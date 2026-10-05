@@ -48,3 +48,9 @@ Created nested `podsite/`
 1. Backed up prompt under `/backlog`
 1. Created backlog from spec
 1. Amended nested issues
+
+#### NOTES
+
+- It's weird that a User Story has 1+ ACs. How do we know when it's "DONE"?
+- I broke each AC into separate "Issues", and they seem to be big enough to be its own User Story.
+- I ended up moving around: **Features**, **Functional Requirements** and **Measurable Outcomes** to where it made more sense.
