@@ -12,7 +12,7 @@ Sync Impact Report
 - Templates requiring updates: none (dependent templates read the constitution at runtime)
 - Follow-up TODOs: none
 -->
-# hello-spec-kit Constitution
+# podsite Constitution
 
 ## Core Principles
 
