@@ -54,3 +54,7 @@ Created nested `podsite/`
 - It's weird that a User Story has 1+ ACs. How do we know when it's "DONE"?
 - I broke each AC into separate "Issues", and they seem to be big enough to be its own User Story.
 - I ended up moving around: **Features**, **Functional Requirements** and **Measurable Outcomes** to where it made more sense.
+
+### Scaffold
+
+Not part of the tutotial, but I basically created an ADR from the prompt in the video stating the tech-stack and used that to scaffold the initial commit.
