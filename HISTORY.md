@@ -20,3 +20,13 @@
 
 1. Backup `/constitution` prompt
 1. Use prompt to extend `constitution.md`
+
+> [!NOTE]
+> There is now a `/speckit-constitution` command that wasn't there before
+
+### Specify
+
+> [!WARNING]
+> `/specify` is now `/speckit-specify` to avoid name collition.
+
+1. Backed up the prompt uder `/specify`
