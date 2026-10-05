@@ -14,7 +14,13 @@
 ### Scaffold
 
 1. `$> specify podsite`
-1. Move `.github/` and `.specify/` to root
+1. Options chosen: "GitHub Copilot" and "Powershell"
+
+Created nested `podsite/`
+
+#### Fix
+
+1. Moved `.github/` and `.specify/` to root
 
 ### Constitution
 
