@@ -9,6 +9,7 @@
     "tsc": "tsc --noEmit",
     "dev": "npm run next:dev",
     "build": "npm run next:build",
+    "out": "npm run next:build",
     "start": "npm run serve:out",
     "lint": "npm run tsc"
   },
