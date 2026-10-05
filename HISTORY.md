@@ -42,3 +42,9 @@ Created nested `podsite/`
 
 1. Backed up prompt under `/clarification`
 1. Ran `/clarification` against spec.
+
+#### Backlog
+
+1. Backed up prompt under `/backlog`
+1. Created backlog from spec
+1. Amended nested issues

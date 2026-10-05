@@ -12,6 +12,8 @@ ms.topic: concept
 
 **Status**: Draft
 
+**Tracking Issue**: [#4](https://github.com/percebus/hello-spec-kit/issues/4)
+
 **Input**: User description: "I am building a modern podcast website. I want
 it to look sleek, something that would stand out. It should have a landing page
 with one featured episode. There should be an episodes page, an about page, and
@@ -37,6 +39,8 @@ needed."
 
 ### User Story 1 - Discover the Featured Episode (Priority: P1)
 
+**Issue**: [#5](https://github.com/percebus/hello-spec-kit/issues/5)
+
 As a visitor, I want a visually distinctive landing page that introduces the
 podcast and highlights one featured episode so that I can quickly understand
 the show's identity and start exploring its content.
@@ -52,16 +56,18 @@ episodes are visible and usable.
 
 1. **Given** a visitor opens the website, **When** the landing page loads,
    **Then** the visitor sees the podcast name, a concise show description, and
-   exactly one clearly identified featured episode.
+   exactly one clearly identified featured episode. ([#12](https://github.com/percebus/hello-spec-kit/issues/12))
 2. **Given** the featured episode is displayed, **When** the visitor reviews
    it, **Then** they can see its title, artwork, publication date, duration,
-   summary, and an obvious playback action.
+   summary, and an obvious playback action. ([#17](https://github.com/percebus/hello-spec-kit/issues/17))
 3. **Given** the visitor wants more content, **When** they use the primary
-   episodes call to action, **Then** they arrive at the episodes page.
+   episodes call to action, **Then** they arrive at the episodes page. ([#14](https://github.com/percebus/hello-spec-kit/issues/14))
 
 ---
 
 ### User Story 2 - Browse and Play Episodes (Priority: P2)
+
+**Issue**: [#6](https://github.com/percebus/hello-spec-kit/issues/6)
 
 As a listener, I want to browse a complete collection of episodes and start any
 episode so that I can choose content that interests me.
@@ -76,24 +82,26 @@ episodes.
 **Acceptance Scenarios**:
 
 1. **Given** a visitor opens the episodes page, **When** the page loads,
-   **Then** exactly 20 distinct mocked episodes are available.
+   **Then** exactly 20 distinct mocked episodes are available. ([#11](https://github.com/percebus/hello-spec-kit/issues/11))
 2. **Given** the episode collection is displayed, **When** the visitor scans
    it, **Then** each episode shows a title, artwork, publication date, duration,
-   summary, and playback action.
+   summary, and playback action. ([#18](https://github.com/percebus/hello-spec-kit/issues/18))
 3. **Given** a visitor selects an episode's playback action, **When** playback
    starts, **Then** the selected episode is clearly identified and standard
-   playback controls are available.
+   playback controls are available. ([#15](https://github.com/percebus/hello-spec-kit/issues/15))
 4. **Given** a visitor uses only a keyboard, **When** they move through episode
    actions, **Then** every interactive control is reachable, visibly focused,
-   and operable.
+   and operable. ([#13](https://github.com/percebus/hello-spec-kit/issues/13))
 5. **Given** an episode is playing, **When** the visitor starts another episode,
-   **Then** the first episode stops and only the newly selected episode plays.
+   **Then** the first episode stops and only the newly selected episode plays. ([#16](https://github.com/percebus/hello-spec-kit/issues/16))
 6. **Given** an episode is playing, **When** the visitor moves to another
-   primary page, **Then** playback stops rather than continuing across pages.
+   primary page, **Then** playback stops rather than continuing across pages. ([#21](https://github.com/percebus/hello-spec-kit/issues/21))
 
 ---
 
 ### User Story 3 - Learn About the Podcast (Priority: P3)
+
+**Issue**: [#7](https://github.com/percebus/hello-spec-kit/issues/7)
 
 As a prospective listener, I want an about page that explains the show's
 purpose and creators so that I can decide whether the podcast matches my
@@ -110,13 +118,15 @@ visiting another page.
 
 1. **Given** a visitor opens the about page, **When** the page loads, **Then**
    they see the show's purpose, topics, intended audience, and creator or host
-   information.
+   information. ([#9](https://github.com/percebus/hello-spec-kit/issues/9))
 2. **Given** the about page contains imagery, **When** it is unavailable or
-   cannot be seen, **Then** equivalent text identifies its meaning.
+   cannot be seen, **Then** equivalent text identifies its meaning. ([#20](https://github.com/percebus/hello-spec-kit/issues/20))
 
 ---
 
 ### User Story 4 - Find Common Answers (Priority: P4)
+
+**Issue**: [#8](https://github.com/percebus/hello-spec-kit/issues/8)
 
 As a visitor, I want a FAQ page with concise answers to common podcast questions
 so that I can resolve basic questions without outside help.
@@ -131,10 +141,10 @@ can be found, read, and operated by mouse, touch, or keyboard.
 
 1. **Given** a visitor opens the FAQ page, **When** the page loads, **Then**
    common questions about the show, episode schedule, listening, and contact
-   expectations have concise answers.
+   expectations have concise answers. ([#10](https://github.com/percebus/hello-spec-kit/issues/10))
 2. **Given** answers use expandable controls, **When** a visitor operates a
    question by keyboard or pointer, **Then** the related answer opens or closes
-   and the control's current state is apparent.
+   and the control's current state is apparent. ([#19](https://github.com/percebus/hello-spec-kit/issues/19))
 
 ### Edge Cases
 
