@@ -36,3 +36,9 @@ Created nested `podsite/`
 > `/specify` is now `/speckit-specify` to avoid name collition.
 
 1. Backed up the prompt uder `/specify`
+1. Ran the prompt
+
+#### spec/001: Modern podcast stie
+
+1. Backed up prompt under `/clarification`
+1. Ran `/clarification` against spec.
