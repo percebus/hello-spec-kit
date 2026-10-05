@@ -18,6 +18,21 @@ with one featured episode. There should be an episodes page, an about page, and
 a FAQ page. It should have 20 episodes, and the data is mocked; no real feed is
 needed."
 
+## Clarifications
+
+### Session 2026-10-05
+
+* Q: What happens when a visitor starts an episode while another episode is
+  playing? → A: Stop the current episode and start the newly selected episode.
+* Q: Does playback continue when a visitor moves to another primary page? →
+  A: No; playback stops when the visitor leaves the current page.
+* Q: Which browsers define the acceptance baseline? → A: The latest stable
+  Chrome, Edge, Firefox, and Safari releases.
+* Q: What contrast standard must the visual design meet? → A: WCAG 2.2 AA
+  contrast thresholds.
+* Q: How much text enlargement must the layout support? → A: Up to 200% without
+  loss of content or functionality.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Discover the Featured Episode (Priority: P1)
@@ -71,6 +86,10 @@ episodes.
 4. **Given** a visitor uses only a keyboard, **When** they move through episode
    actions, **Then** every interactive control is reachable, visibly focused,
    and operable.
+5. **Given** an episode is playing, **When** the visitor starts another episode,
+   **Then** the first episode stops and only the newly selected episode plays.
+6. **Given** an episode is playing, **When** the visitor moves to another
+   primary page, **Then** playback stops rather than continuing across pages.
 
 ---
 
@@ -128,7 +147,7 @@ can be found, read, and operated by mouse, touch, or keyboard.
 * Direct visits to the landing, episodes, about, and FAQ pages retain complete
   navigation to every other primary page.
 * Content and controls remain readable and usable at narrow mobile widths and
-  enlarged text settings.
+  text enlargement up to 200% without loss of content or functionality.
 * The featured episode appears only once on the landing page and corresponds to
   one of the 20 episodes in the complete catalog.
 
@@ -164,8 +183,9 @@ can be found, read, and operated by mouse, touch, or keyboard.
   visible focus state.
 * **FR-014**: All meaningful images MUST have text alternatives, and decorative
   imagery MUST not add noise for visitors using assistive technology.
-* **FR-015**: Text and essential controls MUST maintain readable visual contrast
-  against their backgrounds.
+* **FR-015**: Text and essential controls MUST meet WCAG 2.2 AA contrast
+  thresholds: at least 4.5:1 for normal text, 3:1 for large text, and 3:1 for
+  essential user-interface components and focus indicators.
 * **FR-016**: All pages MUST remain usable on mobile and desktop displays
   without horizontal scrolling at common viewport widths from 320 to 1440
   pixels.
@@ -177,6 +197,12 @@ can be found, read, and operated by mouse, touch, or keyboard.
   authentication, or personal information to browse or play episodes.
 * **FR-020**: A playback failure MUST be communicated in plain language without
   blocking access to navigation or other episode information.
+* **FR-021**: Only one episode MUST play at a time; starting another episode
+  MUST stop the current episode before the selected episode starts.
+* **FR-022**: Playback MUST stop when a visitor leaves the current primary page
+  and MUST NOT persist across page navigation.
+* **FR-023**: All content and controls MUST remain readable and operable when
+  text is enlarged up to 200%, without loss of content or functionality.
 
 ### Key Entities
 
@@ -212,6 +238,13 @@ can be found, read, and operated by mouse, touch, or keyboard.
   without visible broken content or browser errors during acceptance testing.
 * **SC-008**: 100% of episode cards expose the required title, artwork,
   publication date, duration, summary, and playback action.
+* **SC-009**: Every primary user journey completes without browser-specific
+  failures in the latest stable Chrome, Edge, Firefox, and Safari releases.
+* **SC-010**: All text, essential user-interface components, and focus
+  indicators meet the contrast thresholds defined in FR-015.
+* **SC-011**: Every primary page remains readable and operable with text
+  enlarged to 200%, without hidden content, overlapping controls, or loss of
+  functionality.
 
 ## Assumptions
 
@@ -222,7 +255,7 @@ can be found, read, and operated by mouse, touch, or keyboard.
   publishing workflows, search, filtering, subscriptions, comments, accounts,
   analytics, and live feed synchronization are outside scope.
 * One of the 20 mocked episodes is selected in advance as the featured episode.
-* Visitors use current mainstream browsers and may access the site by mouse,
-  touch, keyboard, or assistive technology.
+* Visitors use the latest stable Chrome, Edge, Firefox, or Safari release and
+  may access the site by mouse, touch, keyboard, or assistive technology.
 * The finished experience can be distributed as self-contained static content
   without a server-side runtime or database.
