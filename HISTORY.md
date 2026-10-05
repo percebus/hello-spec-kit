@@ -11,5 +11,12 @@
 
 [The ONLY guide you'll need for gitHub Spec Kit](https://www.youtube.com/watch?v=a9eR1xsfvHg)
 
+### Scaffold
+
 1. `$> specify podsite`
 1. Move `.github/` and `.specify/` to root
+
+### Constitution
+
+1. Backup `/constitution` prompt
+1. Use prompt to extend `constitution.md`
