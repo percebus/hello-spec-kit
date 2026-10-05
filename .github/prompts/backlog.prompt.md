@@ -2,6 +2,7 @@
 name: backlog
 description: Create backlog items from the spec
 tools: github/*
+input: spec
 ---
 
 I want to codify this spec as nested GH "Issues"
