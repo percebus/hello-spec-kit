@@ -1,10 +1,13 @@
 
+# Agents
+.agents/
+.github/skills/
+.github/prompts/
+
 # hve-core
 .copilot-tracking/
 
 # spec-kit
-.github/skills/
-.github/prompts/
 .specify/
 specs/
 
