@@ -4,11 +4,81 @@
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  color: #18222d;
+  background: #f7f4ed;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 main {
   padding: 1rem;
   max-width: 60rem;
   margin: 0 auto;
+}
+
+.about-page {
+  max-width: 48rem;
+  padding: clamp(2rem, 7vw, 5rem) 1.5rem;
+}
+
+.about-header {
+  margin-bottom: clamp(3rem, 9vw, 6rem);
+}
+
+.about-home-link {
+  color: #18222d;
+  font-weight: 700;
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.2em;
+}
+
+.about-kicker {
+  margin: 3rem 0 0.75rem;
+  color: #a23b16;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.about-page h1,
+.about-page h2 {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.about-page h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  line-height: 0.95;
+}
+
+.about-page h2 {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+}
+
+.about-intro,
+.about-page section p {
+  max-width: 42rem;
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  line-height: 1.6;
+}
+
+.about-intro {
+  margin: 1.5rem 0 0;
+  font-size: clamp(1.2rem, 2.5vw, 1.55rem);
+}
+
+.about-page section {
+  margin-top: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.about-host {
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border-radius: 0.5rem;
+  background: #e3efe8;
+}
+
+.about-host .about-kicker {
+  margin-top: 0;
 }
