@@ -1,6 +1,9 @@
 
 tmp/
 
+# hve-core
+.copilot-tracking/
+
 
 ##################################
 ### VisualStudioCode.gitignore ### SRC: https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
@@ -196,6 +199,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+!app/lib/
+!app/lib/**
 parts/
 sdist/
 var/
@@ -440,4 +445,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-

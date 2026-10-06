@@ -1,7 +1,10 @@
 
+# hve-core
+.copilot-tracking/
+
 # spec-kit
-.github/skills
-.github/prompts
+.github/skills/
+.github/prompts/
 .specify/
 specs/
 
