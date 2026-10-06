@@ -18,6 +18,15 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+
+    # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
+    # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
       - uses: percebus/github-actions-node/.github/actions/setup@main
