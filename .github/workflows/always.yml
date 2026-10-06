@@ -14,10 +14,22 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  CI: true
+
 jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+
+    # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
+    # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
       - uses: percebus/github-actions-node/.github/actions/setup@main
@@ -28,6 +40,13 @@ jobs:
 
       - name: npm test
         run: npm test
+
+      - uses: percebus/github-actions-testing/.github/actions/junit@main
+        with:
+          files_pattern: test-results/junit.xml
+
+          # XXX?
+          list-tests: all
 
       - name: out.zip
         uses: percebus/github-actions-common/.github/actions/artifact-upload@main
