@@ -1,61 +1,51 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "About | Signal & Story",
-  description:
-    "Learn about Signal & Story, a podcast about the people and ideas behind meaningful change.",
+  title: "About",
+  description: "Meet the purpose and people behind Signal & Story.",
 };
 
 export default function AboutPage() {
   return (
-    <main className="about-page">
-      <header className="about-header">
-        <Link className="about-home-link" href="/">
-          Signal &amp; Story
-        </Link>
-        <p className="about-kicker">About the show</p>
-        <h1>Conversations for people building what comes next.</h1>
-        <p className="about-intro">
-          Signal &amp; Story is a podcast about the ideas, choices, and people
-          shaping a more thoughtful future.
+    <main className="page-shell">
+      <header className="page-heading">
+        <p className="eyebrow">Why we listen</p>
+        <h1>About the show</h1>
+        <p className="page-intro">
+          Signal & Story is a podcast about the choices behind creative
+          technology and the people who make those choices with care.
         </p>
       </header>
 
-      <section aria-labelledby="purpose-heading">
-        <h2 id="purpose-heading">Why we make it</h2>
-        <p>
-          We make space for candid conversations that turn ambitious work into
-          useful lessons. Each episode looks past the headlines to explore how
-          meaningful change actually happens.
-        </p>
-      </section>
-
-      <section aria-labelledby="topics-heading">
-        <h2 id="topics-heading">What we explore</h2>
-        <p>
-          Design, technology, culture, and leadership—through the practical
-          stories of people who are creating, questioning, and improving the
-          systems around them.
-        </p>
-      </section>
-
-      <section aria-labelledby="audience-heading">
-        <h2 id="audience-heading">Who it is for</h2>
-        <p>
-          Curious builders, creative leaders, and lifelong learners who want
-          grounded ideas they can carry into their own work.
-        </p>
-      </section>
-
-      <section className="about-host" aria-labelledby="host-heading">
-        <p className="about-kicker">Your host</p>
-        <h2 id="host-heading">Maya Chen</h2>
-        <p>
-          Maya is a writer and product strategist who has spent a decade
-          helping teams turn complex challenges into humane, useful
-          experiences. She brings that same curiosity to every conversation.
-        </p>
+      <section className="content-grid" aria-label="About Signal & Story">
+        <article className="content-panel">
+          <h2>Purpose</h2>
+          <p>
+            We move past launch-day headlines to understand how useful,
+            responsible products are shaped over time.
+          </p>
+        </article>
+        <article className="content-panel">
+          <h2>Topics</h2>
+          <p>
+            Expect conversations about product design, engineering, creative
+            practice, accessibility, leadership, and emerging technology.
+          </p>
+        </article>
+        <article className="content-panel">
+          <h2>For whom</h2>
+          <p>
+            The show is made for curious designers, developers, founders,
+            researchers, and anyone interested in thoughtful digital work.
+          </p>
+        </article>
+        <article className="content-panel">
+          <h2>Your host</h2>
+          <p>
+            Mara Velez is a product strategist and lifelong interviewer who
+            believes the best technology stories begin with better questions.
+          </p>
+        </article>
       </section>
     </main>
   );
