@@ -1,0 +1,75 @@
+name: "[C]ontinuous [I]ntegration"
+
+on:
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+      - uses: percebus/github-actions-npm/.github/actions/install@main
+
+      - name: next build
+        run: npm run out
+
+      - name: out.zip
+        uses: percebus/github-actions-common/.github/actions/artifact-upload@main
+        with:
+          name: out
+          path: ./out
+
+  #
+  deploy-pages:
+    needs: verify
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    environment:
+      url: ${{ steps.deployment.outputs.page_url }}
+      name: github-pages
+
+    # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+    # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+
+    permissions: # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+      pages: write
+      contents: read
+      id-token: write
+
+    steps:
+      - name: out.zip
+        uses: percebus/github-actions-common/.github/actions/artifact-download@main
+        with:
+          name: out
+          path: out
+
+      # SRC: https://github.com/actions/upload-pages-artifact/releases/tag/v5.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        name: Upload artifact
+        with:
+          path: ./out
+
+      # SRC: https://github.com/actions/configure-pages/releases/tag/v6.0.0
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+        name: Configure GitHub.IO Pages
+
+      # SRC: https://github.com/actions/deploy-pages/releases/tag/v5.0.1
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
+        id: deployment
+        name: https://percebus.GitHub.IO/hello-spec-kit

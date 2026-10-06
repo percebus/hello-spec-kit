@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "_prettier": "prettier .",
+    "prettier:check": "npm run _prettier -- --check",
+    "prettier:write": "npm run _prettier -- --write",
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
@@ -10,8 +13,12 @@
     "dev": "npm run next:dev",
     "build": "npm run next:build",
     "out": "npm run next:build",
+    "lint": "npm run prettier:check && npm run tsc",
+    "format": "npm run prettier:write",
+    "postformat": "npm run lint",
     "start": "npm run serve:out",
-    "lint": "npm run tsc"
+    "preci": "npm run lint",
+    "ci": "npm run out"
   },
   "dependencies": {
     "next": "^16.4.0-canary.51",
@@ -22,6 +29,7 @@
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "prettier": "^3.9.9",
     "typescript": "^7.0.2"
   }
 }
