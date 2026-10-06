@@ -10,6 +10,9 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
+    "playwright:install": "npx playwright install --with-deps chromium",
+    "preplaywright:test": "npm run playwright:install",
+    "playwright:test": "playwright test",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",
     "predev": "npm run format",
@@ -18,7 +21,8 @@
     "postformat": "npm run lint",
     "start": "npm run serve:out",
     "prebuild": "npm run lint",
-    "build": "npm run next:build"
+    "build": "npm run next:build",
+    "test": "npm run playwright:test"
   },
   "dependencies": {
     "next": "^16.4.0-canary.51",
@@ -26,6 +30,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

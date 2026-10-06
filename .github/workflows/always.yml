@@ -26,6 +26,9 @@ jobs:
       - name: next build
         run: npm run build
 
+      - name: npm test
+        run: npm test
+
       - name: out.zip
         uses: percebus/github-actions-common/.github/actions/artifact-upload@main
         with:
