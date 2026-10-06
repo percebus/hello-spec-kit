@@ -1,28 +1,16 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { SiteHeader } from "./components/site-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: {
-    default: "Signal & Story",
-    template: "%s | Signal & Story",
-  },
-  description:
-    "A podcast about the people, choices, and ideas shaping creative technology.",
+  title: "Hello World",
+  description: "Static Next.js site scaffold",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <SiteHeader />
-        {children}
-        <footer className="site-footer">
-          <p>Signal & Story</p>
-          <p>New conversations for curious builders.</p>
-        </footer>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
