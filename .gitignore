@@ -1,6 +1,9 @@
 
 tmp/
 
+# hve-core
+.copilot-tracking/
+
 
 ##################################
 ### VisualStudioCode.gitignore ### SRC: https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
