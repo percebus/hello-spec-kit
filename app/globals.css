@@ -287,6 +287,30 @@ h3 {
   border-top: 0.25rem solid var(--accent);
 }
 
+.host-panel {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  column-gap: 1.25rem;
+}
+
+.host-panel h2,
+.host-panel p {
+  grid-column: 2;
+}
+
+.host-portrait {
+  grid-row: span 3;
+  margin: 0;
+}
+
+.host-portrait img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .faq-list {
   display: grid;
   gap: 1rem;
@@ -369,6 +393,10 @@ h3 {
   .episode-grid,
   .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .host-panel {
+    grid-template-columns: 5rem minmax(0, 1fr);
   }
 
   .featured-card {
