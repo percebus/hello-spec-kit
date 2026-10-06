@@ -1,14 +1,13 @@
 Feature: About page
 
-  Scenario: A visitor learns about the show
+  Scenario Outline: A visitor learns about the show
     Given the about page
     When it loads
-    Then the section is visible
+    Then the <section> section is visible
 
     Examples:
-    | section |
-    | - |
-    | Purpose |
-    | Topics |
-    | For whom |
-    | Your host |
+      | section   |
+      | Purpose   |
+      | Topics    |
+      | For whom  |
+      | Your host |
