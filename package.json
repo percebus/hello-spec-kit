@@ -12,7 +12,7 @@
     "serve:out": "npx serve out",
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run playwright:install",
-    "playwright:test": "playwright test",
+    "playwright:test": "bddgen && playwright test",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",
     "predev": "npm run format",
@@ -34,6 +34,7 @@
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "playwright-bdd": "^9.2.1",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2"
   }
