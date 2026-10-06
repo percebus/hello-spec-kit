@@ -14,7 +14,7 @@ export default defineConfig({
   workers: 1,
   reporter: [
     [process.env.CI ? "github" : "list"],
-    ["junit", { outputFile: "test-results/junit.xml" }]
+    ["junit", { outputFile: "test-results/junit.xml" }],
   ],
   use: {
     baseURL: `http://127.0.0.1:${port}/hello-spec-kit`,
