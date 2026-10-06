@@ -17,8 +17,25 @@ function getSection(page: Page, section: string) {
   return { heading, panel: heading.locator("..") };
 }
 
+function getCurrentSection(page: Page) {
+  const section = currentSections.get(page);
+
+  if (!section) {
+    throw new Error("No section is currently selected.");
+  }
+
+  return getSection(page, section);
+}
+
 Given("the about page", async ({ page }) => {
   await page.goto("/hello-spec-kit/about/");
+});
+
+Given("the {string} section", async ({ page }, section: string) => {
+  const { heading } = getSection(page, section);
+
+  await expect(heading).toBeVisible();
+  currentSections.set(page, section);
 });
 
 When("it loads", async ({ page }) => {
@@ -35,14 +52,24 @@ Then(/^the (.+) section is visible$/, async ({ page }, section: string) => {
 });
 
 Then("it has some description", async ({ page }) => {
-  const section = currentSections.get(page);
-
-  if (!section) {
-    throw new Error("No visible section is available to describe.");
-  }
-
-  const description = getSection(page, section).panel.getByRole("paragraph");
+  const description = getCurrentSection(page)
+    .panel.getByRole("paragraph")
+    .first();
 
   await expect(description).toBeVisible();
   await expect(description).toHaveText(/\S/);
+});
+
+Then("there is alt text available", async ({ page }) => {
+  await expect(getCurrentSection(page).panel.getByRole("img")).toHaveAttribute(
+    "alt",
+    /\S/,
+  );
+});
+
+Then("it reads {string}", async ({ page }, altText: string) => {
+  await expect(getCurrentSection(page).panel.getByRole("img")).toHaveAttribute(
+    "alt",
+    altText,
+  );
 });
