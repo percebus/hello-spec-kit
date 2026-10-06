@@ -23,8 +23,8 @@ jobs:
       - uses: percebus/github-actions-node/.github/actions/setup@main
       - uses: percebus/github-actions-npm/.github/actions/install@main
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+      - name: next build
+        run: npm run build
 
       - name: npm test
         run: npm test

@@ -10,7 +10,7 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
-    "playwright:install": "npx playwright install chromium",
+    "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run playwright:install",
     "playwright:test": "playwright test",
     "lint": "npm run prettier:check && npm run tsc",
