@@ -42,6 +42,8 @@ jobs:
         run: npm test
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
+        with:
+          files_pattern: test-results/junit.xml
 
       - name: out.zip
         uses: percebus/github-actions-common/.github/actions/artifact-upload@main
