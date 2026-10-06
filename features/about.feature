@@ -4,6 +4,8 @@ Feature: About page
     Given the about page
     When it loads
     Then the <section> section is visible
+    # FR-011
+    And it has some description
 
     Examples:
       | section   |
