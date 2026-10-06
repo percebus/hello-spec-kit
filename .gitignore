@@ -199,6 +199,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+!app/lib/
+!app/lib/**
 parts/
 sdist/
 var/
@@ -443,4 +445,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
