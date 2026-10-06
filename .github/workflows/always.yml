@@ -44,7 +44,7 @@ jobs:
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         with:
           files_pattern: test-results/junit.xml
-          
+
           # XXX?
           list-tests: all
 
