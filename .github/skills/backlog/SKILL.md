@@ -1,10 +1,8 @@
 ---
 name: backlog
 description: Create backlog items from the spec
-tools: github/*
-input: spec
+disable-model-invocation: true
 ---
-
 I want to codify this spec as nested GH "Issues"
 
 Have a top-level "Issue" (type Feature if available) with all the general detail.
