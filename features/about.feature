@@ -10,11 +10,11 @@ Feature: About page
     And it has some description
 
     Examples:
-      | section   |
-      | Purpose   |
-      | Topics    |
-      | For whom  |
-      | Your host |
+      | section   | issue |
+      | Purpose   |   #22 |
+      | Topics    |   #23 |
+      | For whom  |   #24 |
+      | Your host |   #25 |
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/20
   Scenario: About page imagery has equivalent text
