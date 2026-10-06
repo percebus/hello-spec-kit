@@ -19,10 +19,10 @@
     "dev": "npm run next:dev",
     "out": "npm run next:build",
     "postformat": "npm run lint",
+    "pretest": "npm run lint",
+    "test": "npm run playwright:test",
     "start": "npm run serve:out",
-    "prebuild": "npm run lint",
-    "build": "npm run next:build",
-    "test:e2e": "npm run build && npm run playwright:test"
+    "build": "npm run next:build"
   },
   "dependencies": {
     "next": "^16.4.0-canary.51",
