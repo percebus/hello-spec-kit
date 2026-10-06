@@ -4,6 +4,13 @@ tmp/
 # hve-core
 .copilot-tracking/
 
+# Playwright MCP
+.playwright-mcp/
+
+# Playwright tests
+playwright-report/
+test-results/
+
 
 ##################################
 ### VisualStudioCode.gitignore ### SRC: https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
