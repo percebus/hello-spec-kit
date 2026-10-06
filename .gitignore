@@ -10,6 +10,7 @@ tmp/
 # Playwright tests
 playwright-report/
 test-results/
+.features-gen/
 
 
 ##################################

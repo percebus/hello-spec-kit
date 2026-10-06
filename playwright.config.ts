@@ -1,9 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
+import { defineBddConfig } from "playwright-bdd";
 
 const port = 3000;
+const bddTestDir = defineBddConfig({
+  features: "features/*.feature",
+  steps: "features/steps/*.ts",
+});
 
 export default defineConfig({
-  testDir: "./tests/e2e",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
@@ -16,6 +20,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testDir: "./tests/e2e",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium-bdd",
+      testDir: bddTestDir,
       use: { ...devices["Desktop Chrome"] },
     },
   ],
