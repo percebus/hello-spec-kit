@@ -10,6 +10,7 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
+    "test:e2e": "playwright test",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",
     "predev": "npm run format",
@@ -26,6 +27,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
