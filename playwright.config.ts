@@ -12,7 +12,10 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   workers: 1,
-  reporter: process.env.CI ? "github" : "list",
+  reporter: [
+    [process.env.CI ? "github" : "list"],
+    ["junit", { outputFile: "test-results/junit.xml" }]
+  ],
   use: {
     baseURL: `http://127.0.0.1:${port}/hello-spec-kit`,
     trace: "on-first-retry",
