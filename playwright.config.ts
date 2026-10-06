@@ -4,10 +4,10 @@ const port = 3000;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  retries: 0,
+  workers: 1,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: `http://127.0.0.1:${port}/hello-spec-kit`,
@@ -20,7 +20,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run next:dev -- --hostname 127.0.0.1 --port ${port}`,
+    command: `node scripts/serve-static-export.mjs`,
     url: `http://127.0.0.1:${port}/hello-spec-kit/`,
     reuseExistingServer: !process.env.CI,
   },

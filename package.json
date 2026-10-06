@@ -10,7 +10,9 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
-    "test:e2e": "playwright test",
+    "playwright:install": "npx playwright install chromium",
+    "preplaywright:test": "npm run playwright:install",
+    "playwright:test": "playwright test",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",
     "predev": "npm run format",
@@ -19,7 +21,8 @@
     "postformat": "npm run lint",
     "start": "npm run serve:out",
     "prebuild": "npm run lint",
-    "build": "npm run next:build"
+    "build": "npm run next:build",
+    "test:e2e": "npm run build && npm run playwright:test"
   },
   "dependencies": {
     "next": "^16.4.0-canary.51",

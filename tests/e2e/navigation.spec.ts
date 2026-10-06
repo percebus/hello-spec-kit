@@ -84,10 +84,40 @@ async function openPrimaryPage(
   page: Page,
   primaryPage: (typeof primaryPages)[number],
 ) {
+  await page.addInitScript(() => {
+    const clickCountKey = "navigationClickCount";
+
+    if (sessionStorage.getItem(clickCountKey) === null) {
+      sessionStorage.setItem(clickCountKey, "0");
+    }
+
+    document.addEventListener(
+      "click",
+      (event) => {
+        if (event.isTrusted) {
+          const clickCount = Number(sessionStorage.getItem(clickCountKey));
+          sessionStorage.setItem(clickCountKey, String(clickCount + 1));
+        }
+      },
+      true,
+    );
+  });
+
   await page.goto(expectedPath(primaryPage.path));
   await expect(page).toHaveURL(
     new RegExp(`${expectedPath(primaryPage.path)}$`),
   );
+  await page.evaluate(() =>
+    sessionStorage.setItem("navigationClickCount", "0"),
+  );
+}
+
+async function expectClickCount(page: Page, expectedMaximum: number) {
+  const clickCount = await page.evaluate(() =>
+    Number(sessionStorage.getItem("navigationClickCount")),
+  );
+
+  expect(clickCount).toBeLessThanOrEqual(expectedMaximum);
 }
 
 test.describe("FR-002: consistent primary navigation", () => {
@@ -99,18 +129,16 @@ test.describe("FR-002: consistent primary navigation", () => {
         await openPrimaryPage(page, source);
 
         const startingUrl = page.url();
-        let clickCount = 0;
 
         await page
           .getByRole("navigation", { name: "Primary navigation" })
           .getByRole("link", { name: destination.linkName, exact: true })
           .click();
-        clickCount += 1;
 
         await expect(page).toHaveURL(
           new RegExp(`${expectedPath(destination.path)}$`),
         );
-        expect(clickCount).toBeLessThanOrEqual(1);
+        await expectClickCount(page, 1);
 
         if (source === destination) {
           expect(page.url()).toBe(startingUrl);
@@ -128,13 +156,10 @@ test.describe("SC-002: episodes are reachable within two clicks", () => {
       }) => {
         await openPrimaryPage(page, source);
 
-        let clickCount = 0;
-
         await page
           .getByRole("navigation", { name: "Primary navigation" })
           .getByRole("link", { name: "Episodes", exact: true })
           .click();
-        clickCount += 1;
         await expect(page).toHaveURL(
           new RegExp(`${expectedPath("/episodes/")}$`),
         );
@@ -144,7 +169,6 @@ test.describe("SC-002: episodes are reachable within two clicks", () => {
           .filter({ has: page.getByRole("heading", { name: episode.title }) });
         await expect(episodeCard).toContainText(`Episode ${episode.number}`);
         await episodeCard.getByRole("link", { name: "View episode" }).click();
-        clickCount += 1;
 
         await expect(page).toHaveURL(
           new RegExp(`${expectedPath(`/episodes/${episode.slug}/`)}$`),
@@ -152,7 +176,7 @@ test.describe("SC-002: episodes are reachable within two clicks", () => {
         await expect(
           page.getByRole("heading", { level: 1, name: episode.title }),
         ).toBeVisible();
-        expect(clickCount).toBeLessThanOrEqual(2);
+        await expectClickCount(page, 2);
       });
     }
   }

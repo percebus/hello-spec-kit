@@ -30,7 +30,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: navigation tests
-        run: npm run test:e2e
+        run: npm run playwright:test
 
       - name: out.zip
         uses: percebus/github-actions-common/.github/actions/artifact-upload@main
