@@ -1,5 +1,11 @@
+import dotenv from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
 import { defineBddConfig } from "playwright-bdd";
+
+dotenv.config({
+  path: `.env.${process.env.ENV ?? "development"}`,
+  override: true,
+});
 
 const baseURL = process.env.BASE_URL;
 const bddTestDir = defineBddConfig({

@@ -13,7 +13,7 @@
     "bddgen": "bddgen",
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
-    "playwright:test": "NODE_OPTIONS=--env-file=.env.${ENV:-development} playwright test --fully-parallel --workers=4",
+    "playwright:test": "playwright test --fully-parallel --workers=4",
     "postinstall": "npm run playwright:install",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",
@@ -36,6 +36,7 @@
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "dotenv": "^18.0.6",
     "playwright-bdd": "^9.2.1",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2"
