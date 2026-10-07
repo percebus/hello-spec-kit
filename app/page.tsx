@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { featuredEpisode } from "./lib/episodes";
 
@@ -23,6 +24,14 @@ export default function Home() {
         </div>
 
         <article className="featured-card">
+          <Image
+            className="featured-artwork"
+            src="/designing-for-trust.svg"
+            width={800}
+            height={800}
+            alt="Interlocking shapes representing balance and trust."
+            priority
+          />
           <p className="eyebrow">Featured episode</p>
           <p className="episode-number">
             Episode {featuredEpisode.episodeNumber}
@@ -40,10 +49,10 @@ export default function Home() {
             </div>
           </dl>
           <Link
-            className="text-link"
+            className="button featured-action"
             href={`/episodes/${featuredEpisode.slug}`}
           >
-            Explore the featured episode <span aria-hidden="true">→</span>
+            Listen to the featured episode <span aria-hidden="true">→</span>
           </Link>
         </article>
       </section>
