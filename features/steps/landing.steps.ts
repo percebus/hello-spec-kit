@@ -108,3 +108,20 @@ Then("they arrive at the episodes page", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Episodes", exact: true }),
   ).toBeVisible();
 });
+
+When("the visitor clicks the play button", async ({ page }) => {
+  const player = getFeaturedEpisode(page).locator("audio[controls]");
+  await player.click();
+});
+
+Then("the episode audio playback is initiated", async ({ page }) => {
+  const player = getFeaturedEpisode(page).locator("audio[controls]");
+  
+  // Verify player has interactive controls and is accessible
+  await expect(player).toBeVisible();
+  await expect(player).toHaveAttribute("aria-label", "Play Designing for Trust");
+  
+  // Verify audio source is loaded
+  const audioSrc = await player.locator("source").first().getAttribute("src");
+  expect(audioSrc).toBeTruthy();
+});

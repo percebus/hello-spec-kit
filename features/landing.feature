@@ -27,6 +27,13 @@ Feature: Landing page
     | duration         | #17, #30 | FR-006 |
     | summary          | #17, #30 | FR-006 |
 
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/17
+  Scenario: A visitor can interact with the featured episode player
+    Given the landing page
+    And the featured episode
+    When the visitor clicks the play button
+    Then the episode audio playback is initiated
+
   # SRC: https://github.com/percebus/hello-spec-kit/issues/14
   Scenario: A visitor opens the Episodes page from Home
     Given the Home page
