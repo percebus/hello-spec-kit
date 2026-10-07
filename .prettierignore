@@ -4,6 +4,9 @@
 .github/skills/
 .github/prompts/
 
+# Generated agentic workflows
+.github/workflows/*.lock.yml
+
 # hve-core
 .copilot-tracking/
 
@@ -16,6 +19,3 @@ specs/
 **/.svn
 **/.hg
 node_modules/
-
-# Generated agentic workflows
-.github/workflows/*.lock.yml
