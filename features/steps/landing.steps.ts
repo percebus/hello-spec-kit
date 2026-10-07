@@ -13,6 +13,14 @@ Given("the landing page", async ({ page }) => {
   await page.goto("/hello-spec-kit/");
 });
 
+Given("the featured episode", async ({ page }) => {
+  await expect(getFeaturedEpisode(page)).toHaveCount(1);
+});
+
+When("the feature episode loads", async ({ page }) => {
+  await expect(getFeaturedEpisode(page)).toBeVisible();
+});
+
 When("the landing page loads", async ({ page }) => {
   await expect(page).toHaveTitle(/Signal & Story/);
 });
@@ -39,37 +47,7 @@ Then("exactly one featured episode is visible", async ({ page }) => {
   await expect(getFeaturedEpisode(page)).toHaveCount(1);
 });
 
-Then("the featured episode shows its title", async ({ page }) => {
-  await expect(
-    getFeaturedEpisode(page).getByRole("heading", {
-      level: 2,
-      name: "Designing for Trust",
-    }),
-  ).toBeVisible();
-});
-
-Then("the featured episode shows its artwork", async ({ page }) => {
-  await expect(getFeaturedEpisode(page).getByRole("img")).toHaveAttribute(
-    "alt",
-    /trust/i,
-  );
-});
-
-Then("the featured episode shows its publication date", async ({ page }) => {
-  await expect(getFeaturedEpisode(page)).toContainText("September 28, 2026");
-});
-
-Then("the featured episode shows its duration", async ({ page }) => {
-  await expect(getFeaturedEpisode(page)).toContainText("32 min");
-});
-
-Then("the featured episode shows its summary", async ({ page }) => {
-  await expect(
-    getFeaturedEpisode(page).getByText(/small interface choices/i),
-  ).toBeVisible();
-});
-
-Then("the featured episode provides playback controls", async ({ page }) => {
+Then("it provides playback controls", async ({ page }) => {
   const player = getFeaturedEpisode(page).locator("audio[controls]");
 
   await expect(player).toHaveAttribute(
@@ -77,6 +55,40 @@ Then("the featured episode provides playback controls", async ({ page }) => {
     "Play Designing for Trust",
   );
   await expect(player).toHaveAttribute("src", /^blob:/);
+});
+
+Then(/^it shows (.+) its title$/, async ({ page }, element: string) => {
+  const featuredEpisode = getFeaturedEpisode(page);
+
+  switch (element) {
+    case "title":
+      await expect(
+        featuredEpisode.getByRole("heading", {
+          level: 2,
+          name: "Designing for Trust",
+        }),
+      ).toBeVisible();
+      break;
+    case "artwork":
+      await expect(featuredEpisode.getByRole("img")).toHaveAttribute(
+        "alt",
+        /trust/i,
+      );
+      break;
+    case "publication date":
+      await expect(featuredEpisode).toContainText("September 28, 2026");
+      break;
+    case "duration":
+      await expect(featuredEpisode).toContainText("32 min");
+      break;
+    case "summary":
+      await expect(
+        featuredEpisode.getByText(/small interface choices/i),
+      ).toBeVisible();
+      break;
+    default:
+      throw new Error(`Unsupported featured episode element: ${element}`);
+  }
 });
 
 When(
@@ -91,6 +103,6 @@ When(
 Then("the episodes page loads", async ({ page }) => {
   await expect(page).toHaveURL(/\/hello-spec-kit\/episodes\/$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "All episodes" }),
+    page.getByRole("heading", { level: 1, name: "Episodes" }),
   ).toBeVisible();
 });
