@@ -1,9 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { defineBddConfig } from "playwright-bdd";
 
-const port = 3000;
 const baseURL = process.env.BASE_URL;
-const isLocal = baseURL?.startsWith(`http://127.0.0.1:${port}`);
 const bddTestDir = defineBddConfig({
   features: "features/*.feature",
   steps: "features/steps/*.ts",
@@ -34,11 +32,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: !isLocal
-    ? undefined
-    : {
-        command: `node scripts/serve-static-export.mjs`,
-        url: `http://127.0.0.1:${port}/hello-spec-kit/`,
-        reuseExistingServer: !process.env.CI,
-      },
+  webServer:
+    process.env.ENV === "development"
+      ? {
+          command: `node scripts/serve-static-export.mjs`,
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+        }
+      : undefined,
 });
