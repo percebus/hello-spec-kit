@@ -25,7 +25,7 @@ When("the landing page loads", async ({ page }) => {
   await expect(page).toHaveTitle(/Signal & Story/);
 });
 
-Then(/^(podcast identity|concise show description|featured episode) is visible$/, async ({ page }, element: string) => {
+Then(/^(podcast identity|concise show description|exactly 1 featured episode) is visible$/, async ({ page }, element: string) => {
   switch (element) {
     case "podcast identity":
       await expect(
@@ -43,7 +43,7 @@ Then(/^(podcast identity|concise show description|featured episode) is visible$/
         page.getByText(/explores how thoughtful people make creative technology/i),
       ).toBeVisible();
       break;
-    case "featured episode":
+    case "exactly 1 featured episode":
       await expect(getFeaturedEpisode(page)).toHaveCount(1);
       break;
   }
