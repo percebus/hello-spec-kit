@@ -453,3 +453,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright environment configs (ENV=<name> loads .env.<name>)
+!.env.development
+!.env.production

@@ -59,8 +59,6 @@ jobs:
     needs: verify
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
-    outputs:
-      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       url: ${{ steps.deployment.outputs.page_url }}
       name: github-pages
@@ -99,8 +97,8 @@ jobs:
         name: https://percebus.GitHub.IO/hello-spec-kit
 
   #
-  verify-deployed:
-    name: Verify deployed pages
+  e2e-tests:
+    name: E2E tests
     needs: deploy-pages
     runs-on: ubuntu-latest
 
@@ -115,10 +113,10 @@ jobs:
       - uses: percebus/github-actions-node/.github/actions/setup@main
       - uses: percebus/github-actions-npm/.github/actions/install@main
 
-      - name: npm test (deployed pages)
+      - name: npm test
         run: npm test
         env:
-          BASE_URL: ${{ needs.deploy-pages.outputs.page_url }}
+          ENV: "production"
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         if: ${{ !cancelled() }}

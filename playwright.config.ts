@@ -1,8 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync } from "node:fs";
 import { defineBddConfig } from "playwright-bdd";
 
+const env = process.env.ENV ?? "development";
+const envFile = `.env.${env}`;
+if (existsSync(envFile)) {
+  process.loadEnvFile(envFile);
+}
+
 const port = 3000;
-const deployedUrl = process.env.BASE_URL;
+const baseURL =
+  process.env.BASE_URL ?? `http://127.0.0.1:${port}/hello-spec-kit`;
+const isLocal = env === "development";
 const bddTestDir = defineBddConfig({
   features: "features/*.feature",
   steps: "features/steps/*.ts",
@@ -18,7 +27,7 @@ export default defineConfig({
     ["junit", { outputFile: "test-results/junit.xml" }],
   ],
   use: {
-    baseURL: deployedUrl ?? `http://127.0.0.1:${port}/hello-spec-kit`,
+    baseURL: baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -33,7 +42,7 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: deployedUrl
+  webServer: !isLocal
     ? undefined
     : {
         command: `node scripts/serve-static-export.mjs`,
