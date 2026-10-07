@@ -1,6 +1,7 @@
 
 # Agents
 .agents/
+.github/agents/
 .github/skills/
 .github/prompts/
 
