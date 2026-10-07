@@ -24,9 +24,8 @@ Feature: Landing page
     | duration |
     | summary |
 
-
   # SRC: https://github.com/percebus/hello-spec-kit/issues/14
-  Scenario: A visitor browses all episodes
-    Given the landing page
-    When the visitor follows the primary episodes call to action
-    Then the episodes page loads
+  Scenario: A visitor opens the Episodes page from Home
+    Given the Home page
+    When they click on Episodes
+    Then they arrive at the episodes page

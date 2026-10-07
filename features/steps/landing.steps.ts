@@ -91,18 +91,20 @@ Then(/^it shows (.+) its title$/, async ({ page }, element: string) => {
   }
 });
 
-When(
-  "the visitor follows the primary episodes call to action",
-  async ({ page }) => {
-    await page
-      .getByRole("link", { name: "Browse all episodes", exact: true })
-      .click();
-  },
-);
+Given("the Home page", async ({ page }) => {
+  await page.goto("/hello-spec-kit/");
+});
 
-Then("the episodes page loads", async ({ page }) => {
+When("they click on Episodes", async ({ page }) => {
+  await page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .getByRole("link", { name: "Episodes", exact: true })
+    .click();
+});
+
+Then("they arrive at the episodes page", async ({ page }) => {
   await expect(page).toHaveURL(/\/hello-spec-kit\/episodes\/$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Episodes" }),
+    page.getByRole("heading", { level: 1, name: "Episodes", exact: true }),
   ).toBeVisible();
 });
