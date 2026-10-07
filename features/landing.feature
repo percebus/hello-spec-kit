@@ -1,15 +1,16 @@
 Feature: Landing page
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/12
+  # NOTE: FR-003 is covered by this
   Scenario Outline: A visitor recognizes the show and its featured episode
     Given the landing page
     When the landing page loads
     Then <element> is visible
     Examples:
-    | element                  |
-    | podcast identity         |
-    | concise show description |
-    | featured episode         |
+    | element                    | issue | FR     |
+    | podcast identity           |       |        |
+    | concise show description   |       |        |
+    | exactly 1 featured episode |   #27 | FR-004 |
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
   Scenario Outline: The featured episode provides complete listening context
