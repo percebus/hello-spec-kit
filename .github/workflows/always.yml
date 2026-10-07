@@ -16,6 +16,7 @@ permissions:
 
 env:
   CI: true
+  ENV: "development"
 
 jobs:
   verify:
@@ -95,3 +96,31 @@ jobs:
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
         id: deployment
         name: https://percebus.GitHub.IO/hello-spec-kit
+
+  #
+  e2e-tests:
+    name: E2E tests
+    needs: deploy-pages
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+      - uses: percebus/github-actions-npm/.github/actions/install@main
+
+      - name: npm test
+        run: npm test
+        env:
+          ENV: "production"
+
+      - uses: percebus/github-actions-testing/.github/actions/junit@main
+        if: ${{ !cancelled() }}
+        with:
+          files_pattern: test-results/junit.xml
+          list-tests: all
