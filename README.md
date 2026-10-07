@@ -4,34 +4,33 @@
 
 ## Closed issue auditor
 
-`.github/workflows/issue-closed.yml` audits completed closures and can be rerun
-manually with an issue number. Not-planned and duplicate closures are skipped.
-Only sub-issues are followed, bottom-up; parent and related links are ignored.
-An open child is closed only when a merged closing PR exists and Copilot finds
-evidence that all requirements are met. Otherwise, closed ancestors are reopened.
-Cross-repository children are checked but never modified.
+The [agentic Markdown workflow](.github/workflows/issue-closed.md) audits completed
+issue closures, traversing only sub-issues bottom-up. It uses Copilot to decide
+whether unfinished children can close or their ancestors must reopen, assigns
+unassigned issues from linked closed PR authors, and sets `podsite` Status to
+`Done`. Not-planned and duplicate closures are excluded. GitHub reads are
+read-only; mutations use gh-aw safe outputs.
 
-Existing assignees are preserved. Unassigned issues use a linked closed PR's
-author (merged PRs first), falling back to the workflow actor. If nobody can be
-assigned, the issue is reopened and the audit fails. Completed issues are added
-to the `podsite` project and its `Status` is set to `Done`.
-
-Configure these Actions secrets before enabling the workflow:
+Configure these Actions secrets:
 
 - `COPILOT_GITHUB_TOKEN`: a fine-grained PAT with **Copilot Requests** permission
   and an active Copilot subscription.
-- `ISSUE_AUDITOR_PROJECT_TOKEN`: a token with read/write access to the owner's
-  Projects v2 and read access to this repository. A classic PAT needs `project`
-  (and `repo` for a private repository); a fine-grained PAT needs Projects
-  read/write and repository Issues read access.
+- `ISSUE_AUDITOR_PROJECT_TOKEN`: a token with Projects v2 read/write access and
+  Issues read access to this repository (classic PAT: `project`, plus `repo`
+  for a private repository).
 
-Optionally set the Actions variable `PODSITE_PROJECT_OWNER` if the project belongs
-to a different user or organization. That owner must have exactly one project
-named `podsite`, with a single-select `Status` field containing `Done`.
-Project permission or configuration errors fail the run rather than silently
-skipping updates. Copilot receives only bounded issue/PR/comment evidence, has
-no tools, and is not given the issue or project mutation tokens.
+Replace the project URL placeholders in both the Markdown frontmatter and prompt
+with the existing `podsite` project's URL (use `/orgs/` instead of `/users/` for an
+organization project). The project needs a single-select `Status` field containing
+`Done`. Until configured, the agent is instructed to stop without changes.
 
-Run the auditor's mocked regression tests with
-`node --test scripts/audit-closed-issue.test.mjs`. No live issues are changed by
-these tests.
+Install the [GitHub Agentic Workflows CLI](https://github.com/github/gh-aw),
+then run `gh aw compile issue-closed --validate` after editing the Markdown.
+Commit both `.md` and the generated `.lock.yml`; do not edit the lockfile manually.
+The workflow runs on `issues.closed` and supports manual dispatch with an issue
+number. Safe outputs run after the agent finishes, so parents with children still
+open are conservatively reopened, even when a child closure has been proposed.
+Unassigned closures are likewise reopened while assignment is requested; only
+observed assigned closures are eligible for Done. Verify assignments before
+closing those issues again, and manually rerun the audit for completed children
+once their closures are applied.

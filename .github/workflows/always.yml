@@ -35,9 +35,6 @@ jobs:
       - uses: percebus/github-actions-node/.github/actions/setup@main
       - uses: percebus/github-actions-npm/.github/actions/install@main
 
-      - name: Issue auditor tests
-        run: node --test scripts/audit-closed-issue.test.mjs
-
       - name: next build
         run: npm run build
 

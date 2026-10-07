@@ -16,3 +16,6 @@ specs/
 **/.svn
 **/.hg
 node_modules/
+
+# Generated agentic workflows
+.github/workflows/*.lock.yml
