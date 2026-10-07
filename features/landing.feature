@@ -20,12 +20,12 @@ Feature: Landing page
     Then it provides playback controls
     And it shows <element>
     Examples:
-    | element          | issue | FR     |
-    | title            |   #30 | FR-006 |
-    | artwork          |   #30 | FR-006 |
-    | publication date |   #30 | FR-006 |
-    | duration         |   #30 | FR-006 |
-    | summary          |   #30 | FR-006 |
+    | element          | issues   | FR     |
+    | title            | #17, #30 | FR-006 |
+    | artwork          | #17, #30 | FR-006 |
+    | publication date | #17, #30 | FR-006 |
+    | duration         | #17, #30 | FR-006 |
+    | summary          | #17, #30 | FR-006 |
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/14
   Scenario: A visitor opens the Episodes page from Home
