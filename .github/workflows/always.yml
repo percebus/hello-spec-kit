@@ -59,6 +59,8 @@ jobs:
     needs: verify
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       url: ${{ steps.deployment.outputs.page_url }}
       name: github-pages
@@ -95,3 +97,31 @@ jobs:
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
         id: deployment
         name: https://percebus.GitHub.IO/hello-spec-kit
+
+  #
+  verify-deployed:
+    name: Verify deployed pages
+    needs: deploy-pages
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+      - uses: percebus/github-actions-npm/.github/actions/install@main
+
+      - name: npm test (deployed pages)
+        run: npm test
+        env:
+          BASE_URL: ${{ needs.deploy-pages.outputs.page_url }}
+
+      - uses: percebus/github-actions-testing/.github/actions/junit@main
+        if: ${{ !cancelled() }}
+        with:
+          files_pattern: test-results/junit.xml
+          list-tests: all

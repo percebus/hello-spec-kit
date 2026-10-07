@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { defineBddConfig } from "playwright-bdd";
 
 const port = 3000;
+const deployedUrl = process.env.BASE_URL;
 const bddTestDir = defineBddConfig({
   features: "features/*.feature",
   steps: "features/steps/*.ts",
@@ -17,7 +18,7 @@ export default defineConfig({
     ["junit", { outputFile: "test-results/junit.xml" }],
   ],
   use: {
-    baseURL: `http://127.0.0.1:${port}/hello-spec-kit`,
+    baseURL: deployedUrl ?? `http://127.0.0.1:${port}/hello-spec-kit`,
     trace: "on-first-retry",
   },
   projects: [
@@ -32,9 +33,11 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: `node scripts/serve-static-export.mjs`,
-    url: `http://127.0.0.1:${port}/hello-spec-kit/`,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: deployedUrl
+    ? undefined
+    : {
+        command: `node scripts/serve-static-export.mjs`,
+        url: `http://127.0.0.1:${port}/hello-spec-kit/`,
+        reuseExistingServer: !process.env.CI,
+      },
 });
