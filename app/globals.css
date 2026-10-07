@@ -191,6 +191,25 @@ h3 {
   font-size: clamp(2rem, 4vw, 3.4rem);
 }
 
+.featured-artwork {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+}
+
+.episode-player {
+  display: block;
+  width: 100%;
+  margin: 0 0 1.25rem;
+}
+
+.featured-details {
+  display: inline-block;
+  color: var(--surface);
+}
+
 .episode-number {
   margin: 0 0 0.5rem;
   color: var(--accent-dark);

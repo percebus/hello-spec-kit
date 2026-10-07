@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { EpisodePlayer } from "./components/episode-player";
 import { featuredEpisode } from "./lib/episodes";
 
 export default function Home() {
@@ -48,11 +49,12 @@ export default function Home() {
               <dd>{featuredEpisode.duration}</dd>
             </div>
           </dl>
+          <EpisodePlayer title={featuredEpisode.title} />
           <Link
-            className="button featured-action"
+            className="text-link featured-details"
             href={`/episodes/${featuredEpisode.slug}`}
           >
-            Listen to the featured episode <span aria-hidden="true">→</span>
+            View episode details <span aria-hidden="true">→</span>
           </Link>
         </article>
       </section>
