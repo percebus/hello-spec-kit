@@ -32,12 +32,11 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer:
-    process.env.ENV === "development"
-      ? {
-          command: `node scripts/serve-static-export.mjs`,
-          url: baseURL,
-          reuseExistingServer: !process.env.CI,
-        }
-      : undefined,
+  webServer: process.env.WEB_SERVER
+    ? {
+        command: `node scripts/serve-static-export.mjs`,
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+      }
+    : undefined,
 });
