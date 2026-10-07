@@ -18,6 +18,7 @@
 *.proto text
 *.txt text
 *.md text
+.github/workflows/*.lock.yml linguist-generated=true
 
 # Denote all files that are truly binary and should not be modified.
 *.png binary
