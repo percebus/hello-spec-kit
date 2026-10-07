@@ -13,7 +13,7 @@
     "bddgen": "bddgen",
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
-    "playwright:test": "playwright test --fully-parallel --workers=4",
+    "playwright:test": "node --env-file=.env.${ENV:-development} node_modules/@playwright/test/cli.js test --fully-parallel --workers=4",
     "postinstall": "npm run playwright:install",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",

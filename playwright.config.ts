@@ -1,17 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
-import { existsSync } from "node:fs";
 import { defineBddConfig } from "playwright-bdd";
 
-const env = process.env.ENV ?? "development";
-const envFile = `.env.${env}`;
-if (existsSync(envFile)) {
-  process.loadEnvFile(envFile);
-}
-
 const port = 3000;
-const baseURL =
-  process.env.BASE_URL ?? `http://127.0.0.1:${port}/hello-spec-kit`;
-const isLocal = env === "development";
+const baseURL = process.env.BASE_URL;
+const isLocal = baseURL?.startsWith(`http://127.0.0.1:${port}`);
 const bddTestDir = defineBddConfig({
   features: "features/*.feature",
   steps: "features/steps/*.ts",
@@ -27,7 +19,7 @@ export default defineConfig({
     ["junit", { outputFile: "test-results/junit.xml" }],
   ],
   use: {
-    baseURL: baseURL,
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
