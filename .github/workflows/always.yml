@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
       - uses: percebus/github-actions-node/.github/actions/setup@main
-      
+
       # FIXME package-lock.json issues w/ microsoft packagefeed
       # - uses: percebus/github-actions-npm/.github/actions/install@main
 
