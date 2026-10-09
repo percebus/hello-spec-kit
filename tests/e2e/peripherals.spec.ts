@@ -12,7 +12,10 @@ const primaryPages = [
   { name: "FAQ", path: "/faq/" },
 ] as const;
 
+// FR-013: All interactive controls MUST be usable by keyboard and provide a visible focus state.
 // SRC: https://github.com/percebus/hello-spec-kit/issues/38
+
+// SC-004: Every journey can be completed with keyboard-only input
 // SRC: https://github.com/percebus/hello-spec-kit/issues/57
 for (const width of [320, 1440]) {
   test.describe(`FR-013 / SC-004: physical keyboard at ${width}px`, () => {
