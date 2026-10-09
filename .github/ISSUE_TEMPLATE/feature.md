@@ -1,9 +1,9 @@
 ---
 name: Feature
 about: Request a new feature
-title: ''
-labels: ''
-assignees: ''
+title: ""
+labels: ""
+assignees: ""
 ---
 
 # Feature
