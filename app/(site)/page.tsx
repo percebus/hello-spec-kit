@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { EpisodePlayer } from "./components/episode-player";
-import { featuredEpisode } from "./lib/episodes";
+import { EpisodePlayer } from "../components/episode-player";
+import { featuredEpisode } from "../lib/episodes";
 
 export default function Home() {
   return (

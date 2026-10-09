@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EpisodePlayer } from "../../components/episode-player";
-import { episodes, findEpisode } from "../../lib/episodes";
+import { EpisodePlayer } from "../../../components/episode-player";
+import { episodes, findEpisode } from "../../../lib/episodes";
 
 type EpisodePageProps = {
   params: Promise<{ slug: string }>;

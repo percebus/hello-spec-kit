@@ -1,6 +1,6 @@
-Feature: Physical keyboard support
+Feature: Episode player
 
-  # FR-013: All interactive controls 
+  # FR-013: All interactive controls
   #  - MUST be usable by keyboard
   #  - and provide a visible focus state.
   #
@@ -19,12 +19,12 @@ Feature: Physical keyboard support
 
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/55
-  Scenario Outline: A visitor listens to the featured episode with a physical keyboard
+  Scenario Outline: Toggle play|stop with keyboard
     Given the Episode Player
     And the featured episode <initial-state>
     When the user hits <kbd>space</kbd>
     Then it <action>
     Examples:
       | initial-state   | action         |
-      | is playing      | starts playing |
-      | is not playing  | stops playing  |
+      | is not playing  | starts playing |
+      | is playing      | stops playing  |
