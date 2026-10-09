@@ -42,7 +42,7 @@ export default function AboutPage() {
         <article className="content-panel host-panel">
           <figure className="host-portrait">
             <img
-              src="/hello-spec-kit/mara-velez.svg"
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH}/mara-velez.svg`}
               alt="Illustrated portrait of Mara Velez, the host of Signal & Story."
             />
           </figure>

@@ -1,7 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const basePath = "/hello-spec-kit";
-
 const primaryPages = [
   { name: "landing", linkName: "Home", path: "/" },
   { name: "episodes", linkName: "Episodes", path: "/episodes/" },
@@ -77,7 +75,7 @@ const episodes = [
 ] as const;
 
 function expectedPath(path: string) {
-  return `${basePath}${path}`;
+  return path;
 }
 
 async function openPrimaryPage(
@@ -103,7 +101,7 @@ async function openPrimaryPage(
     );
   });
 
-  await page.goto(expectedPath(primaryPage.path));
+  await page.goto(`.${primaryPage.path}`);
   await expect(page).toHaveURL(
     new RegExp(`${expectedPath(primaryPage.path)}$`),
   );
