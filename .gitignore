@@ -1,9 +1,6 @@
 
 tmp/
 
-# hve-core
-.copilot-tracking/
-
 # Playwright MCP
 .playwright-mcp/
 

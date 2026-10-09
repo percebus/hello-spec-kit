@@ -36,6 +36,7 @@ a {
 }
 
 a:focus-visible,
+audio:focus-visible,
 summary:focus-visible {
   outline: 0.2rem solid var(--focus);
   outline-offset: 0.25rem;
