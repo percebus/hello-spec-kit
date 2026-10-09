@@ -12,6 +12,9 @@ playwright-report/
 test-results/
 .features-gen/
 
+# HACK FIXME temp
+package-lock.json
+
 
 ##################################
 ### VisualStudioCode.gitignore ### SRC: https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
