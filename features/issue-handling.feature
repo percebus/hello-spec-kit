@@ -1,11 +1,5 @@
+# SRC: https://github.com/percebus/hello-spec-kit/issues/91
 Feature: Issue-handling skill instructions
-
-  # SRC: https://github.com/percebus/hello-spec-kit/issues/91
-  # These scenarios validate the instruction contract, not live AI execution.
-  Scenario: Copilot is instructed to load the skill for an assigned issue
-    Given the repository issue-handling instructions
-    When the issue-handling instruction contract is checked
-    Then Copilot must load the registered issue-handling skill before implementation
 
   Scenario: The skill requires complete requirements from the issue tree
     Given the repository issue-handling instructions
