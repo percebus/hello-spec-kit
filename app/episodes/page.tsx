@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EpisodePlayer } from "../../components/episode-player";
-import { episodes } from "../../lib/episodes";
+import { EpisodePlayer } from "../components/episode-player";
+import { episodes } from "../lib/episodes";
 
 export const metadata: Metadata = {
   title: "Episodes",

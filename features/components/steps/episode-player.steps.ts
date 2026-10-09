@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { featuredEpisode } from "../../app/lib/episodes";
-import { focusWithKeyboard } from "../../tests/helpers/keyboard";
+import { featuredEpisode } from "../../../app/lib/episodes";
+import { focusWithKeyboard } from "../../../tests/helpers/keyboard";
 
 const { Given, When, Then } = createBdd();
 
@@ -17,9 +17,9 @@ async function waitForPlayer(page: Page) {
     .toBeGreaterThanOrEqual(2);
 }
 
-// Isolated harness: app/(test)/test/episode-player/page.tsx
-Given("the Episode Player", async ({ page }) => {
-  await page.goto("/hello-spec-kit/test/episode-player/");
+// Story: app/components/episode-player.story.tsx, rendered by playwright/gallery.
+Given("the Episode Player", async ({ mount }) => {
+  await mount("components/episode-player/Featured");
 });
 
 Given("a screen of `width`:{int}", async ({ page }, width: number) => {

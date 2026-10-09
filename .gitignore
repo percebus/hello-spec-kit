@@ -11,6 +11,7 @@ tmp/
 playwright-report/
 test-results/
 .features-gen/
+.features-gen-components/
 
 # HACK FIXME temp
 package-lock.json
