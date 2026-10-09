@@ -8,4 +8,4 @@ applyTo: 'package*.json'
 ## Guidance
 
 Developers are working in an isolated environment that CANNOT reach `registry.npmjs.org`.
-Make sure you enforce `.npmrc`
+Make sure you enforce the `microsoft.npmrc`
