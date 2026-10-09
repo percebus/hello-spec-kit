@@ -1,9 +1,12 @@
 
 # Agents
 .agents/
+
+# GitHub Copilot
+.github/copilot-instructions.md
 .github/agents/
 .github/skills/
-.github/prompts/
+.github/instructions/
 
 # Generated agentic workflows
 .github/workflows/*.lock.yml
