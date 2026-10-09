@@ -58,3 +58,9 @@ Created nested `podsite/`
 ### Scaffold
 
 Not part of the tutotial, but I basically created an ADR from the prompt in the video stating the tech-stack and used that to scaffold the initial commit.
+
+### Drift
+
+The `spec-kit` tool is an opinionated "all artifacts exist [under the `specs/` folder](./specs/). Which doesn't lend to agentic interaction w/ disparate data sources.
+
+So [I worked the backlog the way I wanted](https://github.com/percebus/hello-spec-kit/issues) and started working w/ RPI, GitHub copilot Cloud agents, etc.

@@ -12,7 +12,9 @@ Feature: Landing page
     | concise show description   |       |        |
     | exactly 1 featured episode |   #27 | FR-004 |
 
+  # FR-006
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/30
   Scenario Outline: The featured episode provides complete listening context
     Given the landing page
     And the featured episode
@@ -20,12 +22,12 @@ Feature: Landing page
     Then it provides playback controls
     And it shows <element>
     Examples:
-    | element          | issues   | FR     |
-    | title            | #17, #30 | FR-006 |
-    | artwork          | #17, #30 | FR-006 |
-    | publication date | #17, #30 | FR-006 |
-    | duration         | #17, #30 | FR-006 |
-    | summary          | #17, #30 | FR-006 |
+    | element          |
+    | title            |
+    | artwork          |
+    | publication date |
+    | duration         |
+    | summary          |
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
   Scenario: A visitor can interact with the featured episode player

@@ -5,6 +5,11 @@ description: Gather complete requirements from a GitHub issue and all nested sub
 
 # Issue handling
 
+Gather the complete assigned issue and all nested sub-issues, including comments,
+without expanding scope to parents, siblings, or related issues. Follow the
+skill's acceptance-criteria-first workflow and report any incomplete retrieval
+or coverage.
+
 ## Scope
 
 Use the assigned issue URL or repository and issue number as the root. If the
@@ -71,3 +76,12 @@ Implement against the combined checklist, not just the root issue. Follow
 repository test and validation conventions. Before finishing, report each
 source issue's acceptance-criteria coverage, validation results, and remaining
 gaps. Do not claim completion while required descendant work is missing.
+
+## "Functional requirements" and "Success Criteria"
+
+These are usually coded as `tests/e2e/**/*.ts` (since they're not in a GivenWhenThen format).
+
+1. First make sure that the `FC-*` or `SC-*` is not covered by any other test
+  - Sometimes ACs have comments w/ the reference to `FC-*` or `SC-*`.
+1. If they don't exist, codify the requirement as an e2e test
+  - Ideally, the test name would be `SC-001.ts` for example. However, if 2 or more tests would benefit for being co-located in the same file, consider the page section instead (i.e. `landing.ts`, `about.ts`, etc.)
