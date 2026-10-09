@@ -5,6 +5,11 @@ description: Gather complete requirements from a GitHub issue and all nested sub
 
 # Issue handling
 
+Gather the complete assigned issue and all nested sub-issues, including comments,
+without expanding scope to parents, siblings, or related issues. Follow the
+skill's acceptance-criteria-first workflow and report any incomplete retrieval
+or coverage.
+
 ## Scope
 
 Use the assigned issue URL or repository and issue number as the root. If the
