@@ -10,7 +10,7 @@ function getFeaturedEpisode(page: Page) {
 }
 
 Given("the landing page", async ({ page }) => {
-  await page.goto("/hello-spec-kit/");
+  await page.goto("./");
 });
 
 Given("the featured episode", async ({ page }) => {
@@ -100,7 +100,7 @@ Then(
 );
 
 Given("the Home page", async ({ page }) => {
-  await page.goto("/hello-spec-kit/");
+  await page.goto("./");
 });
 
 When("they click on Episodes", async ({ page }) => {
@@ -111,7 +111,7 @@ When("they click on Episodes", async ({ page }) => {
 });
 
 Then("they arrive at the episodes page", async ({ page }) => {
-  await expect(page).toHaveURL(/\/hello-spec-kit\/episodes\/$/);
+  await expect(page).toHaveURL(/\/episodes\/$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Episodes", exact: true }),
   ).toBeVisible();
