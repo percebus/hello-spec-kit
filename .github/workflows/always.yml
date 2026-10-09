@@ -117,7 +117,9 @@ jobs:
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
       - uses: percebus/github-actions-node/.github/actions/setup@main
-      - uses: percebus/github-actions-npm/.github/actions/install@main
+
+      - name: npm install
+        run: npm install
 
       - name: npm test
         run: npm test
