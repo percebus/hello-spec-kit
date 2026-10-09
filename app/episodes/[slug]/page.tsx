@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EpisodePlayer } from "../../components/episode-player";
 import { episodes, findEpisode } from "../../lib/episodes";
 
 type EpisodePageProps = {
@@ -54,6 +55,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
           </div>
         </dl>
         <p className="episode-summary">{episode.summary}</p>
+        <EpisodePlayer title={episode.title} />
         <Link className="button button-secondary" href="/episodes">
           Back to all episodes
         </Link>

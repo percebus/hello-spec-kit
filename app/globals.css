@@ -19,7 +19,6 @@ html {
 
 body {
   margin: 0;
-  min-width: 20rem;
   color: var(--ink);
   background:
     radial-gradient(circle at 90% 5%, rgb(217 79 48 / 16%), transparent 24rem),
@@ -35,10 +34,13 @@ a {
   color: inherit;
 }
 
-a:focus-visible,
-summary:focus-visible {
+:focus-visible {
   outline: 0.2rem solid var(--focus);
   outline-offset: 0.25rem;
+}
+
+.featured-card :focus-visible {
+  outline-color: #f7b6a7;
 }
 
 .site-header {
