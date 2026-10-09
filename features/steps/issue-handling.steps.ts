@@ -12,7 +12,9 @@ async function readInstructions(path: string) {
 
 Given("the repository issue-handling instructions", async () => {
   expect(await readInstructions(skillPath)).not.toBe("");
-  expect(await readInstructions(".github/copilot-instructions.md")).not.toBe("");
+  expect(await readInstructions(".github/copilot-instructions.md")).not.toBe(
+    "",
+  );
 });
 
 When("the issue-handling instruction contract is checked", async () => {
@@ -47,15 +49,18 @@ Then(
   },
 );
 
-Then("the skill requires recursive traversal of all sub-issue pages", async () => {
-  const skill = await readInstructions(skillPath);
-  expect(skill).toMatch(/get_sub_issues[\s\S]*every page/i);
-  expect(skill).toMatch(/recursively[\s\S]*each child/i);
-  expect(skill).toMatch(/regardless of[\s\S]*open or closed/i);
-  expect(skill).toMatch(
-    /visited set[\s\S]*owner[\s\S]*repository[\s\S]*issue number/i,
-  );
-});
+Then(
+  "the skill requires recursive traversal of all sub-issue pages",
+  async () => {
+    const skill = await readInstructions(skillPath);
+    expect(skill).toMatch(/get_sub_issues[\s\S]*every page/i);
+    expect(skill).toMatch(/recursively[\s\S]*each child/i);
+    expect(skill).toMatch(/regardless of[\s\S]*open or closed/i);
+    expect(skill).toMatch(
+      /visited set[\s\S]*owner[\s\S]*repository[\s\S]*issue number/i,
+    );
+  },
+);
 
 Then("the skill excludes parents, siblings, and related issues", async () => {
   const skill = await readInstructions(skillPath);
