@@ -12,6 +12,7 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
+    "vite:playwright": "npx vite --config playwright/vite.config.mts",
     "bddgen": "bddgen",
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
@@ -24,6 +25,7 @@
     "out": "npm run next:build",
     "postformat": "npm run lint",
     "start": "npm run serve:out",
+    "start:test": "node scripts/serve-static-export.mjs",
     "prebuild": "npm run lint",
     "build": "npm run next:build",
     "test": "npm run playwright:test"
@@ -38,10 +40,12 @@
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "dotenv": "^18.0.5",
     "hve-core": "github:microsoft/hve-core#hve-core-v3.3.101",
     "playwright-bdd": "^9.2.1",
     "prettier": "^3.9.9",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
   }
 }

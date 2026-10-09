@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const sampleRate = 8_000;
 const previewSeconds = 8;
@@ -42,23 +42,46 @@ function createPreviewUrl() {
 
 export function EpisodePlayer({ title }: { title: string }) {
   const [previewUrl, setPreviewUrl] = useState<string>();
+  const [playbackFailed, setPlaybackFailed] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const url = createPreviewUrl();
+    const audio = audioRef.current;
 
     setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+    return () => {
+      audio?.pause();
+      URL.revokeObjectURL(url);
+    };
   }, []);
 
   return (
-    <audio
-      className="episode-player"
-      aria-label={`Play ${title}`}
-      controls
-      preload="metadata"
-      src={previewUrl}
-    >
-      Your browser does not support audio playback.
-    </audio>
+    <>
+      <audio
+        ref={audioRef}
+        className="episode-player"
+        aria-label={`Play ${title}`}
+        controls
+        preload="metadata"
+        src={previewUrl}
+        onPlay={(event) => {
+          for (const audio of document.querySelectorAll("audio")) {
+            if (audio !== event.currentTarget) {
+              audio.pause();
+            }
+          }
+        }}
+        onError={() => setPlaybackFailed(true)}
+      >
+        Your browser does not support audio playback.
+      </audio>
+      {playbackFailed && (
+        <p role="alert">
+          The audio preview for {title} is unavailable. Please try another
+          episode.
+        </p>
+      )}
+    </>
   );
 }

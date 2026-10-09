@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EpisodePlayer } from "../components/episode-player";
 import { episodes } from "../lib/episodes";
 
 export const metadata: Metadata = {
@@ -36,6 +37,7 @@ export default function EpisodesPage() {
                   <dd>{episode.duration}</dd>
                 </div>
               </dl>
+              <EpisodePlayer title={episode.title} />
               <Link className="text-link" href={`/episodes/${episode.slug}`}>
                 View episode <span aria-hidden="true">→</span>
               </Link>

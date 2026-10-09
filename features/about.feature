@@ -1,5 +1,12 @@
 Feature: About page
 
+  # FR-011
+  # The about page MUST describe 
+  #  - the show's purpose
+  #  - principal topics,
+  #  - intended audience
+  #  - and creator or host
+  #
   # SRC: https://github.com/percebus/hello-spec-kit/issues/9
   Scenario Outline: A visitor learns about the show
     Given the about page
@@ -15,6 +22,7 @@ Feature: About page
       | Topics    |   #23 |
       | For whom  |   #24 |
       | Your host |   #25 |
+
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/20
   Scenario: About page imagery has equivalent text

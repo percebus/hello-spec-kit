@@ -8,9 +8,15 @@ dotenv.config({
 });
 
 const baseURL = process.env.BASE_URL;
+const galleryURL = "http://127.0.0.1:5173/playwright/gallery/index.html";
 const bddTestDir = defineBddConfig({
   features: "features/*.feature",
   steps: "features/steps/*.ts",
+});
+const componentsBddTestDir = defineBddConfig({
+  outputDir: ".features-gen-components",
+  features: "features/components/*.feature",
+  steps: "features/components/steps/*.ts",
 });
 
 export default defineConfig({
@@ -37,12 +43,31 @@ export default defineConfig({
       testDir: bddTestDir,
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // Component tests: Playwright's built-in `mount` against playwright/gallery.
+      name: "components-bdd",
+      testDir: componentsBddTestDir,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: galleryURL,
+        serviceWorkers: "block",
+      },
+    },
   ],
-  webServer: process.env.WEB_SERVER
-    ? {
-        command: `node scripts/serve-static-export.mjs`,
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-      }
-    : undefined,
+  webServer: [
+    ...(process.env.WEB_SERVER
+      ? [
+          {
+            command: "npm run start:test",
+            url: baseURL,
+            reuseExistingServer: !process.env.CI,
+          },
+        ]
+      : []),
+    {
+      command: "npm run vite:playwright",
+      url: galleryURL,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });
