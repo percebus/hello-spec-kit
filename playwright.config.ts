@@ -58,14 +58,14 @@ export default defineConfig({
     ...(process.env.WEB_SERVER
       ? [
           {
-            command: `node scripts/serve-static-export.mjs`,
+            command: "npm run start:test",
             url: baseURL,
             reuseExistingServer: !process.env.CI,
           },
         ]
       : []),
     {
-      command: "npx vite --config playwright/vite.config.mts",
+      command: "npm run vite:playwright",
       url: galleryURL,
       reuseExistingServer: !process.env.CI,
     },

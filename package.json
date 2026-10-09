@@ -12,6 +12,7 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "serve:out": "npx serve out",
+    "vite:playwright": "npx vite --config playwright/vite.config.mts",
     "bddgen": "bddgen",
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
@@ -24,6 +25,7 @@
     "out": "npm run next:build",
     "postformat": "npm run lint",
     "start": "npm run serve:out",
+    "start:test": "node scripts/serve-static-export.mjs",
     "prebuild": "npm run lint",
     "build": "npm run next:build",
     "test": "npm run playwright:test"
