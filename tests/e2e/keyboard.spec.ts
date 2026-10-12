@@ -28,7 +28,7 @@ for (const width of [320, 1440]) {
         test(`${source.name} to ${destination.name} navigation`, async ({
           page,
         }) => {
-          await page.goto(`/hello-spec-kit${source.path}`);
+          await page.goto(`.${source.path}`);
           await focusWithKeyboard(
             page,
             page
@@ -36,16 +36,14 @@ for (const width of [320, 1440]) {
               .getByRole("link", { name: destination.name, exact: true }),
           );
           await page.keyboard.press("Enter");
-          await expect(page).toHaveURL(
-            new RegExp(`/hello-spec-kit${destination.path}$`),
-          );
+          await expect(page).toHaveURL(new RegExp(`${destination.path}$`));
         });
       }
     }
 
     for (const name of ["Browse all episodes", "Meet the show"]) {
       test(`Home action: ${name}`, async ({ page }) => {
-        await page.goto("/hello-spec-kit/");
+        await page.goto("./");
         await focusWithKeyboard(
           page,
           page.getByRole("link", { name, exact: true }),
@@ -60,7 +58,7 @@ for (const width of [320, 1440]) {
     test("all FAQ answers open and close with Enter and Space", async ({
       page,
     }) => {
-      await page.goto("/hello-spec-kit/faq/");
+      await page.goto("faq/");
       const questions = page.locator("summary");
       await expect(questions).toHaveCount(4);
       for (const question of await questions.all()) {
@@ -77,7 +75,7 @@ for (const width of [320, 1440]) {
     });
 
     test("native audio shortcuts seek and adjust volume", async ({ page }) => {
-      await page.goto("/hello-spec-kit/");
+      await page.goto("./");
       const player = page.locator("audio[controls]");
       await expect
         .poll(() =>
@@ -118,7 +116,7 @@ for (const width of [320, 1440]) {
       test(`play, inspect and return from episode ${episode.episodeNumber}`, async ({
         page,
       }) => {
-        await page.goto("/hello-spec-kit/episodes/");
+        await page.goto("episodes/");
         expect(
           await page.evaluate(
             () =>
@@ -149,14 +147,14 @@ for (const width of [320, 1440]) {
           page.getByRole("link", { name: "Back to all episodes" }),
         );
         await page.keyboard.press("Enter");
-        await expect(page).toHaveURL(/\/hello-spec-kit\/episodes\/$/);
+        await expect(page).toHaveURL(/\/episodes\/$/);
       });
     }
 
     test("starting another episode stops the previous player", async ({
       page,
     }) => {
-      await page.goto("/hello-spec-kit/episodes/");
+      await page.goto("episodes/");
       const players = page.locator("audio[controls]");
       await expect(players).toHaveCount(20);
       await focusWithKeyboard(page, players.nth(0));
@@ -192,7 +190,7 @@ for (const width of [320, 1440]) {
     test("a failed preview explains the error without blocking keyboard navigation", async ({
       page,
     }) => {
-      await page.goto("/hello-spec-kit/");
+      await page.goto("./");
       await expect(page.locator("audio")).toHaveAttribute("src", /^blob:/);
       await page.locator("audio").evaluate((audio: HTMLAudioElement) => {
         audio.src = "data:audio/wav;base64,AAAA";

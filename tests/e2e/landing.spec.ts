@@ -37,7 +37,7 @@ async function expectLandingContentUsable(page: Page) {
   await page
     .getByRole("link", { name: "Browse all episodes", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/hello-spec-kit\/episodes\/$/);
+  await expect(page).toHaveURL(/\/episodes\/$/);
 }
 
 test.describe("SC-001: identify the show topic and featured episode", () => {
@@ -46,7 +46,7 @@ test.describe("SC-001: identify the show topic and featured episode", () => {
   }) => {
     test.setTimeout(10_000);
 
-    await page.goto("/hello-spec-kit/");
+    await page.goto("./");
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -70,7 +70,7 @@ test.describe("SC-005: landing page has no horizontal scrolling", () => {
   for (const width of [320, 375, 768, 1440]) {
     test(`landing page fits a ${width}px viewport`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto("/hello-spec-kit/");
+      await page.goto("./");
 
       await expectNoHorizontalScroll(page);
       await expectLandingContentUsable(page);
@@ -81,7 +81,7 @@ test.describe("SC-005: landing page has no horizontal scrolling", () => {
 test.describe("SC-011: landing page supports 200% text enlargement", () => {
   test("landing content remains readable and operable", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/hello-spec-kit/");
+    await page.goto("./");
     await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
 
     await expectNoHorizontalScroll(page);

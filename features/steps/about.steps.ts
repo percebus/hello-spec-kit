@@ -28,7 +28,7 @@ function getCurrentSection(page: Page) {
 }
 
 Given("the about page", async ({ page }) => {
-  await page.goto("/hello-spec-kit/about/");
+  await page.goto("about/");
 });
 
 Given("the {string} section", async ({ page }, section: string) => {
