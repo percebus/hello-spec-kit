@@ -7,7 +7,7 @@ dotenv.config({
   override: true,
 });
 
-const baseURL = process.env.BASE_URL;
+const baseURL = `${process.env.BASE_URL}${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`;
 const galleryURL = "http://127.0.0.1:5173/playwright/gallery/index.html";
 const bddTestDir = defineBddConfig({
   features: "features/*.feature",

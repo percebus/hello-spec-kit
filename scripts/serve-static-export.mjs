@@ -1,11 +1,10 @@
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import nextConfig from "../next.config.mjs";
 
 const host = "127.0.0.1";
 const port = Number(process.env.PORT ?? 3000);
-const basePath = nextConfig.basePath ?? "";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const outputDirectory = path.resolve("out");
 
 const contentTypes = new Map([
