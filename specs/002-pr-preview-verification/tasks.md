@@ -39,7 +39,7 @@ implemented and tested independently.
 
 **Purpose**: Configuration and records that every story uses.
 
-- [ ] T001 [P] Create `.env.main` containing exactly `BASE_URL=https://percebus.github.io` and `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. Do NOT modify `.env.production` or `.env.development`, because `next build` loads `.env.production` (research R9).
+- [ ] T001 [P] In both `.env.production` and `.env.development`, change `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit` to `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`, leaving all other lines unchanged. `next build` reads `.env.production` and local tests read `.env.development`, so both must agree (research R9). Then run `npm run build` and `npm test`; both must pass with the site at `http://127.0.0.1:3000/hello-spec-kit/main/`. ⚠️ Merge this together with T015–T020. On its own, today's root deploy would publish a build that expects `/hello-spec-kit/main/`, which breaks the live site.
 - [ ] T002 [P] Create `docs/ADR/002-rnd-site-subsites.md`.
   - Follow the format of `docs/ADR/001-static-nextjs.md`: "Latest revision" with date 2026-10-28, Status checkboxes with Proposed checked, Decision, and Justification.
   - Summarize the R&D site with per-branch subsites (research R1), publishing serialized in `main`'s context (R2), the deterministic scanner as the only blocking source (R4), and the slug rule with its hash suffix (R8).
@@ -199,7 +199,7 @@ a collision is rejected.
   - **Delete:** Update the same marker comment to "Subsite deleted (<reason>)".
   - **`main` publish:**
     1. Poll `main/preview.json`.
-    2. Check out `main`, then run `percebus/github-actions-node/.github/actions/setup@main`, `npm install`, and `npm test` with `ENV: main`.
+    2. Check out `main`, then run `percebus/github-actions-node/.github/actions/setup@main`, `npm install`, and `npm test` with `ENV: production`.
     3. Publish JUnit results with `percebus/github-actions-testing/.github/actions/junit@main`, as the removed `e2e-tests` job did.
 - [ ] T021 [US1] Run `npm run format` and confirm that `npm run build` still produces `out/` with no "Preview build" text, using `grep -r "Preview build" out` (expect no match). Build again with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/feat-x` and the three preview variables, then run `PREVIEW_SCAN=1 PREVIEW_PR=… PREVIEW_REF=… PREVIEW_SHA=… npx playwright test --project=preview-scan tests/preview/banner.spec.ts` against `npm run start:test`.
 
@@ -429,7 +429,7 @@ merge-blocking expectations in section 3:
 
 - **Setup (Phase 1)** has no dependencies. T003 is required before T005, T008, T013, T021, and T023 can run.
 - **Foundational (Phase 2)** depends on T003. It blocks all stories.
-- **US1 (Phase 3)** depends on Phase 2. T015 through T020 must merge together, or `main` stops being published.
+- **US1 (Phase 3)** depends on Phase 2. T001 and T015 through T020 must merge together, or `main` stops being published or publishes with the wrong base path.
 - **US2 (Phase 4)** depends on US1 being merged, because verification needs a published subsite and `pages-publish` on `main`.
 - **US3 (Phase 5)** depends on US2, because it extends the same prompt and workflow file.
 - **US4 (Phase 6):**

@@ -170,7 +170,8 @@ tests/
 └── helpers/
     └── preview-scan.ts        # NEW crawl + image/media/overflow/error collectors + findings writer
 
-.env.main                      # NEW BASE_URL=https://percebus.github.io, NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main
+.env.production                # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main (read by next build + ENV=production tests)
+.env.development               # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main (local tests; site at 127.0.0.1:3000/hello-spec-kit/main/)
 playwright.config.ts           # + "unit" project; + "preview-scan" project and no dotenv/gallery when PREVIEW_SCAN=1
 docs/ADR/002-rnd-site-subsites.md  # NEW record of R1, R2, R4, R8; links #100
 README.md                      # + "Pull request subsites" section; production URL now …/main/

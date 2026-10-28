@@ -309,11 +309,14 @@ has two implications:
 - `pages-publish` writes `<slug>/preview.json`
   ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json))
   and polls it until it reports the expected SHA.
-- `.env.production` stays **unchanged**, because `next build` loads it, so
-  CI's local test build keeps `/hello-spec-kit`. A new file, `.env.main`, sets
-  `BASE_URL=https://percebus.github.io` and
-  `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. The post-publish tests for
-  `main` run with `ENV=main`.
+- `.env.production` and `.env.development` both change to
+  `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. Each file is read by two
+  consumers, and keeping both files on the same value keeps them consistent:
+  - `next build` loads `.env.production`. CI's local test build and `main`'s
+    publish build therefore both use `/main`.
+  - Playwright loads `.env.${ENV}`. Local tests use `.env.development`, and the
+    post-publish `main` tests use `ENV=production` as before. Locally, the site
+    is served at `http://127.0.0.1:3000/hello-spec-kit/main/`.
 - When `PREVIEW_SCAN=1`, `playwright.config.ts` skips loading dotenv and the
   gallery web server. The scanner then takes `BASE_URL` and
   `NEXT_PUBLIC_BASE_PATH` from the process environment, which is set per
@@ -321,15 +324,22 @@ has two implications:
 
 **Rationale**:
 
-- In Next.js, explicit process environment variables override `.env` files.
+- In Next.js, explicit process environment variables override `.env` files,
+  so branch subsite builds pass their own base path.
+- If only `.env.production` changed, CI's local build would use `/main` while
+  local tests still expected `/hello-spec-kit`.
+- No code or test hard-codes the base path, because all of them read
+  `NEXT_PUBLIC_BASE_PATH`.
 - `playwright.config.ts` loads `.env.${ENV}` with `override: true`, which would
-  overwrite a per-subsite base path. That is why the scanner skips dotenv and
-  `main` gets its own env file.
-- A separate publish build avoids changing the local test setup.
+  overwrite a per-subsite base path. That is why the scanner skips dotenv.
+- A separate publish build for branches avoids changing the local test setup.
 - The extra build takes about 1 minute, which fits SC-002.
 
 **Alternatives considered**:
 
+- _A separate `.env.main` for post-publish tests_: rejected because a third
+  environment file duplicates `.env.production`. Keeping `.env.production` and
+  `.env.development` on the same base path is simpler.
 - _One build with the subsite base path that is also used for local tests_:
   rejected because it changes how test environment files work.
 - _Rewriting HTML after the build_: rejected because it is brittle.
