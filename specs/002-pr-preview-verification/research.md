@@ -312,8 +312,8 @@ For example, `feat/see-website` becomes `feat-see-website`.
 **Residual risk (accepted)**: Same-repo PR authors already have write access.
 Their static files are served on the same origin as `main/`.
 `percebus.github.io` has no authentication or cookies, so this is acceptable
-for the R&D site. #100 moves production to a separate origin path and
-repository.
+for the R&D site. All of `percebus`'s project Pages sites share this origin,
+so moving production to a release repository (#100) does not change this risk.
 
 ## R11. Override and rerun (FR-018, FR-019)
 
