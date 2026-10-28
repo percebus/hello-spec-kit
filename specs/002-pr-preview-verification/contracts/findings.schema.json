@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/percebus/hello-spec-kit/specs/002-pr-preview-verification/contracts/findings.schema.json",
+  "title": "Preview verification findings",
+  "description": "Output of the defect scanner (test-results/preview-scan/findings.json). The agent reads this file and adds its own advisory findings using the same item shape in the report.",
+  "type": "object",
+  "required": ["pr", "sha", "baseUrl", "viewports", "pagesVisited", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "pr": { "type": "integer", "minimum": 1 },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "baseUrl": { "type": "string", "format": "uri" },
+    "viewports": {
+      "type": "array",
+      "items": { "enum": [320, 1440] },
+      "minItems": 2,
+      "uniqueItems": true
+    },
+    "pagesVisited": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^/" },
+      "minItems": 1
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": [
+        "id",
+        "source",
+        "severity",
+        "category",
+        "page",
+        "viewport",
+        "description",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^(scan|agent)-[0-9]{4}$" },
+        "source": { "enum": ["scanner", "agent"] },
+        "severity": { "enum": ["blocking", "advisory"] },
+        "category": {
+          "enum": [
+            "missing-image",
+            "broken-link",
+            "overflow",
+            "horizontal-scroll",
+            "browser-error",
+            "media-error",
+            "external-link",
+            "intent-mismatch",
+            "visual-concern"
+          ]
+        },
+        "page": { "type": "string", "pattern": "^/" },
+        "viewport": { "enum": [320, 1440] },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "selector": { "type": "string" },
+        "evidence": {
+          "type": "object",
+          "required": ["artifact", "file"],
+          "additionalProperties": false,
+          "properties": {
+            "artifact": { "type": "string" },
+            "file": { "type": "string" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "source": { "const": "agent" } } },
+          "then": { "properties": { "severity": { "const": "advisory" } } }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "enum": ["external-link", "intent-mismatch", "visual-concern"]
+              }
+            }
+          },
+          "then": { "properties": { "severity": { "const": "advisory" } } }
+        }
+      ]
+    }
+  }
+}

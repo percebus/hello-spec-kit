@@ -9,6 +9,14 @@
   --focus: #185b9d;
 }
 
+.preview-banner {
+  padding: 0.5rem 1rem;
+  color: var(--surface);
+  background: var(--ink);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
 * {
   box-sizing: border-box;
 }

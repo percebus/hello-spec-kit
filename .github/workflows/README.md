@@ -1,5 +1,113 @@
 # Workflows
 
+## R&D site and pull request subsites
+
+`hello-spec-kit`'s GitHub Pages site is the R&D site. Every open same-repo pull
+request into `main` gets its own subsite, and `main` lives at its own subsite.
+See `specs/002-pr-preview-verification/` and
+[ADR-002](../../docs/ADR/002-rnd-site-subsites.md).
+
+```text
+https://percebus.github.io/hello-spec-kit/
+├── index.html        → redirects to ./main/
+├── main/             → main (interim production; see #100)
+├── <branch-slug>/    → one subsite per open PR branch
+└── subsites.json     → slug → branch, PR, SHA
+```
+
+A branch name becomes a flat slug: `feat/a/b/c` → `feat-a-b-c`. Names longer
+than 63 characters keep 54 characters plus an 8-character hash. Two open
+branches that flatten to the same slug (for example `feat/a-b/c` and
+`feat/a/b-c`) are rejected; rename the second branch.
+
+### CI flow
+
+[always.yml](always.yml) runs, for every branch:
+
+```text
+Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
+```
+
+| Job              | Role                                                                                                                                                                                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verify`         | Builds and tests locally as before. Builds the subsite with its base path and uploads it as artifact `site`.                                                                                                                                         |
+| `deploy-pages`   | Publishes the subsite (or `main/`) into the R&D site; deletes it when the pull request closes; prunes subsites of PRs that are no longer open.                                                                                                       |
+| `e2e-tests`      | Runs the existing tests against the deployed subsite (`main` included).                                                                                                                                                                              |
+| `preview-verify` | When `PREVIEW_VERIFY=true` and the end-to-end tests pass, dispatches [preview-verify.md](preview-verify.md): a deterministic Playwright scan (`tests/preview/`) decides blocking findings, and the Copilot agent checks intent and posts the report. |
+
+- CI runs one at a time across the repository (`group: ${{ github.workflow }}`,
+  `cancel-in-progress: false`, `queue: max`). Waiting runs are queued, never
+  dropped. `preview-verify` keeps a per-PR group and can run in parallel.
+- A failing subsite stays available until the next push or until the PR
+  closes.
+- Rerun: **Re-run all jobs** on the PR's CI run, or push a new commit. There is
+  no override.
+- `deploy-pages` stores the site tree on the `gh-pages` branch as a single
+  commit and deploys it with `actions/deploy-pages`. **Never edit `gh-pages`
+  by hand.** The Pages source stays "GitHub Actions".
+- `preview-verify` reuses `COPILOT_GITHUB_TOKEN`. After editing
+  `preview-verify.md`, run `npm run format` first, then
+  `gh aw compile preview-verify --validate`, and commit both files.
+- Fork pull requests are verified but not deployed. Push the change to a
+  branch in this repository to get a subsite.
+
+### Environments
+
+Create these under Settings → Environments:
+
+| Environment    | Deployment branches                                                                  | Variables                                    |
+| -------------- | ------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `main`         | `main`                                                                               | `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`  |
+| `branch`       | No restriction                                                                       | `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true` |
+| `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") | —                                            |
+
+`verify` runs in `main` for `refs/heads/main` and in `branch` otherwise. It
+fails with a clear error if `SUBSITE_KIND` is missing.
+
+**Bootstrap:** each deployment publishes the whole stored tree, and the root
+redirects to `main/`. Until the first push to `main` runs this workflow, `main/`
+does not exist and the root returns a 404, even though branch subsites work.
+Merging the pull request that introduces this workflow publishes `main/`.
+
+Environment rules match the run's `GITHUB_REF`. For `pull_request` runs that
+is `refs/pull/<n>/merge`, not the branch name. A rule like `feat/*` therefore
+never matches, and `github-pages` needs the `refs/pull/*/merge` rule. If the
+`branch` environment uses selected branches instead of "No restriction", it
+needs the same rule.
+
+### Merge gate
+
+Apply this ruleset once, **after** the feature is on `main` and a pull request
+has passed end to end. Before then, nothing can set `preview-verification` to
+`success`, and every pull request would be blocked.
+
+```text
+gh api -X POST repos/percebus/hello-spec-kit/rulesets --input - <<'EOF'
+{
+  "name": "main: preview verification",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
+  "rules": [
+    { "type": "pull_request", "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false } },
+    { "type": "required_status_checks", "parameters": {
+        "strict_required_status_checks_policy": false,
+        "required_status_checks": [
+          { "context": "Verify" },
+          { "context": "preview-verification" } ] } }
+  ]
+}
+EOF
+```
+
+Do not apply force-push or deletion rules to `gh-pages`; `deploy-pages`
+force-pushes it on every deployment.
+
 ## Closed issue auditor
 
 The [agentic Markdown workflow](issue-closed.md) audits completed
