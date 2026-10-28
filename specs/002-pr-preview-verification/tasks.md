@@ -424,6 +424,41 @@ merge-blocking expectations in section 3:
 
 ---
 
+## Phase 8: Rework — publishing inside CI (2026-10-28)
+
+**Purpose**: The owner's direction replaces the separate publishing workflow.
+`deploy-pages` and `e2e-tests` stay in `always.yml` for every branch, and
+`preview-verify` is dispatched only after `e2e-tests` pass. The override is
+dropped. `main` and branch behavior comes from environments. CI runs one at a
+time.
+
+**Superseded**: T015–T020 and T029 (`pages-publish.yml`), T027's delete
+dispatch, T034 (`preview-override.yml`), and T035 (rerun dispatch). Their
+behavior now lives in the tasks below.
+
+- [X] T042 Rewrite `.github/workflows/always.yml`:
+  - **Triggers:** `pull_request` types `opened, synchronize, reopened, closed`, plus `push` to `main` and `workflow_dispatch`.
+  - **Concurrency:** `group: ${{ github.workflow }}`, `cancel-in-progress: false`, `queue: max`.
+  - **`verify`:** uses `environment: main|branch` and exports `vars.SUBSITE_KIND` and `vars.PREVIEW_VERIFY`. It fails if `SUBSITE_KIND` is not `main` or `branch`.
+  - **`deploy-pages`:** environment `github-pages`. Publishes via `scripts/pages-tree.mjs upsert`, deletes on same-repo `closed` using `main`'s scripts, prunes, deploys only when the tree changed, and updates the PR comment.
+  - **`e2e-tests`:** waits for `preview.json`, writes `.env.subsite`, and runs `npm test` with `ENV=subsite`.
+  - **`preview-verify`:** dispatches `preview-verify.lock.yml --ref <head branch>` when `preview_verify == 'true'`.
+- [X] T043 Delete `.github/workflows/pages-publish.yml` and `.github/workflows/preview-override.yml`.
+- [X] T044 In `.github/workflows/preview-verify.md`:
+  - remove the delete dispatch and `actions: write` from `finalize`;
+  - change the report to "kept until the next push or until the PR closes" and give rerun guidance;
+  - recompile with `gh aw compile preview-verify --validate`.
+- [X] T045 Add `.env.subsite` to `.gitignore`.
+- [X] T046 Validate:
+  - `npm run format` passes.
+  - actionlint flags only the documented `queue` key.
+  - `bash -n` passes on every multi-line `run:` block, and no `run:` script interpolates `${{ }}`.
+  - `npm test` passes all 228 tests against a local subsite build with `ENV=subsite`, banner present.
+- [X] T047 Update docs to match: `spec.md` (clarifications, FR-001/006/018/019, SC-001/002/008, edge cases, US1 AC3/AC4, US4 AC3), `research.md` (R2, R6, R7, R9–R13), `data-model.md`, `contracts/*`, `quickstart.md`, `plan.md`, `checklists/requirements.md`, `docs/ADR/002-rnd-site-subsites.md`, and `.github/workflows/README.md`.
+- [ ] T048 Owner: create the `main` and `branch` environments with their variables, and allow PR branches on `github-pages` (see `.github/workflows/README.md` › Environments). Do this before merging.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase dependencies
