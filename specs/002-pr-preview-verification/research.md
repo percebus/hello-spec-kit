@@ -309,14 +309,22 @@ has two implications:
 - `pages-publish` writes `<slug>/preview.json`
   ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json))
   and polls it until it reports the expected SHA.
-- `.env.production` changes to `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`, so
-  production end-to-end tests target `main/`.
+- `.env.production` stays **unchanged**, because `next build` loads it, so
+  CI's local test build keeps `/hello-spec-kit`. A new file, `.env.main`, sets
+  `BASE_URL=https://percebus.github.io` and
+  `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. The post-publish tests for
+  `main` run with `ENV=main`.
+- When `PREVIEW_SCAN=1`, `playwright.config.ts` skips loading dotenv and the
+  gallery web server. The scanner then takes `BASE_URL` and
+  `NEXT_PUBLIC_BASE_PATH` from the process environment, which is set per
+  subsite.
 
 **Rationale**:
 
 - In Next.js, explicit process environment variables override `.env` files.
-- `playwright.config.ts` loads `.env.${ENV}` with `override: true`, so local
-  tests keep their own base path.
+- `playwright.config.ts` loads `.env.${ENV}` with `override: true`, which would
+  overwrite a per-subsite base path. That is why the scanner skips dotenv and
+  `main` gets its own env file.
 - A separate publish build avoids changing the local test setup.
 - The extra build takes about 1 minute, which fits SC-002.
 

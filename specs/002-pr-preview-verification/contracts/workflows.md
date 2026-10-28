@@ -43,7 +43,7 @@ Three workflows own all changes to the R&D site and the merge gate:
 | `prepare`     | Resolve `op`, `slug`, `sha`, and `pr`. Run the staleness and slug checks: reserved name, collision, open PR, and head equal to `sha`. For publish, download artifact `site` from the CI run (`run-id`). | `actions: read`, `pull-requests: read`, `statuses: write`, `contents: read` |
 | `update-tree` | Check out `gh-pages`, or initialize it with `index.html`, `.nojekyll`, and `subsites.json`. Apply the operation: replace `<slug>/` with the artifact plus `preview.json`, or remove `<slug>/`, conditionally for a delete with a SHA. Also prune closed PRs. Enforce the 1 GB limit. Force-push a single orphan commit. Upload the Pages artifact. | `contents: write`                                            |
 | `deploy`      | `actions/deploy-pages`.                                                                                                                                       | `pages: write`, `id-token: write`; environment `github-pages` |
-| `announce`    | Poll `<slug>/preview.json` until `sha` matches (≤ 5 min). For a branch publish: post or update the PR comment with the subsite address (FR-005), set the status to `pending` "Verifying…", and dispatch `preview-verify` with `pr_number`, `sha`, and `slug`. For a `main` publish: run the production end-to-end tests (`ENV=production npm test`) against `/hello-spec-kit/main/`. | `actions: write`, `pull-requests: write`, `statuses: write`  |
+| `announce`    | Poll `<slug>/preview.json` until `sha` matches (≤ 5 min). For a branch publish: post or update the PR comment with the subsite address (FR-005), set the status to `pending` "Verifying…", and dispatch `preview-verify` with `pr_number`, `sha`, and `slug`. For a `main` publish: run the end-to-end tests (`ENV=main npm test`) against `/hello-spec-kit/main/`. | `actions: write`, `pull-requests: write`, `statuses: write`  |
 
 Any `prepare`, `update-tree`, or `deploy` failure on a branch publish sets
 `preview-verification=error` with the reason.
@@ -88,9 +88,13 @@ republish anything.
 | `NEXT_PUBLIC_PREVIEW_REF` | head branch                 | unset                   |
 | `NEXT_PUBLIC_PREVIEW_SHA` | head SHA                    | unset                   |
 
-`.env.production` changes to `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main` for
-production end-to-end tests. `.env.development` stays unchanged for local
-tests.
+`.env.production` and `.env.development` stay unchanged, because `next build`
+loads `.env.production` for CI's local test build. The new `.env.main`
+(`BASE_URL=https://percebus.github.io`,
+`NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`) is used by the end-to-end tests
+that run after `main` is published (`ENV=main`). The scanner runs with
+`PREVIEW_SCAN=1`, skips dotenv, and reads `BASE_URL` and
+`NEXT_PUBLIC_BASE_PATH` from the process environment.
 
 ## Repository configuration (one-time, manual)
 

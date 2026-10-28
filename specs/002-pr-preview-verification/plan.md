@@ -156,20 +156,22 @@ app/
 
 scripts/
 ├── branch-slug.mjs            # NEW slug rule (research R8), shared by CI and pages-publish
+├── pages-tree.mjs             # NEW upsert/remove/prune a subsite in a checked-out gh-pages tree; maintains subsites.json
 └── pages-root/
     └── index.html             # NEW root redirect → ./main/ (with visible link)
 
 tests/
-├── preview/                   # NEW Playwright project "preview-scan" (excluded from default npm test)
+├── preview/                   # NEW Playwright project "preview-scan" (only when PREVIEW_SCAN=1)
 │   ├── defects.spec.ts        # crawl subsite at 320/1440 → findings.json + screenshots
 │   └── banner.spec.ts         # banner shows expected PR/ref/sha (FR-002)
-├── unit/
-│   └── branch-slug.spec.ts    # NEW slug cases (reserved, hash suffix for long names, collisions)
+├── unit/                      # NEW Playwright project "unit" (no browser)
+│   ├── branch-slug.spec.ts    # NEW slug cases (reserved, hash suffix for long names, collisions)
+│   └── pages-tree.spec.ts     # NEW tree operations (conditional delete, collision, size cap, prune)
 └── helpers/
     └── preview-scan.ts        # NEW crawl + image/media/overflow/error collectors + findings writer
 
-.env.production                # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main
-playwright.config.ts           # + "preview-scan" project when PREVIEW_SCAN=1; skip gallery webServer for it
+.env.main                      # NEW BASE_URL=https://percebus.github.io, NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main
+playwright.config.ts           # + "unit" project; + "preview-scan" project and no dotenv/gallery when PREVIEW_SCAN=1
 docs/ADR/002-rnd-site-subsites.md  # NEW record of R1, R2, R4, R8; links #100
 README.md                      # + "Pull request subsites" section; production URL now …/main/
 ```
