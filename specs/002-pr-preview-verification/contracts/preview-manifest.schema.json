@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/percebus/hello-spec-kit/specs/002-pr-preview-verification/contracts/preview-manifest.schema.json",
+  "title": "Preview manifest",
+  "description": "Published at https://percebus.github.io/hello-spec-kit-preview/preview.json by the deploy job. The workflow polls it until sha matches, which proves that the preview is available. It contains only public identifiers and never secrets.",
+  "type": "object",
+  "required": ["pr", "ref", "sha", "runUrl", "deployedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "pr": { "type": "integer", "minimum": 1 },
+    "ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "runUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://github\\.com/percebus/hello-spec-kit/actions/runs/"
+    },
+    "deployedAt": { "type": "string", "format": "date-time" }
+  }
+}
