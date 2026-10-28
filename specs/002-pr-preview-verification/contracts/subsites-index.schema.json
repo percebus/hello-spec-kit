@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/percebus/hello-spec-kit/specs/002-pr-preview-verification/contracts/subsites-index.schema.json",
+  "title": "R&D site subsite index",
+  "description": "Root file subsites.json on the gh-pages storage branch and the published R&D site. pages-publish is the only writer. It records slug ownership for collision detection and pruning. Each value repeats the corresponding <slug>/preview.json.",
+  "type": "object",
+  "required": ["updatedAt", "subsites"],
+  "additionalProperties": false,
+  "properties": {
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "subsites": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+      },
+      "additionalProperties": {
+        "$ref": "./subsite-manifest.schema.json"
+      }
+    }
+  }
+}

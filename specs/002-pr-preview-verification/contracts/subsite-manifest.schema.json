@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/percebus/hello-spec-kit/specs/002-pr-preview-verification/contracts/subsite-manifest.schema.json",
+  "title": "Subsite manifest",
+  "description": "Published at https://percebus.github.io/hello-spec-kit/<slug>/preview.json by pages-publish. Polled until sha matches, which proves the subsite is available. Also used for conditional deletes. Contains only public identifiers.",
+  "type": "object",
+  "required": ["slug", "kind", "branch", "pr", "sha", "ciRunUrl", "publishedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "kind": { "enum": ["branch", "main"] },
+    "branch": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "pr": { "type": ["integer", "null"], "minimum": 1 },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "ciRunUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://github\\.com/percebus/hello-spec-kit/actions/runs/"
+    },
+    "publishedAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "main" } } },
+      "then": {
+        "properties": {
+          "slug": { "const": "main" },
+          "branch": { "const": "main" },
+          "pr": { "const": null }
+        }
+      },
+      "else": {
+        "properties": {
+          "slug": { "not": { "const": "main" } },
+          "pr": { "type": "integer" }
+        }
+      }
+    }
+  ]
+}

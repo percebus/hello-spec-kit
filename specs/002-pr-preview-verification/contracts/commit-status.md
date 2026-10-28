@@ -16,10 +16,13 @@ It is written through
 
 | State     | Description (prefix)                                  | Written by                                 | Blocks merge? |
 | --------- | ----------------------------------------------------- | ------------------------------------------ | ------------- |
-| `pending` | `Queued for shared preview`                           | `always.yml` › `preview-enqueue`           | Yes           |
-| `pending` | `Deploying preview…` / `Scanning…` / `Reviewing…`     | `preview-verify` jobs                      | Yes           |
+| `pending` | `Waiting for subsite`                                 | `always.yml` › `verify`                    | Yes           |
+| `pending` | `Publishing subsite…` / `Verifying…`                  | `pages-publish`                            | Yes           |
+| `pending` | `Scanning…` / `Reviewing…`                            | `preview-verify` jobs                      | Yes           |
 | `failure` | `N blocking finding(s)`                               | `preview-verify` › `scan`                  | Yes           |
-| `error`   | `Inconclusive: <reason>`                              | `deploy`, `scan`, `record-verdict`, `finalize` | Yes       |
+| `error`   | `Inconclusive: <reason>`                              | `pages-publish`, `scan`, `record-verdict`, `finalize` | Yes |
+| `error`   | `Address collision with <branch>; rename the branch`  | `pages-publish` › `prepare`                | Yes           |
+| `error`   | `Superseded by a newer commit`                        | `preview-verify` › `finalize` (older SHA only) | No; not the head |
 | `success` | `No blocking findings (M advisory)`                   | `preview-verify` › `record-verdict` only   | No            |
 | `success` | `Override by @<actor>: <reason>`                      | `preview-override.yml` only                | No            |
 
@@ -33,4 +36,6 @@ It is written through
    Older SHAs are left unchanged.
 4. Fork PRs receive no automatic status. The ruleset therefore reports the
    check as "Expected", which blocks merging until a maintainer dispatches a
-   run or records an override.
+   publish or records an override.
+5. Any final state other than `success`, except `Superseded`, triggers a
+   conditional delete of the subsite (FR-006).
