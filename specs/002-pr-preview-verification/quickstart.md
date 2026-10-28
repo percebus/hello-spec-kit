@@ -18,7 +18,8 @@ no implementation code.
     `SUBSITE_KIND=main` and `PREVIEW_VERIFY=false`.
   - Environment `branch`: no branch restriction; variables
     `SUBSITE_KIND=branch` and `PREVIEW_VERIFY=true`.
-  - Environment `github-pages`: deployment branches allow PR branches.
+  - Environment `github-pages`: deployment branches and tags allow `main` and
+    `refs/pull/*/merge`, because `pull_request` runs deploy from the merge ref.
   - The `gh-pages` branch is excluded from force-push protection.
   - A ruleset on `main` requires `Verify` and `preview-verification`, applied
     last.

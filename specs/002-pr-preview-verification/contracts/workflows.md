@@ -87,7 +87,7 @@ only); GitHub read toolsets `pull_requests` and `issues`;
 | Pages source                  | Stays **GitHub Actions**                                                                |
 | Environment `main`            | Deployment branches: `main`. Variables: `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`.    |
 | Environment `branch`          | Deployment branches: no restriction. Variables: `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true`. |
-| Environment `github-pages`    | Deployment branches must allow PR branches, for example "No restriction".              |
+| Environment `github-pages`    | Selected branches and tags: `main` and `refs/pull/*/merge`, because `pull_request` runs deploy as `GITHUB_REF=refs/pull/<n>/merge`. "No restriction" also works. |
 | `gh-pages` branch             | Created by the first deployment. Exclude it from rules that block force-pushes.         |
 | Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                            |
 | Ruleset on `main`             | Require status checks `Verify` and `preview-verification`; require a PR                 |

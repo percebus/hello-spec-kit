@@ -55,14 +55,20 @@ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
 
 Create these under Settings → Environments:
 
-| Environment    | Deployment branches                          | Variables                                    |
-| -------------- | -------------------------------------------- | -------------------------------------------- |
-| `main`         | `main`                                       | `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`  |
-| `branch`       | No restriction                               | `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true` |
-| `github-pages` | No restriction (PR branches deploy subsites) | —                                            |
+| Environment    | Deployment branches                                                                  | Variables                                    |
+| -------------- | ------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `main`         | `main`                                                                               | `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`  |
+| `branch`       | No restriction                                                                       | `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true` |
+| `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") | —                                            |
 
 `verify` runs in `main` for `refs/heads/main` and in `branch` otherwise. It
 fails with a clear error if `SUBSITE_KIND` is missing.
+
+Environment rules match the run's `GITHUB_REF`. For `pull_request` runs that
+is `refs/pull/<n>/merge`, not the branch name. A rule like `feat/*` therefore
+never matches, and `github-pages` needs the `refs/pull/*/merge` rule. If the
+`branch` environment uses selected branches instead of "No restriction", it
+needs the same rule.
 
 ### Merge gate
 
