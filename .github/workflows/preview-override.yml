@@ -1,0 +1,69 @@
+name: "Preview override"
+
+# Maintainer-only override of the `preview-verification` merge gate (FR-018).
+# See specs/002-pr-preview-verification/contracts/commit-status.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+        type: number
+      reason:
+        description: Why merging without a passing verification is acceptable
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  override:
+    name: Override
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+
+    steps:
+      - name: record override
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr_number }}
+          REASON: ${{ inputs.reason }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          permission="$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$GITHUB_ACTOR/permission" --jq .permission)"
+          case "$permission" in
+            admin | maintain) ;;
+            *)
+              echo "::error::@$GITHUB_ACTOR has '$permission' permission; admin or maintain is required"
+              exit 1
+              ;;
+          esac
+
+          if [ -z "$(printf '%s' "$REASON" | tr -d '[:space:]')" ]; then
+            echo "::error::A reason is required"
+            exit 1
+          fi
+
+          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")"
+          if [ "$(jq -r .state <<< "$pr_json")" != "open" ]; then
+            echo "::error::Pull request #$PR is not open"
+            exit 1
+          fi
+          sha="$(jq -r .head.sha <<< "$pr_json")"
+
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" \
+            -f state=success -f context=preview-verification \
+            -f description="$(printf 'Override by @%s: %s' "$GITHUB_ACTOR" "$REASON" | cut -c1-140)" \
+            -f target_url="$RUN_URL" > /dev/null
+
+          body="$(printf '**Preview verification overridden** by @%s for `%s`.\n\n> %s\n\n[Override run](%s)' \
+            "$GITHUB_ACTOR" "$sha" "$REASON" "$RUN_URL")"
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+          echo "Recorded override for #$PR at $sha"

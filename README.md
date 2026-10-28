@@ -5,6 +5,18 @@
 See the [workflow documentation](.github/workflows/README.md) for closed issue
 auditor setup and usage.
 
+## Pull request subsites
+
+The site lives at https://percebus.github.io/hello-spec-kit/main/; the root
+address redirects there. Locally, `npm run dev` and the tests serve it under
+`/hello-spec-kit/main/` too.
+
+Every pull request into `main` is published as its own subsite, such as
+`https://percebus.github.io/hello-spec-kit/feat-a-b-c/` for branch
+`feat/a/b/c`. It is then scanned at 320 px and 1440 px and reviewed by an
+agent before it can merge. See the
+[workflow documentation](.github/workflows/README.md#rd-site-and-pull-request-subsites).
+
 ## Installing dependencies
 
 Run `npm install` from the repository root. The project `.npmrc` and the
