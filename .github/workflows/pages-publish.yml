@@ -384,7 +384,7 @@ jobs:
           upsert_comment() {
             local marker="<!-- rnd-subsite -->" id
             id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-              --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)"
+              --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1 || true)"
             if [ -n "$id" ]; then
               gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" \
                 -f body="$marker"$'\n'"$1" > /dev/null
