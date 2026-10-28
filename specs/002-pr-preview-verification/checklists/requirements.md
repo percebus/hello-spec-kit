@@ -33,6 +33,11 @@
 
 - FR-017 resolved (2026-10-28): only defect findings block merging; intent
   findings are advisory.
+- Hosting revised (2026-10-28): `hello-spec-kit` is the R&D site, with
+  per-branch subsites verified in parallel and `main` at its own subsite.
+  Passing subsites are kept until the pull request closes; subsites that do not
+  pass are deleted immediately. FR-001 to FR-006 were rewritten, and FR-020 and
+  SC-008 were added. The production release repository is follow-up #100.
 - Hosting and workflow choices, including the agentic workflow in the user
   input, are deferred to `/speckit-plan`; the spec only uses neutral terms such
   as "preview" and "automated reviewer".
