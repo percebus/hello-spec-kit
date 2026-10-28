@@ -1,0 +1,463 @@
+name: "Pages publish"
+
+# Owns every change to the R&D site (https://percebus.github.io/hello-spec-kit/).
+# Runs from the default branch's workflow file and never checks out pull request
+# code. See specs/002-pr-preview-verification/contracts/workflows.md.
+
+on:
+  workflow_run:
+    workflows: ["[C]ontinuous [I]ntegration"]
+    types: [completed]
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      op:
+        description: publish (rerun a PR), delete (a subsite), or prune
+        required: true
+        type: choice
+        options: [publish, delete, prune]
+      pr_number:
+        description: Pull request number (publish; optional for delete)
+        required: false
+        type: number
+      slug:
+        description: Subsite slug (delete)
+        required: false
+        type: string
+      sha:
+        description: Only delete if the subsite still shows this commit (delete)
+        required: false
+        type: string
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+env:
+  SITE_URL: https://percebus.github.io/hello-spec-kit
+  STATUS_CONTEXT: preview-verification
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      statuses: write
+    outputs:
+      skip: ${{ steps.resolve.outputs.skip }}
+      op: ${{ steps.resolve.outputs.op }}
+      slug: ${{ steps.resolve.outputs.slug }}
+      kind: ${{ steps.resolve.outputs.kind }}
+      branch: ${{ steps.resolve.outputs.branch }}
+      pr: ${{ steps.resolve.outputs.pr }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      ci_run_id: ${{ steps.resolve.outputs.ci_run_id }}
+
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+
+      - name: resolve operation
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          INPUT_OP: ${{ inputs.op }}
+          INPUT_PR: ${{ inputs.pr_number }}
+          INPUT_SLUG: ${{ inputs.slug }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          out() { echo "$1=$2" >> "$GITHUB_OUTPUT"; }
+          skip() { echo "Skipping: $1"; out skip true; exit 0; }
+          set_status() {
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$1" \
+              -f state="$2" -f context="$STATUS_CONTEXT" \
+              -f description="$(printf '%s' "$3" | cut -c1-140)" \
+              -f target_url="$RUN_URL" > /dev/null
+          }
+
+          op="" kind="branch" branch="" pr="" sha="" slug="" ci_run_id=""
+
+          case "$EVENT_NAME" in
+            workflow_run)
+              [ "$RUN_CONCLUSION" = "success" ] || skip "CI concluded '$RUN_CONCLUSION'"
+              [ "$RUN_HEAD_REPO" = "$GITHUB_REPOSITORY" ] \
+                || skip "fork pull request; a maintainer must dispatch op=publish"
+              op="publish" sha="$RUN_HEAD_SHA" ci_run_id="$RUN_ID"
+              if [ "$RUN_EVENT" = "push" ] && [ "$RUN_HEAD_BRANCH" = "main" ]; then
+                kind="main" branch="main" slug="main"
+              elif [ "$RUN_EVENT" = "pull_request" ]; then
+                [ -n "$RUN_PR" ] || skip "no pull request is associated with the CI run"
+                branch="$RUN_HEAD_BRANCH" pr="$RUN_PR"
+              else
+                skip "CI event '$RUN_EVENT' on '$RUN_HEAD_BRANCH' is not published"
+              fi
+              ;;
+            pull_request_target)
+              [ "$PR_HEAD_REPO" = "$GITHUB_REPOSITORY" ] || skip "fork pull request"
+              op="delete" branch="$PR_HEAD_REF" pr="$PR_NUMBER"
+              ;;
+            schedule)
+              op="prune"
+              ;;
+            workflow_dispatch)
+              op="$INPUT_OP"
+              case "$op" in
+                prune) ;;
+                delete)
+                  slug="$INPUT_SLUG" sha="$INPUT_SHA" pr="$INPUT_PR"
+                  [ -n "$slug" ] || { echo "::error::slug is required for op=delete"; exit 1; }
+                  ;;
+                publish)
+                  # Rerun (FR-019): republish the PR head from its latest successful CI run.
+                  [ -n "$INPUT_PR" ] || { echo "::error::pr_number is required for op=publish"; exit 1; }
+                  pr="$INPUT_PR"
+                  pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr")"
+                  [ "$(jq -r .state <<< "$pr_json")" = "open" ] \
+                    || { echo "::error::Pull request #$pr is not open"; exit 1; }
+                  sha="$(jq -r .head.sha <<< "$pr_json")"
+                  branch="$(jq -r .head.ref <<< "$pr_json")"
+                  ci_run_id="$(gh api \
+                    "repos/$GITHUB_REPOSITORY/actions/workflows/always.yml/runs?head_sha=$sha&status=success&per_page=1" \
+                    --jq '.workflow_runs[0].id // empty')"
+                  artifact_id=""
+                  if [ -n "$ci_run_id" ]; then
+                    artifact_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ci_run_id/artifacts" \
+                      --jq '[.artifacts[] | select(.name == "site" and (.expired | not))][0].id // empty')"
+                  fi
+                  if [ -z "$artifact_id" ]; then
+                    set_status "$sha" error "Inconclusive: no CI artifact; re-run CI"
+                    echo "::error::No unexpired 'site' artifact for $sha; re-run CI first"
+                    exit 1
+                  fi
+                  ;;
+                *)
+                  echo "::error::Unknown op '$op'"; exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              skip "event '$EVENT_NAME' is not handled"
+              ;;
+          esac
+
+          if [ "$op" != "prune" ] && [ -z "$slug" ]; then
+            if ! slug="$(node scripts/branch-slug.mjs "$branch" 2> slug-error.txt)"; then
+              message="$(cat slug-error.txt)"
+              if [ "$op" = "publish" ]; then
+                set_status "$sha" error "$message; rename the branch"
+              fi
+              skip "$message"
+            fi
+          fi
+
+          if [ "$op" = "publish" ] && [ "$kind" = "branch" ]; then
+            pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr")"
+            [ "$(jq -r .state <<< "$pr_json")" = "open" ] || skip "pull request #$pr is closed"
+            [ "$(jq -r .head.sha <<< "$pr_json")" = "$sha" ] \
+              || skip "pull request #$pr head moved past $sha; a newer run will publish it"
+            set_status "$sha" pending "Publishing subsite…"
+          fi
+
+          out skip false
+          out op "$op"
+          out slug "$slug"
+          out kind "$kind"
+          out branch "$branch"
+          out pr "$pr"
+          out sha "$sha"
+          out ci_run_id "$ci_run_id"
+          echo "op=$op kind=$kind slug=$slug branch=$branch pr=$pr sha=$sha ci_run_id=$ci_run_id"
+
+  publish:
+    name: Publish
+    needs: prepare
+    if: ${{ needs.prepare.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+
+    # Serializes read-modify-write of the gh-pages storage branch and the Pages
+    # deployment. `queue: max` keeps every pending publish instead of only the newest.
+    concurrency:
+      group: pages-publish
+      cancel-in-progress: false
+      queue: max
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
+      pull-requests: read
+      statuses: write
+
+    outputs:
+      changed: ${{ steps.tree.outputs.changed }}
+      stale: ${{ steps.tree.outputs.stale }}
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OP: ${{ needs.prepare.outputs.op }}
+      SLUG: ${{ needs.prepare.outputs.slug }}
+      KIND: ${{ needs.prepare.outputs.kind }}
+      BRANCH: ${{ needs.prepare.outputs.branch }}
+      PR: ${{ needs.prepare.outputs.pr }}
+      SHA: ${{ needs.prepare.outputs.sha }}
+      CI_RUN_ID: ${{ needs.prepare.outputs.ci_run_id }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      TREE: ${{ runner.temp }}/tree
+      SITE: ${{ runner.temp }}/site
+
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+
+      - name: site.zip
+        if: ${{ needs.prepare.outputs.op == 'publish' }}
+        uses: percebus/github-actions-common/.github/actions/artifact-download@main
+        with:
+          name: site
+          path: ${{ runner.temp }}/site
+          run-id: ${{ needs.prepare.outputs.ci_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: update R&D site tree
+        id: tree
+        run: |
+          set -euo pipefail
+          set_status() {
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+              -f state="$1" -f context="$STATUS_CONTEXT" \
+              -f description="$(printf '%s' "$2" | cut -c1-140)" \
+              -f target_url="$RUN_URL" > /dev/null
+          }
+          tree_hash() {
+            (cd "$TREE" && find . -path ./.git -prune -o -type f -print0 | sort -z \
+              | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          }
+
+          # The queue may have held this job; re-check that the PR still points at SHA.
+          if [ "$OP" = "publish" ] && [ "$KIND" = "branch" ]; then
+            pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")"
+            if [ "$(jq -r .state <<< "$pr_json")" != "open" ] \
+              || [ "$(jq -r .head.sha <<< "$pr_json")" != "$SHA" ]; then
+              echo "Pull request #$PR moved on while queued; skipping $SHA"
+              echo "stale=true" >> "$GITHUB_OUTPUT"
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          mkdir -p "$TREE"
+          if git ls-remote --exit-code --heads origin gh-pages > /dev/null; then
+            git fetch --depth 1 origin gh-pages
+            git archive FETCH_HEAD | tar -x -C "$TREE"
+          fi
+          node scripts/pages-tree.mjs init --root "$TREE"
+          before="$(tree_hash)"
+
+          set +e
+          case "$OP" in
+            publish)
+              node scripts/pages-tree.mjs upsert --root "$TREE" \
+                --slug "$SLUG" --kind "$KIND" --branch "$BRANCH" --pr "$PR" --sha "$SHA" \
+                --ci-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID" \
+                --source "$SITE" 2> tree-error.txt
+              ;;
+            delete)
+              node scripts/pages-tree.mjs remove --root "$TREE" --slug "$SLUG" \
+                ${SHA:+--sha "$SHA"} 2> tree-error.txt
+              ;;
+            prune)
+              true
+              ;;
+          esac
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            message="$(cat tree-error.txt)"
+            echo "::error::$message"
+            if [ "$OP" = "publish" ] && [ "$KIND" = "branch" ] && { [ "$code" -eq 3 ] || [ "$code" -eq 4 ]; }; then
+              set_status error "$message"
+            fi
+            exit 1
+          fi
+
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 200 \
+            --json headRefName --jq '[.[].headRefName]' > "$RUNNER_TEMP/open-branches.json"
+          node scripts/pages-tree.mjs prune --root "$TREE" \
+            --open-branches "$RUNNER_TEMP/open-branches.json"
+
+          if [ "$(tree_hash)" = "$before" ]; then
+            echo "R&D site unchanged; nothing to deploy"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cd "$TREE"
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "R&D site: $OP ${SLUG:-prune} ${SHA:0:7}"
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c http.extraheader="AUTHORIZATION: basic $auth" \
+            push -q --force "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" HEAD:gh-pages
+          rm -rf .git
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # SRC: https://github.com/actions/configure-pages/
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        if: ${{ steps.tree.outputs.changed == 'true' }}
+        name: Configure GitHub.IO Pages
+
+      # SRC: https://github.com/actions/upload-pages-artifact/
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: ${{ steps.tree.outputs.changed == 'true' }}
+        name: Upload artifact
+        with:
+          path: ${{ runner.temp }}/tree
+
+      # SRC: https://github.com/actions/deploy-pages/
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        if: ${{ steps.tree.outputs.changed == 'true' }}
+        id: deployment
+        name: https://percebus.GitHub.IO/hello-spec-kit
+
+  announce:
+    name: Announce
+    needs: [prepare, publish]
+    if: ${{ always() && needs.prepare.outputs.skip == 'false' && needs.publish.outputs.stale != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+      checks: write
+      pull-requests: write
+      statuses: write
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OP: ${{ needs.prepare.outputs.op }}
+      SLUG: ${{ needs.prepare.outputs.slug }}
+      KIND: ${{ needs.prepare.outputs.kind }}
+      BRANCH: ${{ needs.prepare.outputs.branch }}
+      PR: ${{ needs.prepare.outputs.pr }}
+      SHA: ${{ needs.prepare.outputs.sha }}
+      PUBLISH_RESULT: ${{ needs.publish.result }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: announce on pull request
+        id: announce
+        run: |
+          set -euo pipefail
+          set_status() {
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+              -f state="$1" -f context="$STATUS_CONTEXT" \
+              -f description="$(printf '%s' "$2" | cut -c1-140)" \
+              -f target_url="$RUN_URL" > /dev/null
+          }
+          current_state() {
+            gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
+              --jq "[.[] | select(.context == \"$STATUS_CONTEXT\")][0].state // empty"
+          }
+          upsert_comment() {
+            local marker="<!-- rnd-subsite -->" id
+            id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+              --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)"
+            if [ -n "$id" ]; then
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" \
+                -f body="$marker"$'\n'"$1" > /dev/null
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+                -f body="$marker"$'\n'"$1" > /dev/null
+            fi
+          }
+          wait_for_manifest() {
+            local url="$SITE_URL/$SLUG/preview.json"
+            for _ in $(seq 1 30); do
+              if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "$SHA" ]; then
+                return 0
+              fi
+              sleep 10
+            done
+            return 1
+          }
+
+          if [ "$PUBLISH_RESULT" != "success" ]; then
+            if [ "$OP" = "publish" ] && [ "$KIND" = "branch" ] && [ "$(current_state)" = "pending" ]; then
+              set_status error "Inconclusive: publishing the subsite failed"
+            fi
+            echo "::error::Publish job concluded '$PUBLISH_RESULT'"
+            exit 1
+          fi
+
+          case "$OP/$KIND" in
+            publish/branch)
+              if ! wait_for_manifest; then
+                set_status error "Inconclusive: subsite did not become available"
+                exit 1
+              fi
+              upsert_comment "$(printf '**R&D subsite**: %s/%s/\n\nBranch `%s` @ `%s` · [publish run](%s)\n\nVerification is running; it will report here.' \
+                "$SITE_URL" "$SLUG" "$BRANCH" "${SHA:0:7}" "$RUN_URL")"
+              set_status pending "Verifying…"
+              gh workflow run preview-verify.lock.yml --repo "$GITHUB_REPOSITORY" --ref main \
+                -f pr_number="$PR" -f sha="$SHA" -f slug="$SLUG"
+              ;;
+            publish/main)
+              if ! wait_for_manifest; then
+                echo "::error::$SITE_URL/main/ did not show $SHA within 5 minutes"
+                exit 1
+              fi
+              echo "e2e=true" >> "$GITHUB_OUTPUT"
+              ;;
+            delete/*)
+              if [ -n "$PR" ]; then
+                upsert_comment "$(printf '**R&D subsite**: `%s` was deleted · [run](%s)\n\nRerun with `gh workflow run pages-publish.yml -f op=publish -f pr_number=%s`.' \
+                  "$SLUG" "$RUN_URL" "$PR")"
+              fi
+              ;;
+          esac
+
+      # End-to-end tests against main's subsite (moved from always.yml › e2e-tests).
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+        if: ${{ steps.announce.outputs.e2e == 'true' }}
+
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+        if: ${{ steps.announce.outputs.e2e == 'true' }}
+
+      - name: npm install
+        if: ${{ steps.announce.outputs.e2e == 'true' }}
+        run: npm install
+
+      - name: npm test
+        if: ${{ steps.announce.outputs.e2e == 'true' }}
+        run: npm test
+        env:
+          ENV: production
+
+      - uses: percebus/github-actions-testing/.github/actions/junit@main
+        if: ${{ steps.announce.outputs.e2e == 'true' && !cancelled() }}
+        with:
+          files_pattern: test-results/junit.xml
+          list-tests: all

@@ -130,25 +130,25 @@ a collision is rejected.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Create `app/components/preview-banner.tsx`, exporting `PreviewBanner()`.
+- [X] T010 [P] [US1] Create `app/components/preview-banner.tsx`, exporting `PreviewBanner()`.
   - Read `process.env.NEXT_PUBLIC_PREVIEW_PR`, `NEXT_PUBLIC_PREVIEW_REF`, and `NEXT_PUBLIC_PREVIEW_SHA`.
   - Return `null` unless all three are set.
   - Otherwise render `<aside className="preview-banner" aria-label="Preview build">` containing `Preview build — not production · PR #{pr} · {ref} @ {sha.slice(0, 7)}`.
   - Render the ref as React text only, never as HTML.
-- [ ] T011 [P] [US1] Add `.preview-banner` styles to `app/globals.css` after the `:root` block.
+- [X] T011 [P] [US1] Add `.preview-banner` styles to `app/globals.css` after the `:root` block.
   - Make it full width and part of the normal flow, with no fixed or sticky positioning.
   - Use `padding: 0.5rem 1rem`, `background: var(--ink)`, `color: var(--surface)`, and `font-size: 0.875rem`.
   - Use `overflow-wrap: anywhere` so long branch names wrap at 320 px.
   - Contrast must meet WCAG 2.2 AA.
-- [ ] T012 [US1] Update `app/layout.tsx`.
+- [X] T012 [US1] Update `app/layout.tsx`.
   - Render `<PreviewBanner />` immediately before `<SiteHeader />`.
   - When `process.env.NEXT_PUBLIC_PREVIEW_PR` is set, add `robots: { index: false, follow: false }` to `metadata`.
   - With the preview variables unset, the output must be byte-identical to today's in content.
   - Depends on T010.
-- [ ] T013 [P] [US1] Create `tests/preview/banner.spec.ts`, which runs in the `preview-scan` project.
+- [X] T013 [P] [US1] Create `tests/preview/banner.spec.ts`, which runs in the `preview-scan` project.
   - When `PREVIEW_PR`, `PREVIEW_REF`, and `PREVIEW_SHA` are set, open `./` and expect `getByRole("complementary", { name: "Preview build" })` to contain `PR #${PREVIEW_PR}`, `PREVIEW_REF`, and the first 7 characters of `PREVIEW_SHA`.
   - Otherwise skip.
-- [ ] T014 [US1] Update the `verify` job in `.github/workflows/always.yml`.
+- [X] T014 [US1] Update the `verify` job in `.github/workflows/always.yml`.
   - Add `statuses: write` to its permissions.
   - After "npm test", add a step that computes the slug:
     - For `pull_request` events, run `node scripts/branch-slug.mjs "$HEAD_REF"` with `HEAD_REF: ${{ github.head_ref }}` passed through `env:`.
@@ -158,8 +158,8 @@ a collision is rejected.
     - `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`;
     - for PRs only, `NEXT_PUBLIC_PREVIEW_PR` (PR number), `NEXT_PUBLIC_PREVIEW_REF` (head ref), and `NEXT_PUBLIC_PREVIEW_SHA` (head SHA).
   - Replace the existing `out` artifact upload with one named `site` from `./out`, using the same `percebus/github-actions-common/.github/actions/artifact-upload@main` action.
-- [ ] T015 [US1] In `.github/workflows/always.yml`, delete the `deploy-pages` and `e2e-tests` jobs, whose responsibilities move to `pages-publish.yml`. This change must merge in the same PR as T016–T020; otherwise `main` stops being published.
-- [ ] T016 [US1] Create the `.github/workflows/pages-publish.yml` skeleton.
+- [X] T015 [US1] In `.github/workflows/always.yml`, delete the `deploy-pages` and `e2e-tests` jobs, whose responsibilities move to `pages-publish.yml`. This change must merge in the same PR as T016–T020; otherwise `main` stops being published.
+- [X] T016 [US1] Create the `.github/workflows/pages-publish.yml` skeleton.
   - Set `name: "Pages publish"`.
   - Add these triggers:
     - `workflow_run: { workflows: ["[C]ontinuous [I]ntegration"], types: [completed] }`;
@@ -169,7 +169,7 @@ a collision is rejected.
   - Set top-level `permissions: { contents: read }`.
   - Set `concurrency: { group: pages-publish, cancel-in-progress: false, queue: max }`.
   - Every `actions/checkout` must use the default ref, `main`. NEVER check out PR code.
-- [ ] T017 [US1] Add a `prepare` job to `.github/workflows/pages-publish.yml` with permissions `actions: read`, `pull-requests: read`, and `statuses: write`.
+- [X] T017 [US1] Add a `prepare` job to `.github/workflows/pages-publish.yml` with permissions `actions: read`, `pull-requests: read`, and `statuses: write`.
   - **Outputs:** `skip`, `op`, `slug`, `kind`, `branch`, `pr`, `sha`, and `ci_run_id`.
   - **`workflow_run`:** Skip unless `conclusion == "success"` and `workflow_run.head_repository.full_name == github.repository`.
     - If the event is `push` and `head_branch == "main"`, publish with kind `main`, slug `main`, and `pr` set to null.
@@ -181,7 +181,7 @@ a collision is rejected.
   - **`schedule` or `op=prune`:** Run `prune`.
   - **Staleness** (data-model "Publish Request"): For a branch publish, call `gh api repos/$GITHUB_REPOSITORY/pulls/$PR`. If `state != "open"` or `head.sha != sha`, set `skip=true` and log the reason.
   - **Status:** For a branch publish that is not skipped, set `pending` with "Publishing subsite…".
-- [ ] T018 [US1] Add an `update-tree` job to `.github/workflows/pages-publish.yml`, with `needs: prepare`, `if: needs.prepare.outputs.skip != 'true'`, and permissions `contents: write`, `actions: read`, and `statuses: write`.
+- [X] T018 [US1] Add an `update-tree` job to `.github/workflows/pages-publish.yml`, with `needs: prepare`, `if: needs.prepare.outputs.skip != 'true'`, and permissions `contents: write`, `actions: read`, and `statuses: write`.
   1. Check out `main` into `src/`.
   2. Fetch `gh-pages` into `tree/`. If the branch does not exist yet, use an empty `tree/`.
   3. Run `node src/scripts/pages-tree.mjs init --root tree`.
@@ -191,8 +191,8 @@ a collision is rejected.
   7. On exit code 3 or 4 for a branch publish, set the status to `error` with the script's message and fail the job.
   8. In `tree/`, run `git checkout --orphan next`, `git add -A`, and commit as `github-actions[bot]` with the message `R&D site: <op> <slug> <short-sha>`. Then run `git push --force origin next:gh-pages`.
   9. Upload `tree/` with `actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9`, which is the same pin as before.
-- [ ] T019 [US1] Add a `deploy` job to `.github/workflows/pages-publish.yml` with `needs: update-tree`, `environment: { name: github-pages, url: ${{ steps.deployment.outputs.page_url }} }`, and permissions `pages: write`, `id-token: write`. Run `actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d` and then `actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346` with `id: deployment`. Use the same pins as the removed job.
-- [ ] T020 [US1] Add an `announce` job to `.github/workflows/pages-publish.yml` with `needs: [prepare, deploy]` and permissions `pull-requests: write`, `statuses: write`, `actions: write`, and `checks: write`.
+- [X] T019 [US1] Add a `deploy` job to `.github/workflows/pages-publish.yml` with `needs: update-tree`, `environment: { name: github-pages, url: ${{ steps.deployment.outputs.page_url }} }`, and permissions `pages: write`, `id-token: write`. Run `actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d` and then `actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346` with `id: deployment`. Use the same pins as the removed job.
+- [X] T020 [US1] Add an `announce` job to `.github/workflows/pages-publish.yml` with `needs: [prepare, deploy]` and permissions `pull-requests: write`, `statuses: write`, `actions: write`, and `checks: write`.
   - **Branch publish:**
     1. Poll `https://percebus.github.io/hello-spec-kit/<slug>/preview.json?t=<epoch>` every 10 s for up to 5 minutes until `.sha == sha`. On timeout, set `error` with "Inconclusive: subsite did not become available" and fail.
     2. Create or update one PR comment identified by `<!-- rnd-subsite -->`. It shows the address, branch, short SHA, and run link (FR-005).
@@ -202,7 +202,7 @@ a collision is rejected.
     1. Poll `main/preview.json`.
     2. Check out `main`, then run `percebus/github-actions-node/.github/actions/setup@main`, `npm install`, and `npm test` with `ENV: production`.
     3. Publish JUnit results with `percebus/github-actions-testing/.github/actions/junit@main`, as the removed `e2e-tests` job did.
-- [ ] T021 [US1] Run `npm run format` and confirm that `npm run build` still produces `out/` with no "Preview build" text, using `grep -r "Preview build" out` (expect no match). Build again with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/feat-x` and the three preview variables, then run `PREVIEW_SCAN=1 PREVIEW_PR=… PREVIEW_REF=… PREVIEW_SHA=… npx playwright test --project=preview-scan tests/preview/banner.spec.ts` against `npm run start:test`.
+- [X] T021 [US1] Run `npm run format` and confirm that `npm run build` still produces `out/` with no "Preview build" text, using `grep -r "Preview build" out` (expect no match). Build again with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/feat-x` and the three preview variables, then run `PREVIEW_SCAN=1 PREVIEW_PR=… PREVIEW_REF=… PREVIEW_SHA=… npx playwright test --project=preview-scan tests/preview/banner.spec.ts` against `npm run start:test`.
 
 **Checkpoint**: After merge, quickstart.md section 2 passes. `pages-publish`
 only runs from the default branch, so validate with a follow-up throwaway PR.

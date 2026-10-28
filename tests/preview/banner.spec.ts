@@ -5,7 +5,10 @@ const ref = process.env.PREVIEW_REF;
 const sha = process.env.PREVIEW_SHA;
 
 test("preview banner identifies the pull request build", async ({ page }) => {
-  test.skip(!pr || !ref || !sha, "PREVIEW_PR, PREVIEW_REF and PREVIEW_SHA are required");
+  test.skip(
+    !pr || !ref || !sha,
+    "PREVIEW_PR, PREVIEW_REF and PREVIEW_SHA are required",
+  );
 
   await page.goto("./");
 
