@@ -3,6 +3,8 @@ import Link from "next/link";
 import { EpisodePlayer } from "./components/episode-player";
 import { featuredEpisode } from "./lib/episodes";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export default function Home() {
   return (
     <main className="page-shell">
@@ -27,7 +29,7 @@ export default function Home() {
         <article className="featured-card">
           <Image
             className="featured-artwork"
-            src="/designing-for-trust.svg"
+            src={`${basePath}/designing-for-trust.svg`}
             width={800}
             height={800}
             alt="Interlocking shapes representing balance and trust."

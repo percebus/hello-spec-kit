@@ -79,10 +79,13 @@ Then(
         ).toBeVisible();
         break;
       case "artwork":
-        await expect(featuredEpisode.getByRole("img")).toHaveAttribute(
-          "alt",
-          /trust/i,
-        );
+        const artwork = featuredEpisode.getByRole("img");
+        await expect(artwork).toHaveAttribute("alt", /trust/i);
+        await expect
+          .poll(() =>
+            artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),
+          )
+          .toBeGreaterThan(0);
         break;
       case "publication date":
         await expect(featuredEpisode).toContainText("September 28, 2026");
