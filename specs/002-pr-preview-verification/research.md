@@ -75,31 +75,47 @@ pull_request closed ──┘ (delete the branch's subsite)
 | `pull_request` closed (same repo)       | `delete` the branch's subsite, using `main`'s scripts      |
 
 Every deployment also prunes subsites whose pull request is no longer open.
-There is no scheduled cleanup. `deploy-pages` keeps the existing
-`concurrency.group: pages` with `cancel-in-progress: false` and adds
-`queue: max`. The workflow-level group, which cancels older runs for the same
-ref, still drops superseded pushes before they deploy.
+There is no scheduled cleanup.
+
+**Concurrency**: The whole CI workflow uses `group: ${{ github.workflow }}`,
+`cancel-in-progress: false`, and `queue: max`. Only one CI run executes at a
+time across the repository, and every waiting run is kept in order.
+
+**Environments**: Only `verify` selects an environment:
+`main` for `refs/heads/main`, otherwise `branch`. It reads `vars.SUBSITE_KIND`
+(`main`|`branch`) and `vars.PREVIEW_VERIFY` (`false`|`true`) and passes them as
+job outputs, so later jobs need no event checks. `deploy-pages` keeps the
+`github-pages` environment. Two checks remain because they depend on per-run
+data, not on the environment: the pull request `closed` path and same-repo
+(fork) detection.
 
 **Rationale**:
 
 - **Simplicity.** One workflow, the same job names as before (`deploy-pages`
   and `e2e-tests`), and reruns through GitHub's "Re-run jobs".
 - **No lost updates.** `deploy-pages` replaces the whole site, so each run does
-  a read-modify-write of the `gh-pages` tree. With `queue: max`, every pending
-  deployment waits its turn. The default, `queue: single`, would drop all but
-  the newest.
-- **Parallel testing.** Only `deploy-pages` is serialized; `e2e-tests` and
-  `preview-verify` run in parallel across pull requests (FR-001).
+  a read-modify-write of the `gh-pages` tree. With one run at a time, writes
+  cannot race. `queue: max` is required because the default, `queue: single`,
+  would cancel every waiting run except the newest and drop other branches'
+  runs.
+- **Configuration over conditions.** Behavior differences between `main` and
+  branches live in environment variables the owner controls.
 - **Dispatch works.** `GITHUB_TOKEN` can trigger `workflow_dispatch` runs
   (GitHub Docs, "GITHUB_TOKEN").
 
-**Required setting**: Settings → Environments → `github-pages` → deployment
-branches must allow pull request branches. The default often allows only
-`main`.
+**Accepted trade-offs**:
 
-**Accepted trade-off**: A `pull_request` run uses the branch's own copy of the
-workflow, so a same-repo pull request could change how it publishes. Same-repo
-authors already have write access, and fork pull requests are never deployed.
+- CI no longer runs pull requests in parallel or cancels superseded pushes.
+  Each push runs in full, in order. The agentic `preview-verify` keeps its own
+  per-PR group and still runs in parallel.
+- A `pull_request` run uses the branch's own copy of the workflow, so a
+  same-repo pull request could change how it publishes. Same-repo authors
+  already have write access, and fork pull requests are never deployed.
+
+**Required settings**: Environments `main` (deployment branches: `main`;
+vars `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`), `branch` (no restriction;
+vars `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true`), and `github-pages`
+(deployment branches: no restriction).
 
 **Alternatives considered**:
 
@@ -107,8 +123,11 @@ authors already have write access, and fork pull requests are never deployed.
   `pull_request_target` (previous design)_: it always ran `main`'s copy of the
   publishing logic and needed no environment change. It was rejected by the
   owner in favor of keeping `deploy-pages` and `e2e-tests` in CI.
-- _One concurrency group per branch_: rejected because concurrent writes to
-  `gh-pages` would race.
+- _Per-ref concurrency with a job-level `pages` queue (previous design)_: it
+  allowed parallel CI across pull requests. It was replaced by the owner's
+  simpler one-at-a-time rule.
+- _Event checks (`github.event_name`) in every job_: replaced by environment
+  variables at the owner's request.
 
 ## R3. Merge gate signal (FR-016, FR-018)
 
@@ -334,19 +353,19 @@ has two implications:
 - `deploy-pages` writes `<slug>/preview.json`
   ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json)).
   `e2e-tests` polls it until it reports the expected SHA.
-- For pull requests, `e2e-tests` writes a temporary `.env.subsite` with
+- `e2e-tests` always writes a temporary `.env.subsite` (git-ignored) with
   `BASE_URL=https://percebus.github.io` and
   `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`, then runs `npm test` with
-  `ENV=subsite`. This reuses the existing dotenv mechanism. For `main`, it
-  runs with `ENV=production` as before.
+  `ENV=subsite`. For `main`, the slug is `main`, which is equivalent to
+  `.env.production`. One path covers both, with no environment switch.
 - `.env.production` and `.env.development` both change to
   `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. Each file is read by two
   consumers, and keeping both files on the same value keeps them consistent:
   - `next build` loads `.env.production`. CI's local test build and `main`'s
-    publish build therefore both use `/main`.
-  - Playwright loads `.env.${ENV}`. Local tests use `.env.development`, and the
-    post-publish `main` tests use `ENV=production` as before. Locally, the site
-    is served at `http://127.0.0.1:3000/hello-spec-kit/main/`.
+    build therefore both use `/main`.
+  - Playwright loads `.env.${ENV}`. Local tests use `.env.development`, and
+    `ENV=production` still targets the live `main` site manually. Locally, the
+    site is served at `http://127.0.0.1:3000/hello-spec-kit/main/`.
 - When `PREVIEW_SCAN=1`, `playwright.config.ts` skips loading dotenv and the
   gallery web server. The scanner then takes `BASE_URL` and
   `NEXT_PUBLIC_BASE_PATH` from the process environment, which is set per
@@ -412,8 +431,8 @@ FR-019 without a custom workflow.
 **Decision**:
 
 - On pushes to `main`, `deploy-pages` publishes `main/`. `e2e-tests` then runs
-  against `https://percebus.github.io/hello-spec-kit/main/` with
-  `ENV=production`, as before.
+  against `https://percebus.github.io/hello-spec-kit/main/` with the same
+  `.env.subsite` mechanism as branches.
 - The root `index.html` uses a meta refresh with a visible link to `./main/`,
   so the old URL keeps working.
 - The move to a release repository is tracked in #100. When that happens, the

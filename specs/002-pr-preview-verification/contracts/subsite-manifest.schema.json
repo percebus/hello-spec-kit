@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/percebus/hello-spec-kit/specs/002-pr-preview-verification/contracts/subsite-manifest.schema.json",
   "title": "Subsite manifest",
-  "description": "Published at https://percebus.github.io/hello-spec-kit/<slug>/preview.json by pages-publish. Polled until sha matches, which proves the subsite is available. Also used for conditional deletes. Contains only public identifiers.",
+  "description": "Published at https://percebus.github.io/hello-spec-kit/<slug>/preview.json by the CI deploy-pages job. Polled by e2e-tests until sha matches, which proves the subsite is available. Contains only public identifiers.",
   "type": "object",
   "required": ["slug", "kind", "branch", "pr", "sha", "ciRunUrl", "publishedAt"],
   "additionalProperties": false,

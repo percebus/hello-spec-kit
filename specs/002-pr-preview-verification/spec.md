@@ -45,9 +45,10 @@ being loaded, frames out of bounds, etc)
   Its published site hosts one subsite per pull request branch. During the
   interim, `main` is also a subsite of the R&D site. Moving production to a
   dedicated release repository is a follow-up (#100).
-- Q: Can several pull requests be verified at once? → A: Yes. Subsites coexist
-  and are verified in parallel. Only publishing to the shared site is
-  serialized.
+- Q: Can several pull requests be verified at once? → A: ~~Yes; subsites
+  coexist and are verified in parallel.~~ Revised: subsites coexist, but CI
+  runs one at a time across the repository, queued and never dropped. The
+  agentic reviews it dispatches can still run in parallel.
 - Q: What does a subsite represent? → A: A branch. Each push replaces that
   branch's subsite.
 - Q: When are subsites deleted? → A: ~~A subsite that does not pass
@@ -66,6 +67,10 @@ being loaded, frames out of bounds, etc)
 - Q: Is a maintainer override of the merge gate needed? → A: Not at this time.
   A failed or inconclusive verification is resolved by fixing and pushing, or
   by re-running the CI workflow.
+- Q: How does CI distinguish `main` from branch runs? → A: Through GitHub
+  environments `main` and `branch`, whose variables (`SUBSITE_KIND`,
+  `PREVIEW_VERIFY`) drive the jobs instead of event checks. CI concurrency is
+  a single workflow-wide group that is never cancelled.
 
 ## Requirements _(mandatory)_
 
@@ -121,8 +126,8 @@ being loaded, frames out of bounds, etc)
 
 - **FR-001**: For every branch with an open pull request targeting `main`, the
   system MUST publish the branch's latest commit as a subsite of the R&D site.
-  Subsites for different branches MUST be able to coexist and be verified in
-  parallel.
+  Subsites for different branches MUST be able to coexist. CI runs for
+  different branches MAY be queued one at a time, but none MUST be dropped.
 - **FR-002**: Each subsite MUST be reachable at a stable, branch-specific
   address that is distinct from `main`'s address. It MUST never be presented
   as `main` or production, and MUST visibly identify the branch and commit it
@@ -195,8 +200,8 @@ being loaded, frames out of bounds, etc)
 - **SC-001**: 100% of pull requests merged into `main` after adoption have a
   passing verification run for their final commit.
 - **SC-002**: A reviewer can open the subsite of an incoming change within
-  10 minutes of the latest push, in at least 95% of runs, including when
-  several pull requests are active.
+  10 minutes of the latest push, in at least 95% of runs when no other CI run
+  is queued.
 - **SC-003**: A change that removes or breaks an expected image on any primary
   page is blocked from merging in 100% of seeded test cases.
 - **SC-004**: A change that causes content to overflow its frame at 320 px or
@@ -212,12 +217,12 @@ being loaded, frames out of bounds, etc)
 
 ## Edge Cases
 
-- Two pushes to the same branch arrive in quick succession: the older CI run
-  is cancelled, the subsite ends up showing the latest commit, and only the
-  latest commit's result counts.
-- Several pull requests deploy at once: every subsite and `main` survive. Each
-  deployment waits for the previous one, but tests and verifications run in
-  parallel.
+- Two pushes to the same branch arrive in quick succession: both CI runs
+  complete in order, the subsite ends up showing the latest commit, and only
+  the latest commit's result counts toward merging.
+- Several pull requests push at once: their CI runs queue and run one at a
+  time, none are dropped, and every subsite and `main` survive. The agentic
+  reviews they dispatch can run in parallel.
 - Two branch names would map to the same address after flattening (for
   example `feat/a-b/c` and `feat/a/b-c`, or `feat/x` and `feat-x`): the second
   one is rejected with an explanation on its pull request instead of
@@ -291,10 +296,10 @@ the same.
 
 ##### Acceptance Criteria 3
 
-- **Given** pull request A's subsite is being verified
+- **Given** pull request A's CI run is in progress
 - **When** a commit is pushed to pull request B
-- **Then** B's subsite is published and verified without waiting for A's
-  verification, and A's subsite is unaffected
+- **Then** B's CI run waits in the queue and runs after A's, B's subsite is
+  then published, and A's subsite is unaffected
 
 ##### Acceptance Criteria 4
 

@@ -7,6 +7,7 @@ There is no database. State lives in:
 - the `gh-pages` storage branch, which is the R&D site tree;
 - GitHub commit statuses;
 - workflow runs and their concurrency groups;
+- GitHub environment variables (`main`, `branch`);
 - workflow artifacts.
 
 ## Entities
@@ -41,51 +42,41 @@ This is one folder `<slug>/` holding a complete static export built with
 | `pr`          | integer \| null        | Required for `branch`; `null` for `main`                                                |
 | `sha`         | 40-character hex       | The commit built                                                                        |
 | `ciRunUrl`    | URL                    | CI run that produced the artifact                                                       |
-| `publishedAt` | ISO-8601               | Set by `pages-publish`                                                                  |
+| `publishedAt` | ISO-8601               | Set by `deploy-pages`                                                                   |
 
 **State transitions**:
 
 ```text
-           publish(sha)                      verification success
-(none) ───────────────▶ available(sha) ─────────────────────────────▶ available(sha) [kept]
-                           │   ▲                                               │
-           publish(sha')   │   │                                               │ PR merged/closed
-           (same branch)   ▼   │                                               ▼
-                        available(sha')                                     deleted
-                           │
-                           │ verification fails / inconclusive for sha'
-                           │ AND preview.json.sha == sha'
-                           ▼
-                        deleted ──── rerun (publish) ───▶ available(sha')
+          publish(sha)                       push(sha') on same branch
+(none) ──────────────▶ available(sha) ──────────────────────────────▶ available(sha')
+                            │
+                            │ PR merged/closed (or no longer open at the next prune)
+                            ▼
+                         deleted
 ```
 
-- `delete(slug, sha)` is **conditional**: it deletes only if `preview.json.sha`
-  equals `sha`. This keeps a failed older commit from removing a newer commit's
-  subsite.
-- `delete(slug)` without a SHA is used when a PR is closed and during pruning.
-  It is unconditional.
+A failing verification does not change the subsite. It stays available for
+inspection until the next push or until the pull request closes (FR-006).
 
-### Publish Request
+### CI Run
 
-This is one `pages-publish` run waiting in the `pages-publish` concurrency
-group (`queue: max`, first in, first out).
+This is one run of `always.yml`. Runs share a single workflow-wide concurrency
+group (`group: ${{ github.workflow }}`, `cancel-in-progress: false`,
+`queue: max`), so they execute one at a time, first in, first out, and none
+are dropped.
 
-| Field       | Type                                     | Rules                                                        |
-| ----------- | ---------------------------------------- | ------------------------------------------------------------ |
-| `op`        | `publish` \| `delete` \| `prune`         |                                                              |
-| `slug`      | string                                   | Derived inside the workflow from event data or `pr_number`   |
-| `sha`       | string, optional                         | Required for `publish`; makes `delete` conditional           |
-| `source`    | `workflow_run` \| `pull_request_target` \| `dispatch` \| `schedule` |                               |
-
-**Staleness rule**: Before publishing a branch subsite, the workflow re-reads
-the PR. If the PR is closed, or its head is no longer `sha`, it skips the
-publish. A newer CI run will publish the newer head.
+| Field     | Source                                             | Rules                                                              |
+| --------- | -------------------------------------------------- | ------------------------------------------------------------------ |
+| `kind`    | Environment variable `SUBSITE_KIND` (`main`\|`branch`) | Environment `main` for `refs/heads/main`, otherwise `branch`; any other value fails `verify` |
+| `preview_verify` | Environment variable `PREVIEW_VERIFY` (`true`\|`false`) | Whether `preview-verify` is dispatched after `e2e-tests`          |
+| `slug`    | `main`, or the branch slug (research R8)           | Empty for forks, non-PR branch runs, or reserved names, so nothing is deployed |
+| `op`      | `publish`, or `delete` on `pull_request` `closed`  | `delete` checks out `main`'s scripts                               |
 
 ### Verification Run
 
-This is one `preview-verify` run for a `(pr, sha, slug)`. Its concurrency group
-is `preview-verify-<pr>` with `cancel-in-progress: true`, so a newer commit
-cancels an older run for the same PR. Different PRs run in parallel.
+This is one `preview-verify` run for a `(pr, sha, slug)`, dispatched by CI only
+after `e2e-tests` pass. Its concurrency group is `preview-verify-<pr>` with
+`cancel-in-progress: true`. Different PRs run in parallel.
 
 | Field            | Type                                         | Rules                                                                                     |
 | ---------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -95,18 +86,17 @@ cancels an older run for the same PR. Different PRs run in parallel.
 | `navigationPath` | ordered steps                                | Recorded by the agent                                                                      |
 | `intentChecked`  | text                                         | Summary of the PR and issue criteria checked                                               |
 | `finalState`     | commit-status state                          | See the table below                                                                        |
-| `deleteRequested`| boolean                                      | True when `finalState` is not `success` and `scanResult` is not `superseded`               |
 
 **Final-state derivation** (FR-016 to FR-018):
 
-| `scanResult` | `agentOutcome` | `finalState`            | Subsite      |
-| ------------ | -------------- | ----------------------- | ------------ |
-| `superseded` | any            | `error` "Superseded"    | Not touched. The newer commit owns it. |
-| `blocking`   | any            | `failure`               | Deleted      |
-| `error`      | any            | `error`                 | Deleted      |
-| `clean`      | `complete`     | `success`               | Kept         |
-| `clean`      | `inconclusive` | `error`                 | Deleted      |
-| `clean`      | `missing`      | `error`                 | Deleted      |
+| `scanResult` | `agentOutcome` | `finalState`            |
+| ------------ | -------------- | ----------------------- |
+| `superseded` | any            | `error` "Superseded"    |
+| `blocking`   | any            | `failure`               |
+| `error`      | any            | `error`                 |
+| `clean`      | `complete`     | `success`               |
+| `clean`      | `inconclusive` | `error`                 |
+| `clean`      | `missing`      | `error`                 |
 
 ### Finding
 
@@ -120,25 +110,24 @@ is deleted (FR-012, FR-013).
 There is one PR comment per run, using the format in
 [contracts/verification-report.md](./contracts/verification-report.md).
 
-### Override
-
-An override sets `preview-verification=success` for the current head SHA. The
-actor must have `admin` or `maintain` permission, and a reason is required. The
-override is recorded by a workflow run and a PR comment. It applies only to
-that SHA and does not republish the subsite.
-
 ## Commit status lifecycle (`preview-verification`)
 
 ```text
-(push to same-repo PR) ── CI › verify ──▶ pending "Waiting for subsite"
-        │ CI fails ─────────────────────▶ (stays pending; Verify check fails → merge blocked)
-        ▼ pages-publish
+(push to same-repo PR) ── verify ──▶ pending "Waiting for subsite"
+        │ verify fails ─────────────────────▶ error "Verify failed…"
+        ▼ deploy-pages
   pending "Publishing subsite…" ──collision/size/deploy error──▶ error
-        ▼ dispatch preview-verify
-  pending "Scanning…" ──blocking──▶ failure ─┐
-        │                 └─crash──▶ error ──┤
-        ▼                                    ├─▶ subsite deleted ─(rerun)─▶ pending …
-  pending "Reviewing…" ──inconclusive/missing──▶ error ─┘
-        │                                    (override) ─▶ success "Override by @…"
-        └──complete──▶ success (subsite kept until PR closes)
+        ▼ e2e-tests
+  pending "Running end-to-end tests…" ──fail──▶ failure
+        ▼ preview-verify (dispatch)
+  pending "Verifying…" ▶ "Scanning…" ──blocking──▶ failure
+        │                    └─crash──▶ error
+        ▼
+  pending "Reviewing…" ──inconclusive/missing──▶ error
+        │
+        └──complete──▶ success
 ```
+
+There is no override. Any non-`success` state is resolved by pushing a fix or
+by re-running the CI workflow. The subsite is never deleted by a status; it is
+deleted only when the pull request closes.

@@ -4,6 +4,11 @@ name: "[C]ontinuous [I]ntegration"
 # subsite (https://percebus.github.io/hello-spec-kit/<slug>/), tested, and then
 # verified by the preview-verify agentic workflow. main lives at …/main/.
 # See specs/002-pr-preview-verification.
+#
+# Environments (Settings → Environments):
+#   main   → vars SUBSITE_KIND=main,   PREVIEW_VERIFY=false; deployment branches: main
+#   branch → vars SUBSITE_KIND=branch, PREVIEW_VERIFY=true;  deployment branches: no restriction
+#   github-pages → deployment branches: no restriction
 
 on:
   workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
@@ -13,9 +18,12 @@ on:
     branches:
       - main
 
+# One CI run at a time across the repository. `queue: max` keeps every waiting
+# run; the default would cancel all but the newest, dropping other branches.
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
@@ -23,6 +31,7 @@ permissions:
 env:
   CI: true
   ENV: "development"
+  PAGES_ORIGIN: https://percebus.github.io
   SITE_URL: https://percebus.github.io/hello-spec-kit
   STATUS_CONTEXT: preview-verification
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -32,6 +41,7 @@ jobs:
     name: Verify
     if: ${{ github.event.action != 'closed' }}
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'branch' }}
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
@@ -43,12 +53,15 @@ jobs:
       statuses: write
 
     outputs:
+      kind: ${{ vars.SUBSITE_KIND }}
+      preview_verify: ${{ vars.PREVIEW_VERIFY }}
       slug: ${{ steps.subsite.outputs.slug }}
 
     env:
       GH_TOKEN: ${{ github.token }}
-      SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
-      SHA: ${{ github.event.pull_request.head.sha }}
+      KIND: ${{ vars.SUBSITE_KIND }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -75,26 +88,39 @@ jobs:
 
       - name: subsite slug
         id: subsite
-        if: ${{ env.SAME_REPO_PR == 'true' || (github.event_name == 'push' && github.ref_name == 'main') }}
         env:
-          HEAD_REF: ${{ github.head_ref }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
-          if [ "$SAME_REPO_PR" = "true" ]; then
-            if ! slug="$(node scripts/branch-slug.mjs "$HEAD_REF" 2> slug-error.txt)"; then
-              message="$(cat slug-error.txt)"
-              echo "::warning::No subsite for this branch: $message"
-              gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-                -f state=error -f context="$STATUS_CONTEXT" \
-                -f description="$(printf '%s; rename the branch' "$message" | cut -c1-140)" \
-                -f target_url="$RUN_URL" > /dev/null
-              exit 0
-            fi
+          set_status() {
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state=pending -f context="$STATUS_CONTEXT" \
-              -f description="Waiting for subsite" -f target_url="$RUN_URL" > /dev/null
-          else
-            slug="main"
+              -f state="$1" -f context="$STATUS_CONTEXT" \
+              -f description="$(printf '%s' "$2" | cut -c1-140)" \
+              -f target_url="$RUN_URL" > /dev/null
+          }
+
+          case "$KIND" in
+            main)
+              echo "slug=main" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            branch) ;;
+            *)
+              echo "::error::Environment variable SUBSITE_KIND must be 'main' or 'branch' (got '$KIND'); see the header of always.yml"
+              exit 1
+              ;;
+          esac
+          if [ -z "$PR" ] || [ "$FORK" = "true" ]; then
+            echo "::notice::Subsites are published for same-repo pull requests only"
+            exit 0
           fi
+          if ! slug="$(node scripts/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
+            message="$(cat slug-error.txt)"
+            echo "::warning::No subsite for this branch: $message"
+            set_status error "$message; rename the branch"
+            exit 0
+          fi
+          set_status pending "Waiting for subsite"
           echo "slug=$slug" >> "$GITHUB_OUTPUT"
 
       - name: next build (subsite)
@@ -117,35 +143,28 @@ jobs:
           retention-days: "14"
 
       - name: preview-verification error
-        if: ${{ failure() && env.SAME_REPO_PR == 'true' }}
+        if: ${{ failure() && env.KIND == 'branch' && env.PR != '' }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
             -f state=error -f context="$STATUS_CONTEXT" \
             -f description="Verify failed; no subsite was published" \
             -f target_url="$RUN_URL" > /dev/null
 
-  # Publishes the branch's subsite (or main) into the R&D site, or deletes it
-  # when its pull request closes. deploy-pages replaces the whole site, so the
-  # tree is kept on the gh-pages storage branch and changed one folder at a time.
+  # Publishes the subsite (or main) into the R&D site, or deletes it when its
+  # pull request closes. deploy-pages replaces the whole site, so the tree is
+  # kept on the gh-pages storage branch and changed one folder at a time.
   deploy-pages:
     name: Deploy pages
     needs: verify
     if: >-
       ${{ !cancelled() && (
-        (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository) ||
-        (needs.verify.result == 'success' && needs.verify.outputs.slug != '')
+        needs.verify.outputs.slug != '' ||
+        (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
       ) }}
     runs-on: ubuntu-latest
     environment:
       url: ${{ steps.deployment.outputs.page_url }}
       name: github-pages
-
-    # One deployment at a time; `queue: max` keeps every pending deployment
-    # (the default keeps only the newest) so no branch's change is lost.
-    concurrency:
-      group: "pages"
-      cancel-in-progress: false
-      queue: max
 
     permissions: # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
       contents: write
@@ -154,15 +173,12 @@ jobs:
       pull-requests: write
       statuses: write
 
-    outputs:
-      changed: ${{ steps.tree.outputs.changed }}
-
     env:
       GH_TOKEN: ${{ github.token }}
       OP: ${{ github.event.action == 'closed' && 'delete' || 'publish' }}
-      KIND: ${{ github.event_name == 'pull_request' && 'branch' || 'main' }}
+      KIND: ${{ needs.verify.outputs.kind || 'branch' }}
       SLUG: ${{ needs.verify.outputs.slug }}
-      BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
+      BRANCH: ${{ github.head_ref || github.ref_name }}
       PR: ${{ github.event.pull_request.number }}
       SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -275,7 +291,7 @@ jobs:
         name: https://percebus.GitHub.IO/hello-spec-kit
 
       - name: pull request comment
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ env.KIND == 'branch' && env.PR != '' }}
         env:
           DEPLOYED_SLUG: ${{ steps.tree.outputs.slug }}
         run: |
@@ -311,11 +327,11 @@ jobs:
               -f target_url="$RUN_URL" > /dev/null
           fi
 
-  #
+  # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests
     needs: [verify, deploy-pages]
-    if: ${{ github.event.action != 'closed' && needs.deploy-pages.result == 'success' }}
+    if: ${{ needs.deploy-pages.result == 'success' && needs.verify.outputs.slug != '' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -327,7 +343,7 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      IS_PR: ${{ github.event_name == 'pull_request' }}
+      KIND: ${{ needs.verify.outputs.kind }}
       SLUG: ${{ needs.verify.outputs.slug }}
       SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -353,23 +369,19 @@ jobs:
           exit 1
 
       - name: target subsite
-        id: target
         run: |
           set -euo pipefail
-          if [ "$IS_PR" = "true" ]; then
-            printf 'BASE_URL=https://percebus.github.io\nNEXT_PUBLIC_BASE_PATH=/hello-spec-kit/%s\n' "$SLUG" > .env.subsite
-            echo "env=subsite" >> "$GITHUB_OUTPUT"
+          printf 'BASE_URL=%s\nNEXT_PUBLIC_BASE_PATH=/hello-spec-kit/%s\n' "$PAGES_ORIGIN" "$SLUG" > .env.subsite
+          if [ "$KIND" = "branch" ]; then
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
               -f state=pending -f context="$STATUS_CONTEXT" \
               -f description="Running end-to-end tests…" -f target_url="$RUN_URL" > /dev/null
-          else
-            echo "env=production" >> "$GITHUB_OUTPUT"
           fi
 
       - name: npm test
         run: npm test
         env:
-          ENV: ${{ steps.target.outputs.env }}
+          ENV: subsite
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         if: ${{ !cancelled() }}
@@ -378,7 +390,7 @@ jobs:
           list-tests: all
 
       - name: preview-verification failure
-        if: ${{ failure() && env.IS_PR == 'true' }}
+        if: ${{ failure() && env.KIND == 'branch' }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
             -f state=failure -f context="$STATUS_CONTEXT" \
@@ -389,7 +401,7 @@ jobs:
   preview-verify:
     name: Preview verify
     needs: [verify, e2e-tests]
-    if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && needs.e2e-tests.result == 'success' }}
+    if: ${{ needs.e2e-tests.result == 'success' && needs.verify.outputs.preview_verify == 'true' }}
     runs-on: ubuntu-latest
 
     permissions:
