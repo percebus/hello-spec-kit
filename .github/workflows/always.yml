@@ -13,13 +13,13 @@ name: "[C]ontinuous [I]ntegration"
 on:
   workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
   pull_request:
-    types: [opened, synchronize, reopened, closed]
   push:
     branches:
       - main
 
 # One CI run at a time across the repository. `queue: max` keeps every waiting
 # run; the default would cancel all but the newest, dropping other branches.
+# pull_request_closed.yml joins this same group by name ("[C]ontinuous [I]ntegration").
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -39,7 +39,6 @@ env:
 jobs:
   verify:
     name: Verify
-    if: ${{ github.event.action != 'closed' }}
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'branch' }}
 
@@ -150,21 +149,16 @@ jobs:
             -f description="Verify failed; no subsite was published" \
             -f target_url="$RUN_URL" > /dev/null
 
-  # Publishes the subsite (or main) into the R&D site, or deletes it when its
-  # pull request closes. deploy-pages replaces the whole site, so the tree is
-  # kept on the gh-pages storage branch and changed one folder at a time.
+  # Publishes the subsite (or main) into the R&D site. Deleting subsites of
+  # closed pull requests is handled by pull_request_closed.yml.
   deploy-pages:
     name: Deploy pages
     needs: verify
-    if: >-
-      ${{ !cancelled() && (
-        needs.verify.outputs.slug != '' ||
-        (github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
-      ) }}
+    if: ${{ needs.verify.outputs.slug != '' }}
     runs-on: ubuntu-latest
     environment:
       # Link to the subsite this run published, not the site root.
-      url: ${{ steps.deployment.outputs.page_url }}${{ steps.tree.outputs.slug }}/
+      url: ${{ steps.site.outputs.page_url }}${{ steps.site.outputs.slug }}/
       name: github-pages
 
     permissions: # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -174,150 +168,33 @@ jobs:
       pull-requests: write
       statuses: write
 
-    env:
-      GH_TOKEN: ${{ github.token }}
-      OP: ${{ github.event.action == 'closed' && 'delete' || 'publish' }}
-      KIND: ${{ needs.verify.outputs.kind || 'branch' }}
-      SLUG: ${{ needs.verify.outputs.slug }}
-      BRANCH: ${{ github.head_ref || github.ref_name }}
-      PR: ${{ github.event.pull_request.number }}
-      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-
     steps:
-      # A closed pull request's merge ref may no longer exist; use main's scripts.
       - uses: percebus/github-actions-common/.github/actions/checkout@main
-        with:
-          ref: ${{ github.event.action == 'closed' && github.event.repository.default_branch || '' }}
 
       - name: site.zip
-        if: ${{ env.OP == 'publish' }}
         uses: percebus/github-actions-common/.github/actions/artifact-download@main
         with:
           name: site
           path: ${{ runner.temp }}/site
 
-      - name: update R&D site tree
-        id: tree
-        run: |
-          set -euo pipefail
-          TREE="$RUNNER_TEMP/tree"
-          SITE="$RUNNER_TEMP/site"
-          set_status() {
-            [ "$OP/$KIND" = "publish/branch" ] || return 0
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state="$1" -f context="$STATUS_CONTEXT" \
-              -f description="$(printf '%s' "$2" | cut -c1-140)" \
-              -f target_url="$RUN_URL" > /dev/null
-          }
-          tree_hash() {
-            (cd "$TREE" && find . -path ./.git -prune -o -type f -print0 | sort -z \
-              | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
-          }
-
-          if [ "$OP" = "delete" ]; then
-            if ! SLUG="$(node .github/pages/branch-slug.mjs "$BRANCH")"; then
-              echo "Branch '$BRANCH' never had a subsite"
-              echo "changed=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          fi
-          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
-          set_status pending "Publishing subsite…"
-
-          mkdir -p "$TREE"
-          if git ls-remote --exit-code --heads origin gh-pages > /dev/null; then
-            git fetch --depth 1 origin gh-pages
-            git archive FETCH_HEAD | tar -x -C "$TREE"
-          fi
-          node .github/pages/pages-tree.mjs init --root "$TREE"
-          before="$(tree_hash)"
-
-          set +e
-          if [ "$OP" = "publish" ]; then
-            node .github/pages/pages-tree.mjs upsert --root "$TREE" \
-              --slug "$SLUG" --kind "$KIND" --branch "$BRANCH" --pr "$PR" --sha "$SHA" \
-              --ci-run-url "$RUN_URL" --source "$SITE" 2> tree-error.txt
-          else
-            node .github/pages/pages-tree.mjs remove --root "$TREE" --slug "$SLUG" 2> tree-error.txt
-          fi
-          code=$?
-          set -e
-          if [ "$code" -ne 0 ]; then
-            message="$(cat tree-error.txt)"
-            echo "::error::$message"
-            set_status error "$message"
-            exit 1
-          fi
-
-          # Also drops subsites whose pull request closed without a cleanup run.
-          gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 200 \
-            --json headRefName --jq '[.[].headRefName]' > "$RUNNER_TEMP/open-branches.json"
-          node .github/pages/pages-tree.mjs prune --root "$TREE" \
-            --open-branches "$RUNNER_TEMP/open-branches.json"
-
-          if [ "$(tree_hash)" = "$before" ]; then
-            echo "R&D site unchanged; nothing to deploy"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          cd "$TREE"
-          git init -q -b gh-pages
-          git add -A
-          git -c user.name="github-actions[bot]" \
-            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -q -m "R&D site: $OP $SLUG ${SHA:0:7}"
-          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
-          git -c http.extraheader="AUTHORIZATION: basic $auth" \
-            push -q --force "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" HEAD:gh-pages
-          rm -rf .git
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      # SRC: https://github.com/actions/upload-pages-artifact/
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        if: ${{ steps.tree.outputs.changed == 'true' }}
-        name: Upload artifact
+      - name: publish subsite
+        id: site
+        uses: ./.github/actions/replace-pages-artifact
         with:
-          path: ${{ runner.temp }}/tree
-
-      # SRC: https://github.com/actions/configure-pages/
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        if: ${{ steps.tree.outputs.changed == 'true' }}
-        name: Configure GitHub.IO Pages
-
-      # SRC: https://github.com/actions/deploy-pages/
-      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-        if: ${{ steps.tree.outputs.changed == 'true' }}
-        id: deployment
-        name: https://percebus.GitHub.IO/hello-spec-kit
-
-      - name: pull request comment
-        if: ${{ env.KIND == 'branch' && env.PR != '' }}
-        env:
-          DEPLOYED_SLUG: ${{ steps.tree.outputs.slug }}
-        run: |
-          set -euo pipefail
-          [ -n "$DEPLOYED_SLUG" ] || exit 0
-          marker="<!-- rnd-subsite -->"
-          if [ "$OP" = "publish" ]; then
-            message="$(printf '**R&D subsite**: %s/%s/\n\nBranch `%s` @ `%s` · [run](%s)\n\nEnd-to-end tests and verification follow; the verification report will be posted here.' \
-              "$SITE_URL" "$DEPLOYED_SLUG" "$BRANCH" "${SHA:0:7}" "$RUN_URL")"
-          else
-            message="$(printf '**R&D subsite**: `%s` was deleted because the pull request closed · [run](%s)' \
-              "$DEPLOYED_SLUG" "$RUN_URL")"
-          fi
-          id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1 || true)"
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" \
-              -f body="$marker"$'\n'"$message" > /dev/null
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-              -f body="$marker"$'\n'"$message" > /dev/null
-          fi
+          op: publish
+          slug: ${{ needs.verify.outputs.slug }}
+          kind: ${{ needs.verify.outputs.kind }}
+          branch: ${{ github.head_ref || github.ref_name }}
+          pr: ${{ github.event.pull_request.number }}
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          source: ${{ runner.temp }}/site
+          run-url: ${{ env.RUN_URL }}
 
       - name: preview-verification error
-        if: ${{ failure() && env.OP == 'publish' && env.KIND == 'branch' }}
+        if: ${{ failure() && needs.verify.outputs.kind == 'branch' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           current="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
             --jq "[.[] | select(.context == \"$STATUS_CONTEXT\")][0].state // empty")"
@@ -327,7 +204,6 @@ jobs:
               -f description="Inconclusive: publishing the subsite failed" \
               -f target_url="$RUN_URL" > /dev/null
           fi
-
   # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests

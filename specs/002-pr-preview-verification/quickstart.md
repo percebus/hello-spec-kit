@@ -56,10 +56,10 @@ no implementation code.
 4. **Two quick pushes.** Push twice quickly to `feat/a`. Both CI runs complete
    in order, `feat-a/preview.json` ends on the newest SHA, and only the newest
    SHA's status counts toward merging.
-5. **Close a PR.** Close PR B. Its CI run deletes `feat-b/`, which then returns
+5. **Close a PR.** Close PR B. `pull_request_closed.yml` deletes `feat-b/`, which then returns
    404, and `subsites.json` no longer lists it.
 6. **Merge a PR.** Merge PR A after it passes. Then:
-   - Its `closed` run deletes `feat-a/`.
+   - `pull_request_closed.yml` deletes `feat-a/`.
    - The push to `main` republishes `main/` with A's change, and `E2E tests`
      pass.
 7. **Reject a collision.** Open a PR from `feat/a-b/c`, then another from

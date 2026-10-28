@@ -1,20 +1,44 @@
 # Contract: Workflow interfaces
 
-Two workflows own the R&D site and the merge gate:
+Three workflows and one shared action own the R&D site and the merge gate:
 
-| Workflow                    | Writes                                                                          | Runs PR code?                               |
-| --------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------- |
-| `always.yml` (CI)           | `site` artifact, `gh-pages` storage branch, Pages deployment, PR comment, statuses | Yes, for same-repo PRs (see research R2)   |
-| `preview-verify.md` (gh-aw) | statuses, PR report comment, evidence artifacts                                 | No (browses the published subsite only)     |
+| Workflow / action                    | Writes                                                                          | Runs PR code?                               |
+| ------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------- |
+| `always.yml` (CI)                    | `site` artifact, `gh-pages` storage branch, Pages deployment, PR comment, statuses | Yes, for same-repo PRs (see research R2)   |
+| `pull_request_closed.yml`            | `gh-pages` storage branch, Pages deployment, PR comment                         | No (`pull_request_target`, default branch)  |
+| `preview-verify.md` (gh-aw)          | statuses, PR report comment, evidence artifacts                                 | No (browses the published subsite only)     |
+| `.github/actions/replace-pages-artifact` (composite) | Shared publish/delete steps used by both writers above                        | n/a                                         |
+
+## `.github/actions/replace-pages-artifact` (composite action)
+
+The helpers it runs (ranch-slug.mjs, pages-tree.mjs, oot/index.html) stay in .github/pages/; the caller must check out the repository first.
+
+Inputs: `op` (`publish`\|`delete`), `slug` (computed from `branch` for a
+delete when empty), `kind`, `branch`, `pr`, `sha`, `source` (publish only),
+`run-url`, `github-token`. Outputs: `slug`, `changed`, `page_url`.
+
+Steps:
+
+1. Fetch `gh-pages` and run `pages-tree.mjs`: `init`, then `upsert` (publish)
+   or `remove` (delete), then `prune` against open PR branches.
+2. If the tree changed, force-push a single orphan commit, then run
+   `upload-pages-artifact`, `configure-pages`, and `deploy-pages`.
+3. Create or update the `<!-- rnd-subsite -->` PR comment.
+
+For a branch publish, it sets `pending` "Publishing subsite…", and on collision
+or size errors it sets `error` with the reason. The caller must run in the
+`github-pages` environment with `contents: write`, `pages: write`, and
+`id-token: write`.
 
 ## `always.yml`
 
-**Triggers**: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`),
-`push` to `main`, and `workflow_dispatch`.
+**Triggers**: `pull_request` (`opened`, `synchronize`, `reopened`), `push` to
+`main`, and `workflow_dispatch`.
 
 **Concurrency**: `group: ${{ github.workflow }}`, `cancel-in-progress: false`,
 and `queue: max`. One CI run executes at a time across the repository, and
-every waiting run is kept.
+every waiting run is kept. `pull_request_closed.yml` joins the same group by
+name.
 
 **Environments**: `verify` runs in `main` (for `refs/heads/main`) or `branch`
 (everything else). It exports `vars.SUBSITE_KIND` and `vars.PREVIEW_VERIFY`
@@ -27,12 +51,32 @@ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
 
 | Job              | Runs when                                                                                     | Does                                                                                                                                                                                                                                                                                         | Permissions                                                                     |
 | ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `verify`         | Not `closed`                                                                                   | Builds and runs `npm test` locally as before. `kind=main`: slug `main`. `kind=branch` with a same-repo PR: computes the slug (an invalid branch name sets `error`; rename the branch) and sets `pending` "Waiting for subsite". Any other `SUBSITE_KIND` value fails the job. With a slug, it rebuilds with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (plus `NEXT_PUBLIC_PREVIEW_*` for PRs) and uploads artifact `site`. On failure: `error` "Verify failed; no subsite was published". | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write`; environment `main` or `branch` |
-| `deploy-pages`   | `verify` succeeded with a slug, **or** a same-repo PR `closed`                                 | Fetches `gh-pages` and runs `.github/pages/pages-tree.mjs`: `init`, then `upsert` (publish) or `remove` (closed), then `prune` against open PR branches. If the tree changed: force-pushes a single orphan commit, then runs `upload-pages-artifact`, `configure-pages`, and `deploy-pages`. Creates or updates the `<!-- rnd-subsite -->` PR comment. Collision and size errors set `error`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
+| `verify`         | Always                                                                                         | Builds and runs `npm test` locally as before. `kind=main`: slug `main`. `kind=branch` with a same-repo PR: computes the slug (an invalid branch name sets `error`; rename the branch) and sets `pending` "Waiting for subsite". Any other `SUBSITE_KIND` value fails the job. With a slug, it rebuilds with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (plus `NEXT_PUBLIC_PREVIEW_*` for PRs) and uploads artifact `site`. On failure: `error` "Verify failed; no subsite was published". | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write`; environment `main` or `branch` |
+| `deploy-pages`   | `verify` produced a slug                                                                      | Downloads `site` and runs the `replace-pages-artifact` action with `op: publish`. On failure, a still-`pending` status becomes `error` "Inconclusive: publishing the subsite failed". The environment URL is `<page_url><slug>/`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
 | `e2e-tests`      | `deploy-pages` succeeded and `verify` produced a slug                                          | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). Writes `.env.subsite` (`BASE_URL`, `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`) and runs `npm test` with `ENV=subsite`, for `main` and branches alike. For `kind=branch`, it sets `pending` "Running end-to-end tests…", and on failure sets `failure` "End-to-end tests failed on the subsite". Publishes JUnit results. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
 | `preview-verify` | `e2e-tests` succeeded and `preview_verify == 'true'`                                           | Sets `pending` "Verifying…" and runs `gh workflow run preview-verify.lock.yml --ref <head branch>` with `pr_number`, `sha`, and `slug`.                                                                                                                                                       | `actions: write`, `statuses: write`                                             |
 
 Reruns use GitHub's "Re-run all jobs" on the PR's CI run (FR-019).
+
+## `pull_request_closed.yml`
+
+**Trigger**: `pull_request_target` (`closed`) into `main`. The workflow file
+comes from the default branch, and `GITHUB_REF=refs/heads/main`, so it can
+deploy to `github-pages`. It also runs for pull requests with merge conflicts,
+which `pull_request` would skip.
+
+**Concurrency**: `group: "[C]ontinuous [I]ntegration"`,
+`cancel-in-progress: false`, `queue: max`. This is the same queue as
+`always.yml`, so deletes and deployments never race. The literal must match
+`always.yml`'s `name:`.
+
+| Job              | Runs when                         | Does                                                                                                   | Permissions                                                                     |
+| ---------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `delete-subsite` | Same-repo PR (not a fork)         | Checks out the default branch, never PR code, and runs the `replace-pages-artifact` action with `op: delete` and `branch: <head ref>`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`; environment `github-pages` |
+
+Because `pull_request_target` reads the workflow from the default branch, this
+workflow only takes effect once it is on `main`. Until then, each deployment's
+prune step removes subsites of closed pull requests.
 
 ## `preview-verify` (gh-aw: `.github/workflows/preview-verify.md` → `.lock.yml`)
 
