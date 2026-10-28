@@ -45,7 +45,7 @@ jobs:
 
       - name: delete subsite
         id: site
-        uses: ./.github/pages
+        uses: ./.github/actions/replace-pages-artifact
         with:
           op: delete
           branch: ${{ github.event.pull_request.head.ref }}

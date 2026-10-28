@@ -1,10 +1,12 @@
-name: R&D site update
+name: replace-pages-artifact
 description: >-
   Publishes or deletes one subsite of the R&D site
-  (https://percebus.github.io/hello-spec-kit/). The site tree is kept on the
-  gh-pages storage branch, changed one folder at a time, pruned of closed pull
-  requests, and redeployed with actions/deploy-pages. The calling job must run
-  in the github-pages environment with contents: write, pages: write, and
+  (https://percebus.github.io/hello-spec-kit/), then replaces the whole Pages
+  deployment. The site tree is kept on the gh-pages storage branch, changed one
+  folder at a time, pruned of closed pull requests, and redeployed with
+  actions/deploy-pages. Uses the helpers in .github/pages/, so the caller must
+  check out this repository first. The calling job must run in the
+  github-pages environment with contents: write, pages: write, and
   id-token: write, and must be serialized with every other caller.
   See specs/002-pr-preview-verification.
 
@@ -70,7 +72,7 @@ runs:
         SHA: ${{ inputs.sha }}
         SITE: ${{ inputs.source }}
         RUN_URL: ${{ inputs.run-url }}
-        PAGES: ${{ github.action_path }}
+        PAGES: ${{ github.workspace }}/.github/pages
       run: |
         set -euo pipefail
         TREE="$RUNNER_TEMP/rnd-site-tree"

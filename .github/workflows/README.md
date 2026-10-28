@@ -44,8 +44,8 @@ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
   never checks out PR code. It joins CI's queue by name
   (`"[C]ontinuous [I]ntegration"`), so keep it in sync if `always.yml` is
   renamed. It only takes effect once it is on `main`.
-- Both workflows share the composite action [.github/pages](../pages/action.yml)
-  (`R&D site update`) for publish/delete, prune, deploy, and the PR comment.
+- Both workflows share the composite action [replace-pages-artifact](../actions/replace-pages-artifact/action.yml)
+  for publish/delete, prune, deploy, and the PR comment.
 - A failing subsite stays available until the next push or until the PR
   closes.
 - Rerun: **Re-run all jobs** on the PR's CI run, or push a new commit. There is

@@ -179,7 +179,7 @@ jobs:
 
       - name: publish subsite
         id: site
-        uses: ./.github/pages
+        uses: ./.github/actions/replace-pages-artifact
         with:
           op: publish
           slug: ${{ needs.verify.outputs.slug }}

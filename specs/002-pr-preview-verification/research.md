@@ -62,7 +62,7 @@ https://percebus.github.io/hello-spec-kit/
 
 **Decision**: The CI workflow, `always.yml`, publishes subsites itself. A
 separate `pull_request_closed.yml` deletes them. Both use the same composite
-action, `.github/pages/action.yml`:
+action, `.github/actions/replace-pages-artifact`:
 
 ```text
 always.yml:               Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (dispatches preview-verify)
