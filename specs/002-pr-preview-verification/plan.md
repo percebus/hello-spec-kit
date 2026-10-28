@@ -164,7 +164,7 @@ tests/
 │   ├── defects.spec.ts        # crawl subsite at 320/1440 → findings.json + screenshots
 │   └── banner.spec.ts         # banner shows expected PR/ref/sha (FR-002)
 ├── unit/
-│   └── branch-slug.spec.ts    # NEW slug cases (reserved, truncation, collisions)
+│   └── branch-slug.spec.ts    # NEW slug cases (reserved, hash suffix for long names, collisions)
 └── helpers/
     └── preview-scan.ts        # NEW crawl + image/media/overflow/error collectors + findings writer
 

@@ -211,9 +211,13 @@ being loaded, frames out of bounds, etc)
   the failing commit.
 - Several pull requests publish at once: every subsite and `main` survive. Each
   publication waits for the previous one, but verifications run in parallel.
-- Two branch names would map to the same address (for example `feat/x` and
-  `feat-x`): the second one is rejected with an explanation on its pull
-  request instead of overwriting the first one's subsite.
+- Two branch names would map to the same address after flattening (for
+  example `feat/a-b/c` and `feat/a/b-c`, or `feat/x` and `feat-x`): the second
+  one is rejected with an explanation on its pull request instead of
+  overwriting the first one's subsite.
+- A branch name is very long (for example a deep `feat/a/b/c/...` name): its
+  address is shortened but stays unique and stable across pushes, so long
+  branches with the same beginning do not collide.
 - A branch name would collide with `main` or another reserved address: it is
   rejected in the same way.
 - A subsite has been deleted after failing verification: the report, findings,

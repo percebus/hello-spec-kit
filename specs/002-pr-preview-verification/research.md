@@ -242,9 +242,27 @@ payload**, never from artifact contents:
 1. Lowercase the name.
 2. Replace each run of characters outside `[a-z0-9]` with `-`.
 3. Trim leading and trailing `-`.
-4. Truncate to 63 characters.
+4. If the result is longer than 63 characters, keep the first 54 characters,
+   trim any trailing `-`, then append `-` and the first 8 hex characters of the
+   SHA-256 of the **original** branch name.
 
-For example, `feat/see-website` becomes `feat-see-website`.
+| Branch                                                       | Slug                                                       |
+| ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `feat/see-website`                                           | `feat-see-website`                                         |
+| `feat/a/b/c`                                                 | `feat-a-b-c`                                               |
+| `feat/podcast/player/keyboard/…` (more than 63 characters after flattening) | `feat-podcast-player-keyboard-…` (54 characters) + `-` + 8-hex hash |
+
+The owner's branch convention is hierarchical (`feat/a/b/c`), so this design
+has two implications:
+
+- **The hash only applies to long names.** Two long branches with the same
+  beginning get different addresses, because the hash comes from the full
+  original name. The address stays the same across pushes because the hash is
+  deterministic.
+- **Short names can still collide after flattening.** For example, `feat/a-b/c`
+  and `feat/a/b-c` both become `feat-a-b-c`, and `Feat/X` collides with
+  `feat/x`. These are rare and are rejected explicitly. Keeping short
+  addresses readable was chosen over always hashing.
 
 - **Reserved names.** `main` is reserved for `main`'s subsite. Any slug
   starting with `_` or `.`, and the root files (`index.html`, `404.html`,
@@ -255,16 +273,26 @@ For example, `feat/see-website` becomes `feat-see-website`.
 
 **Rationale**:
 
-- The address is stable and readable.
+- One flat folder per branch keeps addresses short and makes pruning a single
+  folder delete.
+- The 63-character cap keeps addresses manageable. A hash suffix keeps capped
+  names unique without making typical names unreadable.
 - Taking the slug from trusted event data prevents a PR from targeting `main/`
   or another branch's folder by tampering with its artifact.
 - Collisions are explicit instead of silently overwriting another subsite.
 
 **Alternatives considered**:
 
+- _Mirror the branch hierarchy as nested folders
+  (`/hello-spec-kit/feat/a/b/c/`)_: Git's ref rules prevent overlaps, because
+  `feat/a` and `feat/a/b` cannot coexist. However, it restricts characters in
+  each name segment, needs cleanup of empty parent folders, and gives longer
+  addresses. The owner chose the flat folder with a hash suffix.
+- _Plain truncation to 63 characters (previous rule)_: rejected because long
+  hierarchical names with the same beginning would collide.
+- _Always hashed slugs_: rejected because they are unreadable.
 - _PR number paths (`/pr-12/`)_: rejected because the owner chose per-branch
   subsites.
-- _Hashed slugs_: rejected because they are unreadable.
 
 ## R9. Builds, base paths, and visible identity
 
