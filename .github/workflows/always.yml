@@ -419,8 +419,15 @@ jobs:
           SLUG: ${{ needs.verify.outputs.slug }}
         run: |
           set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-            -f state=pending -f context="$STATUS_CONTEXT" \
-            -f description="Verifying…" -f target_url="$RUN_URL" > /dev/null
-          gh workflow run preview-verify.lock.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
-            -f pr_number="$PR" -f sha="$SHA" -f slug="$SLUG"
+          set_status() {
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+              -f state="$1" -f context="$STATUS_CONTEXT" \
+              -f description="$2" -f target_url="$RUN_URL" > /dev/null
+          }
+          # Dispatch requires preview-verify.lock.yml to exist on the default branch.
+          set_status pending "Verifying…"
+          if ! gh workflow run preview-verify.lock.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
+            -f pr_number="$PR" -f sha="$SHA" -f slug="$SLUG"; then
+            set_status error "Inconclusive: could not start preview-verify"
+            exit 1
+          fi
