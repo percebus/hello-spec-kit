@@ -39,6 +39,9 @@ being loaded, frames out of bounds, etc)
 - Q: Should intent-mismatch findings block merging? → A: No. Only defect
   findings block merging; intent findings are advisory and visible on the pull
   request.
+- Q: How many previews exist at once? → A: One shared preview environment. The
+  latest push to any pull request branch replaces it, and deploy-and-verify
+  runs are queued so only one runs at a time.
 
 ## Requirements _(mandatory)_
 
@@ -49,13 +52,16 @@ being loaded, frames out of bounds, etc)
 - The published production site continues to be updated only from `main`; this
   feature adds pre-merge environments and does not change the production
   release flow.
-- The site contains only mocked, public content, so previews can be publicly
+- A single shared preview environment is a deliberate constraint for this
+  evaluation. Per-branch previews that coexist are out of scope and may be
+  considered later.
+- The site contains only mocked, public content, so the preview can be publicly
   readable without authentication.
 - The incoming change's intent is described by its pull request description
   and, when present, the linked issue's acceptance criteria. The automated
   reviewer uses these as its definition of "correct".
-- Pull requests from forks are not automatically given previews or automated
-  review, because they must not receive repository credentials; a maintainer
+- Pull requests from forks are not automatically deployed to the preview or
+  reviewed automatically, because they must not receive repository credentials; a maintainer
   can trigger verification after reviewing the change.
 - The visual defect that motivated this feature (an expected image not loading)
   is fixed separately; this feature prevents recurrence.
@@ -64,9 +70,11 @@ being loaded, frames out of bounds, etc)
 
 ### Key Entities
 
-- **Preview**: A complete, browsable copy of the site built from one branch's
-  latest commit. Attributes: source branch, commit, address, status (building,
-  available, failed, retired), creation time.
+- **Preview**: The single shared, browsable copy of the site, built from one
+  pull request branch's commit at a time. Attributes: source branch, commit,
+  address, status (building, available, failed), deployment time.
+- **Verification Queue**: Ordered pending deploy-and-verify requests, at most
+  one per pull request branch, each pointing to that branch's latest commit.
 - **Verification Run**: One automated review of a preview for a specific
   commit. Attributes: commit, preview, pages visited, steps taken to reach the
   changed feature, overall result (pass, fail, inconclusive), completion time.
@@ -83,23 +91,30 @@ being loaded, frames out of bounds, etc)
 
 #### Preview environment
 
-- **FR-001**: The system MUST build and publish a preview for the latest commit
-  of every branch with an open pull request targeting `main`.
-- **FR-002**: Each preview MUST be reachable at a stable, branch-specific
-  address that is distinct from the production address and is never presented
-  as production.
-- **FR-003**: Publishing a preview MUST NOT change the content of the
-  production site or another branch's preview.
-- **FR-004**: When a new commit is pushed, the system MUST replace that
-  branch's preview and MUST NOT report results from an older commit as current.
-- **FR-005**: The preview address MUST be posted on the pull request when the
-  preview becomes available.
-- **FR-006**: The system MUST retire a preview when its pull request is merged
-  or closed.
+- **FR-001**: The system MUST provide exactly one shared preview environment.
+  When a commit is pushed to any branch with an open pull request targeting
+  `main`, the system MUST deploy that commit to the preview, replacing its
+  previous contents.
+- **FR-002**: The preview MUST be reachable at one stable address that is
+  distinct from the production address, MUST never be presented as
+  production, and MUST visibly identify the branch and commit it currently
+  shows.
+- **FR-003**: Publishing the preview MUST NOT change the content of the
+  production site.
+- **FR-004**: Deploy-and-verify runs MUST be queued so that only one runs at a
+  time, and the preview MUST NOT be replaced while a verification run is using
+  it. A newer push to a branch MUST replace that branch's pending queue entry,
+  and results from an older commit MUST NOT be reported as current.
+- **FR-005**: When a pull request's commit is deployed, the preview address,
+  branch, and commit MUST be posted on that pull request. While a request is
+  queued, the pull request MUST show that it is waiting.
+- **FR-006**: When a pull request is merged or closed, the system MUST remove
+  its pending queue entry. The preview may keep showing its last deployment
+  until the next push replaces it.
 
 #### Automated verification
 
-- **FR-007**: For each preview, an automated reviewer MUST navigate the site
+- **FR-007**: For each deployment, an automated reviewer MUST navigate the site
   like a visitor—starting from the landing page and following visible links and
   controls—to reach the pages affected by the incoming change.
 - **FR-008**: The reviewer MUST determine what to verify from the pull request
@@ -148,8 +163,9 @@ being loaded, frames out of bounds, etc)
 - **SC-001**: 100% of pull requests merged into `main` after adoption have a
   completed verification run for their final commit, or a recorded maintainer
   override.
-- **SC-002**: A reviewer can open a preview of an incoming change within
-  10 minutes of the latest push, in at least 95% of runs.
+- **SC-002**: When no other run is queued, a reviewer can open the preview of an
+  incoming change within 10 minutes of the latest push, in at least 95% of
+  runs.
 - **SC-003**: A change that removes or breaks an expected image on any primary
   page is blocked from merging in 100% of seeded test cases.
 - **SC-004**: A change that causes content to overflow its frame at 320 px or
@@ -163,8 +179,13 @@ being loaded, frames out of bounds, etc)
 
 ## Edge Cases
 
-- Two pushes arrive in quick succession: only the latest commit's preview and
-  result count; earlier runs are cancelled or marked stale.
+- Two pushes to the same branch arrive in quick succession: the queued request
+  is updated to the latest commit, and only that commit's result counts.
+- Pushes to different pull requests arrive close together: they are deployed
+  and verified one after another; a later deployment never interrupts a run in
+  progress.
+- A person opens the preview expecting one pull request but sees another: the
+  visible branch and commit identification makes the mismatch clear.
 - The preview build fails: no review runs, the pull request is marked failed,
   and the build error is linked.
 - The change is not visible in the site (for example, documentation or tooling
@@ -183,8 +204,8 @@ being loaded, frames out of bounds, etc)
   inconclusive and merging stays blocked until rerun or override.
 - A pull request comes from a fork: no automatic preview is created; a
   maintainer must trigger verification after inspecting the change.
-- Many open pull requests exist at once: each keeps an isolated preview with no
-  cross-contamination.
+- Many open pull requests exist at once: they share the one preview through the
+  queue, and each pull request's verification applies only to its own commit.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -211,8 +232,8 @@ it, and confirm that the site shows the change while production stays the same.
 
 - **Given** a branch with an open pull request targeting `main`
 - **When** a commit is pushed
-- **Then** a preview of that commit becomes available at a branch-specific,
-  non-production address posted on the pull request
+- **Then** that commit is deployed to the shared, non-production preview,
+  whose address, branch, and commit are posted on the pull request
 
 ##### Acceptance Criteria 2
 
@@ -222,9 +243,10 @@ it, and confirm that the site shows the change while production stays the same.
 
 ##### Acceptance Criteria 3
 
-- **Given** a pull request with a preview
-- **When** the pull request is merged or closed
-- **Then** its preview is retired
+- **Given** the preview is being verified for pull request A
+- **When** a commit is pushed to pull request B
+- **Then** B is queued, shown as waiting, and deployed only after A's run
+  finishes
 
 ---
 
@@ -321,7 +343,7 @@ production unnoticed.
 #### Priority
 
 **Why this priority**: It enforces the other stories, but only has value once
-previews and reports exist.
+the preview and reports exist.
 
 #### Independent Test
 
