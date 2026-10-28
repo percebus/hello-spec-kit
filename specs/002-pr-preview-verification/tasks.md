@@ -181,7 +181,7 @@ a collision is rejected.
   - **`schedule` or `op=prune`:** Run `prune`.
   - **Staleness** (data-model "Publish Request"): For a branch publish, call `gh api repos/$GITHUB_REPOSITORY/pulls/$PR`. If `state != "open"` or `head.sha != sha`, set `skip=true` and log the reason.
   - **Status:** For a branch publish that is not skipped, set `pending` with "Publishing subsite…".
-- [X] T018 [US1] Add an `update-tree` job to `.github/workflows/pages-publish.yml`, with `needs: prepare`, `if: needs.prepare.outputs.skip != 'true'`, and permissions `contents: write`, `actions: read`, and `statuses: write`.
+- [X] T018 [US1] Add an `update-tree` job to `.github/workflows/pages-publish.yml`, with `needs: prepare`, `if: needs.prepare.outputs.skip != 'true'`, and permissions `contents: write`, `actions: read`, and `statuses: write`. _(Implemented as the serialized `publish` job, merged with T019, so only the read-modify-write and deploy hold the `pages-publish` queue; see research R2.)_
   1. Check out `main` into `src/`.
   2. Fetch `gh-pages` into `tree/`. If the branch does not exist yet, use an empty `tree/`.
   3. Run `node src/scripts/pages-tree.mjs init --root tree`.
@@ -379,7 +379,7 @@ merge-blocking expectations in section 3:
 
 ### Implementation for User Story 4
 
-- [ ] T034 [P] [US4] Create `.github/workflows/preview-override.yml`.
+- [X] T034 [P] [US4] Create `.github/workflows/preview-override.yml`.
   - **Trigger:** `workflow_dispatch` with `pr_number` (number, required) and `reason` (string, required).
   - **Permissions:** `statuses: write`, `pull-requests: write`, and `contents: read`.
   - **Steps:**
@@ -388,13 +388,13 @@ merge-blocking expectations in section 3:
     3. Set `success` with "Override by @$GITHUB_ACTOR: $REASON", truncated to 140 characters, and `target_url` set to the run.
     4. Post a PR comment with the full reason, the actor, the SHA, and a link to the run.
     - Pass `REASON` only through `env:`.
-- [ ] T035 [US4] In the `prepare` job of `.github/workflows/pages-publish.yml`, replace T017's placeholder for `workflow_dispatch` with `op=publish` (rerun, FR-019). Fork PRs are allowed here because only maintainers can dispatch.
+- [X] T035 [US4] In the `prepare` job of `.github/workflows/pages-publish.yml`, replace T017's placeholder for `workflow_dispatch` with `op=publish` (rerun, FR-019). Fork PRs are allowed here because only maintainers can dispatch.
   1. Require `pr_number`, and require the PR to be open.
   2. Take `sha = head.sha` and `branch = head.ref`, and compute the slug.
   3. Find `ci_run_id` with `gh api "repos/$GITHUB_REPOSITORY/actions/workflows/always.yml/runs?head_sha=$SHA&status=success" --jq '.workflow_runs[0].id'`.
   4. If no run exists or its `site` artifact is missing or expired, set `error` with "Inconclusive: no CI artifact; re-run CI" and fail.
   5. Otherwise continue as a normal branch publish, which republishes a deleted subsite and dispatches verification.
-- [ ] T036 [US4] Add a "Merge gate" section to `.github/workflows/README.md`.
+- [X] T036 [US4] Add a "Merge gate" section to `.github/workflows/README.md`.
   - Show the exact command to create a ruleset on the default branch: `gh api -X POST repos/percebus/hello-spec-kit/rulesets` with a JSON body for `target: branch`, `enforcement: active`, `conditions.ref_name.include: ["~DEFAULT_BRANCH"]`, and rules `pull_request` and `required_status_checks` with contexts `Verify` and `preview-verification`.
   - State that `gh-pages` must not be covered by rules that block force-pushes or deletions.
   - The owner applies this once, after US1–US3 are on `main`.
@@ -405,7 +405,7 @@ merge-blocking expectations in section 3:
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T037 Update `.github/workflows/README.md`. Add an "R&D site and pull request subsites" section that covers:
+- [X] T037 Update `.github/workflows/README.md`. Add an "R&D site and pull request subsites" section that covers:
   - the site layout tree (research R1);
   - `pages-publish` triggers and operations;
   - that `gh-pages` is managed storage and must never be edited by hand;
@@ -413,9 +413,9 @@ merge-blocking expectations in section 3:
   - the rerun and override commands from quickstart.md section 4;
   - that `workflow_run` and dispatch only use workflow files from the default branch;
   - follow-up #100.
-- [ ] T038 [P] Update `README.md`. Add a short "Pull request subsites" section linking `.github/workflows/README.md`. Note that the site now lives at `https://percebus.github.io/hello-spec-kit/main/`, and that the root redirects there.
-- [ ] T039 Run `npm run format` (Prettier, then lint and `tsc` through `postformat`), `npx playwright test --project=unit`, and `gh aw compile --validate`, which must regenerate `.github/workflows/preview-verify.lock.yml` with no diff. All must pass.
-- [ ] T040 Review security across `.github/workflows/always.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/preview-verify.md`, and `.github/workflows/preview-override.yml`:
+- [X] T038 [P] Update `README.md`. Add a short "Pull request subsites" section linking `.github/workflows/README.md`. Note that the site now lives at `https://percebus.github.io/hello-spec-kit/main/`, and that the root redirects there.
+- [X] T039 Run `npm run format` (Prettier, then lint and `tsc` through `postformat`), `npx playwright test --project=unit`, and `gh aw compile --validate`, which must regenerate `.github/workflows/preview-verify.lock.yml` with no diff. All must pass.
+- [X] T040 Review security across `.github/workflows/always.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/preview-verify.md`, and `.github/workflows/preview-override.yml`:
   - no `${{ }}` interpolation of untrusted values in `run:`;
   - `pages-publish` never checks out a PR ref;
   - least-privilege permissions per job;
