@@ -13,7 +13,8 @@ test-results/
 .features-gen/
 .features-gen-components/
 
-# HACK FIXME temp
+# HACK FIXME temporary
+.npmrc
 package-lock.json
 
 
