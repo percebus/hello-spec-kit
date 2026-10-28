@@ -109,22 +109,21 @@ export function upsert({ root, slug, kind, branch, pr, sha, ciRunUrl, source }) 
   }
 
   const target = path.join(root, slug);
+  const maxBytes = Number(process.env.PAGES_TREE_MAX_BYTES ?? DEFAULT_MAX_BYTES);
+  const projectedBytes =
+    directorySize(root) -
+    (existsSync(target) ? directorySize(target) : 0) +
+    directorySize(source);
+  if (projectedBytes > maxBytes) {
+    throw new PagesTreeError("R&D site would exceed 1 GB", EXIT_SIZE_LIMIT);
+  }
+
   rmSync(target, { recursive: true, force: true });
   cpSync(source, target, { recursive: true });
   writeFileSync(
     path.join(target, "preview.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
-
-  const maxBytes = Number(process.env.PAGES_TREE_MAX_BYTES ?? DEFAULT_MAX_BYTES);
-  if (directorySize(root) > maxBytes) {
-    rmSync(target, { recursive: true, force: true });
-    if (owner) {
-      delete index.subsites[slug];
-      writeIndex(root, index);
-    }
-    throw new PagesTreeError("R&D site would exceed 1 GB", EXIT_SIZE_LIMIT);
-  }
 
   index.subsites[slug] = manifest;
   writeIndex(root, index);
