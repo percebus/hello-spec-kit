@@ -60,19 +60,20 @@ https://percebus.github.io/hello-spec-kit/
 
 ## R2. Publishing runs inside the CI workflow, serialized
 
-**Decision**: The CI workflow, `always.yml`, publishes subsites itself:
+**Decision**: The CI workflow, `always.yml`, publishes subsites itself. A
+separate `pull_request_closed.yml` deletes them. Both use the same composite
+action, `.github/pages/action.yml`:
 
 ```text
-Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (dispatches preview-verify)
-             ▲
-pull_request closed ──┘ (delete the branch's subsite)
+always.yml:               Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (dispatches preview-verify)
+pull_request_closed.yml:  Delete subsite
 ```
 
-| Event                                   | `deploy-pages` operation                                  |
-| --------------------------------------- | --------------------------------------------------------- |
-| `pull_request` opened/synchronize/reopened (same repo) | `publish` the branch's subsite          |
-| `push` to `main`                        | `publish` `main/`                                         |
-| `pull_request` closed (same repo)       | `delete` the branch's subsite, using `main`'s scripts      |
+| Event                                                  | Workflow / operation                                  |
+| ------------------------------------------------------ | ----------------------------------------------------- |
+| `pull_request` opened/synchronize/reopened (same repo) | `always.yml` › `publish` the branch's subsite         |
+| `push` to `main`                                       | `always.yml` › `publish` `main/`                      |
+| `pull_request_target` closed (same repo)               | `pull_request_closed.yml` › `delete` the branch's subsite |
 
 Every deployment also prunes subsites whose pull request is no longer open.
 There is no scheduled cleanup.
@@ -80,14 +81,21 @@ There is no scheduled cleanup.
 **Concurrency**: The whole CI workflow uses `group: ${{ github.workflow }}`,
 `cancel-in-progress: false`, and `queue: max`. Only one CI run executes at a
 time across the repository, and every waiting run is kept in order.
+`pull_request_closed.yml` joins the same group by its literal name, so a delete
+never races a deployment.
 
 **Environments**: Only `verify` selects an environment:
 `main` for `refs/heads/main`, otherwise `branch`. It reads `vars.SUBSITE_KIND`
 (`main`|`branch`) and `vars.PREVIEW_VERIFY` (`false`|`true`) and passes them as
-job outputs, so later jobs need no event checks. `deploy-pages` keeps the
-`github-pages` environment. Two checks remain because they depend on per-run
-data, not on the environment: the pull request `closed` path and same-repo
-(fork) detection.
+job outputs, so later jobs need no event checks. `deploy-pages` and
+`delete-subsite` use the `github-pages` environment. The only per-run check
+left is same-repo (fork) detection.
+
+**Why a separate closed workflow**: `pull_request_target` runs the default
+branch's workflow with `GITHUB_REF=refs/heads/main`. That passes
+`github-pages` rules without the `refs/pull/*/merge` rule, avoids depending on a
+merge ref that no longer exists, and also runs for pull requests with
+conflicts, which `pull_request` events skip. It never checks out PR code.
 
 **Rationale**:
 
@@ -397,9 +405,10 @@ has two implications:
 
 **Decision**:
 
-- Same-repo pull requests are deployed by their own CI run. On a closed pull
-  request, `deploy-pages` checks out `main` and uses `main`'s scripts, because
-  the merge ref may no longer exist.
+- Same-repo pull requests are deployed by their own CI run. Closed pull
+  requests are cleaned up by `pull_request_closed.yml`, which runs on
+  `pull_request_target`. It uses the default branch's workflow and scripts and
+  never checks out PR code.
 - Fork pull requests still run `Verify`, but they get no slug, artifact,
   deployment, or verification, and their token cannot set statuses anyway.
   To verify a fork's change, a maintainer pushes it to a branch in this

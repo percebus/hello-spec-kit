@@ -31,13 +31,21 @@ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
 | Job              | Role                                                                                                                                                                                                                                                 |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `verify`         | Builds and tests locally as before. Builds the subsite with its base path and uploads it as artifact `site`.                                                                                                                                         |
-| `deploy-pages`   | Publishes the subsite (or `main/`) into the R&D site; deletes it when the pull request closes; prunes subsites of PRs that are no longer open.                                                                                                       |
+| `deploy-pages`   | Publishes the subsite (or `main/`) into the R&D site and prunes subsites of PRs that are no longer open.                                                                                                                                             |
 | `e2e-tests`      | Runs the existing tests against the deployed subsite (`main` included).                                                                                                                                                                              |
 | `preview-verify` | When `PREVIEW_VERIFY=true` and the end-to-end tests pass, dispatches [preview-verify.md](preview-verify.md): a deterministic Playwright scan (`tests/preview/`) decides blocking findings, and the Copilot agent checks intent and posts the report. |
 
 - CI runs one at a time across the repository (`group: ${{ github.workflow }}`,
   `cancel-in-progress: false`, `queue: max`). Waiting runs are queued, never
   dropped. `preview-verify` keeps a per-PR group and can run in parallel.
+- When a pull request closes or merges,
+  [pull_request_closed.yml](pull_request_closed.yml) deletes its subsite. It
+  runs on `pull_request_target`, so it uses the default branch's workflow and
+  never checks out PR code. It joins CI's queue by name
+  (`"[C]ontinuous [I]ntegration"`), so keep it in sync if `always.yml` is
+  renamed. It only takes effect once it is on `main`.
+- Both workflows share the composite action [.github/pages](../pages/action.yml)
+  (`R&D site update`) for publish/delete, prune, deploy, and the PR comment.
 - A failing subsite stays available until the next push or until the PR
   closes.
 - Rerun: **Re-run all jobs** on the PR's CI run, or push a new commit. There is

@@ -70,7 +70,7 @@ are dropped.
 | `kind`    | Environment variable `SUBSITE_KIND` (`main`\|`branch`) | Environment `main` for `refs/heads/main`, otherwise `branch`; any other value fails `verify` |
 | `preview_verify` | Environment variable `PREVIEW_VERIFY` (`true`\|`false`) | Whether `preview-verify` is dispatched after `e2e-tests`          |
 | `slug`    | `main`, or the branch slug (research R8)           | Empty for forks, non-PR branch runs, or reserved names, so nothing is deployed |
-| `op`      | `publish`, or `delete` on `pull_request` `closed`  | `delete` checks out `main`'s scripts                               |
+| `op`      | `publish` in `always.yml`; `delete` in `pull_request_closed.yml` | Both run the `.github/pages` action from the default branch's checkout (closed) or the run's checkout (publish) |
 
 ### Verification Run
 

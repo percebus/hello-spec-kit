@@ -1,0 +1,203 @@
+name: R&D site update
+description: >-
+  Publishes or deletes one subsite of the R&D site
+  (https://percebus.github.io/hello-spec-kit/). The site tree is kept on the
+  gh-pages storage branch, changed one folder at a time, pruned of closed pull
+  requests, and redeployed with actions/deploy-pages. The calling job must run
+  in the github-pages environment with contents: write, pages: write, and
+  id-token: write, and must be serialized with every other caller.
+  See specs/002-pr-preview-verification.
+
+inputs:
+  op:
+    description: publish or delete
+    required: true
+  slug:
+    description: Subsite slug. For delete, computed from branch when empty.
+    required: false
+    default: ""
+  kind:
+    description: main or branch
+    required: false
+    default: branch
+  branch:
+    description: Source branch name
+    required: true
+  pr:
+    description: Pull request number (branch subsites)
+    required: false
+    default: ""
+  sha:
+    description: Commit being published
+    required: false
+    default: ""
+  source:
+    description: Directory with the static export to publish (publish only)
+    required: false
+    default: ""
+  run-url:
+    description: URL of the calling workflow run
+    required: true
+  github-token:
+    description: Token with contents write access
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  slug:
+    description: Slug that was published or deleted (empty if none)
+    value: ${{ steps.tree.outputs.slug }}
+  changed:
+    description: Whether the R&D site changed and was redeployed
+    value: ${{ steps.tree.outputs.changed }}
+  page_url:
+    description: Root URL of the deployed Pages site
+    value: ${{ steps.deployment.outputs.page_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: update R&D site tree
+      id: tree
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        OP: ${{ inputs.op }}
+        SLUG: ${{ inputs.slug }}
+        KIND: ${{ inputs.kind }}
+        BRANCH: ${{ inputs.branch }}
+        PR: ${{ inputs.pr }}
+        SHA: ${{ inputs.sha }}
+        SITE: ${{ inputs.source }}
+        RUN_URL: ${{ inputs.run-url }}
+        PAGES: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        TREE="$RUNNER_TEMP/rnd-site-tree"
+        set_status() {
+          [ "$OP/$KIND" = "publish/branch" ] && [ -n "$SHA" ] || return 0
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state="$1" -f context=preview-verification \
+            -f description="$(printf '%s' "$2" | cut -c1-140)" \
+            -f target_url="$RUN_URL" > /dev/null
+        }
+        tree_hash() {
+          (cd "$TREE" && find . -path ./.git -prune -o -type f -print0 | sort -z \
+            | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+        }
+
+        case "$OP" in
+          publish) ;;
+          delete)
+            if [ -z "$SLUG" ] && ! SLUG="$(node "$PAGES/branch-slug.mjs" "$BRANCH")"; then
+              echo "Branch '$BRANCH' never had a subsite"
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            ;;
+          *)
+            echo "::error::op must be 'publish' or 'delete' (got '$OP')"
+            exit 1
+            ;;
+        esac
+        echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+        set_status pending "Publishing subsite…"
+
+        rm -rf "$TREE"
+        mkdir -p "$TREE"
+        if git ls-remote --exit-code --heads origin gh-pages > /dev/null; then
+          git fetch --depth 1 origin gh-pages
+          git archive FETCH_HEAD | tar -x -C "$TREE"
+        fi
+        node "$PAGES/pages-tree.mjs" init --root "$TREE"
+        before="$(tree_hash)"
+
+        set +e
+        if [ "$OP" = "publish" ]; then
+          node "$PAGES/pages-tree.mjs" upsert --root "$TREE" \
+            --slug "$SLUG" --kind "$KIND" --branch "$BRANCH" --pr "$PR" --sha "$SHA" \
+            --ci-run-url "$RUN_URL" --source "$SITE" 2> "$RUNNER_TEMP/tree-error.txt"
+        else
+          node "$PAGES/pages-tree.mjs" remove --root "$TREE" --slug "$SLUG" \
+            2> "$RUNNER_TEMP/tree-error.txt"
+        fi
+        code=$?
+        set -e
+        if [ "$code" -ne 0 ]; then
+          message="$(cat "$RUNNER_TEMP/tree-error.txt")"
+          echo "::error::$message"
+          set_status error "$message"
+          exit 1
+        fi
+
+        # Also drops subsites whose pull request closed without a cleanup run.
+        gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 200 \
+          --json headRefName --jq '[.[].headRefName]' > "$RUNNER_TEMP/open-branches.json"
+        node "$PAGES/pages-tree.mjs" prune --root "$TREE" \
+          --open-branches "$RUNNER_TEMP/open-branches.json"
+
+        if [ "$(tree_hash)" = "$before" ]; then
+          echo "R&D site unchanged; nothing to deploy"
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        cd "$TREE"
+        git init -q -b gh-pages
+        git add -A
+        git -c user.name="github-actions[bot]" \
+          -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+          commit -q -m "R&D site: $OP $SLUG ${SHA:0:7}"
+        auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+        git -c http.extraheader="AUTHORIZATION: basic $auth" \
+          push -q --force "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" HEAD:gh-pages
+        rm -rf .git
+        echo "tree=$TREE" >> "$GITHUB_OUTPUT"
+        echo "changed=true" >> "$GITHUB_OUTPUT"
+
+    # SRC: https://github.com/actions/upload-pages-artifact/
+    - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      if: ${{ steps.tree.outputs.changed == 'true' }}
+      with:
+        path: ${{ steps.tree.outputs.tree }}
+
+    # SRC: https://github.com/actions/configure-pages/
+    - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      if: ${{ steps.tree.outputs.changed == 'true' }}
+
+    # SRC: https://github.com/actions/deploy-pages/
+    - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      if: ${{ steps.tree.outputs.changed == 'true' }}
+      id: deployment
+
+    - name: pull request comment
+      if: ${{ inputs.kind == 'branch' && inputs.pr != '' && steps.tree.outputs.slug != '' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        OP: ${{ inputs.op }}
+        SLUG: ${{ steps.tree.outputs.slug }}
+        BRANCH: ${{ inputs.branch }}
+        PR: ${{ inputs.pr }}
+        SHA: ${{ inputs.sha }}
+        RUN_URL: ${{ inputs.run-url }}
+        SITE_URL: https://percebus.github.io/hello-spec-kit
+      run: |
+        set -euo pipefail
+        marker="<!-- rnd-subsite -->"
+        if [ "$OP" = "publish" ]; then
+          message="$(printf '**R&D subsite**: %s/%s/\n\nBranch `%s` @ `%s` · [run](%s)\n\nEnd-to-end tests and verification follow; the verification report will be posted here.' \
+            "$SITE_URL" "$SLUG" "$BRANCH" "${SHA:0:7}" "$RUN_URL")"
+        else
+          message="$(printf '**R&D subsite**: `%s` was deleted because the pull request closed · [run](%s)' \
+            "$SLUG" "$RUN_URL")"
+        fi
+        id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+          --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1 || true)"
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" \
+            -f body="$marker"$'\n'"$message" > /dev/null
+        else
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            -f body="$marker"$'\n'"$message" > /dev/null
+        fi

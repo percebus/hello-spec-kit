@@ -1,0 +1,53 @@
+name: "Pull request closed"
+
+# Deletes a closed (or merged) pull request's R&D subsite
+# (https://percebus.github.io/hello-spec-kit/<slug>/).
+# See specs/002-pr-preview-verification.
+#
+# pull_request_target runs this file from the default branch with
+# GITHUB_REF=refs/heads/main, so it can deploy to github-pages, and it runs even
+# when the pull request has conflicts. It never checks out pull request code.
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+# Shares the CI workflow's queue so a delete never races a deployment: both
+# read-modify-write the gh-pages tree. Must equal always.yml's `name:`, which
+# is what `${{ github.workflow }}` resolves to there.
+concurrency:
+  group: "[C]ontinuous [I]ntegration"
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: read
+
+jobs:
+  delete-subsite:
+    name: Delete subsite
+    # Fork pull requests never get a subsite.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    environment:
+      url: ${{ steps.site.outputs.page_url }}
+      name: github-pages
+
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+
+      - name: delete subsite
+        id: site
+        uses: ./.github/pages
+        with:
+          op: delete
+          branch: ${{ github.event.pull_request.head.ref }}
+          pr: ${{ github.event.pull_request.number }}
+          run-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
