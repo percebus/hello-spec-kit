@@ -15,7 +15,7 @@ on:
         description: Subsite slug (https://percebus.github.io/hello-spec-kit/<slug>/)
         required: true
         type: string
-  # pages-publish dispatches this workflow with GITHUB_TOKEN.
+  # The CI workflow (always.yml) dispatches this workflow with GITHUB_TOKEN.
   bots: ["github-actions[bot]"]
 concurrency:
   group: preview-verify-${{ inputs.pr_number }}
@@ -147,16 +147,14 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     permissions:
-      actions: write
       pull-requests: read
       statuses: write
     steps:
-      - name: Settle verdict and delete failed subsite
+      - name: Settle verdict
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ inputs.pr_number }}
           SHA: ${{ inputs.sha }}
-          SLUG: ${{ inputs.slug }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -190,15 +188,7 @@ jobs:
               set_status error "Superseded by a newer commit"
             fi
           fi
-
-          IFS=$'\t' read -r state description <<< "$(status)"
-          echo "Final status: $state — $description"
-          if [ "$state" != "success" ] && [ "$current" = "true" ] \
-            && [[ "$description" != Superseded* ]]; then
-            gh workflow run pages-publish.yml --repo "$GITHUB_REPOSITORY" --ref main \
-              -f op=delete -f slug="$SLUG" -f sha="$SHA" -f pr_number="$PR"
-            echo "Requested deletion of subsite $SLUG at $SHA"
-          fi
+          echo "Final status: $(status)"
 
 safe-outputs:
   add-comment:
@@ -342,7 +332,7 @@ Call `add_comment` with `item_number: ${{ inputs.pr_number }}` and this body
 ```markdown
 ## Preview verification — <✅ Passed | ❌ Blocking findings | ⚠️ Inconclusive>
 
-**Subsite**: https://percebus.github.io/hello-spec-kit/${{ inputs.slug }}/ (PR #${{ inputs.pr_number }}, `<branch>` @ `<first 7 of sha>`) <"— kept until the PR closes" | "— deleted after this result; rerun to republish">
+**Subsite**: https://percebus.github.io/hello-spec-kit/${{ inputs.slug }}/ (PR #${{ inputs.pr_number }}, `<branch>` @ `<first 7 of sha>`) — kept until the next push or until the PR closes
 **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} · **Evidence**: artifacts `preview-scan-${{ inputs.sha }}`, `preview-agent-${{ inputs.sha }}`
 
 ### Intent checked
@@ -370,10 +360,9 @@ Pages checked at 320 px and 1440 px: <count> (<list>)
 
 - Write "None" under any empty findings heading; never omit a section.
 - Truncate table descriptions to 200 characters.
-- Use "❌ Blocking findings" whenever the scanner reported any blocking finding,
-  and "— deleted after this result" in that case or when inconclusive. When
-  inconclusive, add one paragraph with the reason and the rerun command:
-  `gh workflow run pages-publish.yml -f op=publish -f pr_number=${{ inputs.pr_number }}`.
+- Use "❌ Blocking findings" whenever the scanner reported any blocking
+  finding. When inconclusive, add one paragraph with the reason and how to
+  rerun: re-run the pull request's CI workflow, or push a new commit.
 
 ## 5. Record the verdict
 
