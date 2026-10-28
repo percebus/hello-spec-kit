@@ -163,8 +163,10 @@ export function remove({ root, slug, sha }) {
   rmSync(target, { recursive: true, force: true });
   const index = readIndex(root);
   const existed = slug in index.subsites;
-  delete index.subsites[slug];
-  writeIndex(root, index);
+  if (existed) {
+    delete index.subsites[slug];
+    writeIndex(root, index);
+  }
   return { removed: slug, existed };
 }
 
@@ -179,7 +181,9 @@ export function prune({ root, openBranches }) {
       removed.push(slug);
     }
   }
-  writeIndex(root, index);
+  if (removed.length > 0) {
+    writeIndex(root, index);
+  }
   return { pruned: removed };
 }
 
