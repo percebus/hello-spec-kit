@@ -30,6 +30,7 @@ jobs:
       actions: read
       checks: write
       pull-requests: write
+      statuses: write
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -54,80 +55,61 @@ jobs:
           # XXX?
           list-tests: all
 
-      - name: out.zip
+      # R&D site subsite build. See specs/002-pr-preview-verification.
+      - name: subsite slug
+        id: subsite
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            if ! slug="$(node scripts/branch-slug.mjs "$HEAD_REF" 2>slug-error.txt)"; then
+              echo "::warning::No subsite for this branch: $(cat slug-error.txt)"
+              echo "error=$(cat slug-error.txt)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            slug="main"
+          fi
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+
+      - name: preview-verification pending
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          SLUG_ERROR: ${{ steps.subsite.outputs.error }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$SLUG_ERROR" ]; then
+            state="error"
+            description="$(printf '%s; rename the branch' "$SLUG_ERROR" | cut -c1-140)"
+          else
+            state="pending"
+            description="Waiting for subsite"
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state="$state" \
+            -f context=preview-verification \
+            -f description="$description" \
+            -f target_url="$RUN_URL"
+
+      - name: next build (subsite)
+        if: ${{ steps.subsite.outputs.slug != '' }}
+        env:
+          NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/${{ steps.subsite.outputs.slug }}
+          NEXT_PUBLIC_PREVIEW_PR: ${{ github.event.pull_request.number }}
+          NEXT_PUBLIC_PREVIEW_REF: ${{ github.head_ref }}
+          NEXT_PUBLIC_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          rm -rf out
+          npm run next:build
+
+      - name: site.zip
+        if: ${{ steps.subsite.outputs.slug != '' }}
         uses: percebus/github-actions-common/.github/actions/artifact-upload@main
         with:
-          name: out
+          name: site
           path: ./out
-
-  #
-  deploy-pages:
-    needs: verify
-    if: github.ref_name == 'main'
-    runs-on: ubuntu-latest
-    environment:
-      url: ${{ steps.deployment.outputs.page_url }}
-      name: github-pages
-
-    # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-    # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-    concurrency:
-      group: "pages"
-      cancel-in-progress: false
-
-    permissions: # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-      pages: write
-      contents: read
-      id-token: write
-
-    steps:
-      - name: out.zip
-        uses: percebus/github-actions-common/.github/actions/artifact-download@main
-        with:
-          name: out
-          path: out
-
-      # SRC: https://github.com/actions/upload-pages-artifact/
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        name: Upload artifact
-        with:
-          path: ./out
-
-      # SRC: https://github.com/actions/configure-pages/
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        name: Configure GitHub.IO Pages
-
-      # SRC: https://github.com/actions/deploy-pages/
-      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-        id: deployment
-        name: https://percebus.GitHub.IO/hello-spec-kit
-
-  #
-  e2e-tests:
-    name: E2E tests
-    needs: deploy-pages
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      pull-requests: write
-
-    steps:
-      - uses: percebus/github-actions-common/.github/actions/checkout@main
-      - uses: percebus/github-actions-node/.github/actions/setup@main
-
-      - name: npm install
-        run: npm install
-
-      - name: npm test
-        run: npm test
-        env:
-          ENV: production
-
-      - uses: percebus/github-actions-testing/.github/actions/junit@main
-        if: ${{ !cancelled() }}
-        with:
-          files_pattern: test-results/junit.xml
-          list-tests: all
+          retention-days: "14"
