@@ -2,13 +2,16 @@
 // Branch name → R&D subsite slug. See
 // specs/002-pr-preview-verification/research.md (R8).
 import { createHash } from "node:crypto";
-import { pathToFileURL } from "node:url";
 
 export const MAX_SLUG_LENGTH = 63;
 const HASHED_PREFIX_LENGTH = 54;
 const HASH_LENGTH = 8;
 export const SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
-export const RESERVED_SLUGS = new Set(["index.html", "404.html", "subsites.json"]);
+export const RESERVED_SLUGS = new Set([
+  "index.html",
+  "404.html",
+  "subsites.json",
+]);
 
 export function branchSlug(branch) {
   if (typeof branch !== "string" || branch.length === 0) {
@@ -39,8 +42,14 @@ export function assertAllowed(slug, branch) {
   if (slug === "main" && branch !== "main") {
     throw new Error(`Branch "${branch}" maps to the reserved address "main"`);
   }
-  if (slug.startsWith("_") || slug.startsWith(".") || RESERVED_SLUGS.has(slug)) {
-    throw new Error(`Branch "${branch}" maps to the reserved address "${slug}"`);
+  if (
+    slug.startsWith("_") ||
+    slug.startsWith(".") ||
+    RESERVED_SLUGS.has(slug)
+  ) {
+    throw new Error(
+      `Branch "${branch}" maps to the reserved address "${slug}"`,
+    );
   }
   if (!SLUG_PATTERN.test(slug)) {
     throw new Error(`Address "${slug}" for branch "${branch}" is invalid`);
@@ -52,8 +61,8 @@ export function allowedBranchSlug(branch) {
   return assertAllowed(branchSlug(branch), branch);
 }
 
-const invokedDirectly =
-  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+// Avoids `import.meta` so Playwright's CommonJS transform can import this file.
+const invokedDirectly = /[\\/]branch-slug\.mjs$/.test(process.argv[1] ?? "");
 
 if (invokedDirectly) {
   const branch = process.argv[2];

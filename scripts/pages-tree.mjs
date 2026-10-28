@@ -17,7 +17,11 @@ import { parseArgs } from "node:util";
 import { SLUG_PATTERN } from "./branch-slug.mjs";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_INDEX_SOURCE = path.join(scriptsDirectory, "pages-root", "index.html");
+const ROOT_INDEX_SOURCE = path.join(
+  scriptsDirectory,
+  "pages-root",
+  "index.html",
+);
 const DEFAULT_MAX_BYTES = 1_000_000_000;
 
 export const EXIT_MAIN_PROTECTED = 2;
@@ -71,7 +75,16 @@ export function init({ root }) {
   return { initialized: true };
 }
 
-export function upsert({ root, slug, kind, branch, pr, sha, ciRunUrl, source }) {
+export function upsert({
+  root,
+  slug,
+  kind,
+  branch,
+  pr,
+  sha,
+  ciRunUrl,
+  source,
+}) {
   assertSlug(slug);
   if (kind !== "branch" && kind !== "main") {
     throw new Error(`Invalid kind "${kind}"`);
@@ -109,7 +122,9 @@ export function upsert({ root, slug, kind, branch, pr, sha, ciRunUrl, source }) 
   }
 
   const target = path.join(root, slug);
-  const maxBytes = Number(process.env.PAGES_TREE_MAX_BYTES ?? DEFAULT_MAX_BYTES);
+  const maxBytes = Number(
+    process.env.PAGES_TREE_MAX_BYTES ?? DEFAULT_MAX_BYTES,
+  );
   const projectedBytes =
     directorySize(root) -
     (existsSync(target) ? directorySize(target) : 0) +

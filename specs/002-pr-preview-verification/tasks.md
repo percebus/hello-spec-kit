@@ -39,12 +39,12 @@ implemented and tested independently.
 
 **Purpose**: Configuration and records that every story uses.
 
-- [ ] T001 [P] In both `.env.production` and `.env.development`, change `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit` to `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`, leaving all other lines unchanged. `next build` reads `.env.production` and local tests read `.env.development`, so both must agree (research R9). Then run `npm run build` and `npm test`; both must pass with the site at `http://127.0.0.1:3000/hello-spec-kit/main/`. ⚠️ Merge this together with T015–T020. On its own, today's root deploy would publish a build that expects `/hello-spec-kit/main/`, which breaks the live site.
-- [ ] T002 [P] Create `docs/ADR/002-rnd-site-subsites.md`.
+- [X] T001 [P] In both `.env.production` and `.env.development`, change `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit` to `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`, leaving all other lines unchanged. `next build` reads `.env.production` and local tests read `.env.development`, so both must agree (research R9). Then run `npm run build` and `npm test`; both must pass with the site at `http://127.0.0.1:3000/hello-spec-kit/main/`. ⚠️ Merge this together with T015–T020. On its own, today's root deploy would publish a build that expects `/hello-spec-kit/main/`, which breaks the live site.
+- [X] T002 [P] Create `docs/ADR/002-rnd-site-subsites.md`.
   - Follow the format of `docs/ADR/001-static-nextjs.md`: "Latest revision" with date 2026-10-28, Status checkboxes with Proposed checked, Decision, and Justification.
   - Summarize the R&D site with per-branch subsites (research R1), publishing serialized in `main`'s context (R2), the deterministic scanner as the only blocking source (R4), and the slug rule with its hash suffix (R8).
   - Link to issue #100 for the release repository.
-- [ ] T003 Update `playwright.config.ts`.
+- [X] T003 Update `playwright.config.ts`.
   - **If `process.env.PREVIEW_SCAN === "1"`:** skip `dotenv.config(...)`. Define only one project, `{ name: "preview-scan", testDir: "./tests/preview", use: { ...devices["Desktop Chrome"] } }`. Set `webServer: []`. Keep `baseURL = ${BASE_URL}${NEXT_PUBLIC_BASE_PATH ?? ""}/`.
   - **Otherwise:** keep the current behavior exactly, and add the project `{ name: "unit", testDir: "./tests/unit" }`.
   - Use `reporter` `[["list"], ["junit", …]]` as today.
@@ -57,7 +57,7 @@ implemented and tested independently.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 [P] Create `scripts/branch-slug.mjs` as an ES module that uses only Node built-ins.
+- [X] T004 [P] Create `scripts/branch-slug.mjs` as an ES module that uses only Node built-ins.
   - **`branchSlug(branch)`:**
     1. Lowercase the name.
     2. Replace each run of characters outside `[a-z0-9]` with `-`.
@@ -70,22 +70,23 @@ implemented and tested independently.
     - Throw if `slug` is empty.
   - **CLI:** `node scripts/branch-slug.mjs <branch>` prints the slug and exits 0, or prints the error to stderr and exits 1.
   - **Contract:** every result must match `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`, as in [contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json).
-- [ ] T005 [P] Create `tests/unit/branch-slug.spec.ts` with `@playwright/test`, importing `../../scripts/branch-slug.mjs`. Cover these cases:
+- [X] T005 [P] Create `tests/unit/branch-slug.spec.ts` with `@playwright/test`, importing `../../scripts/branch-slug.mjs`. Cover these cases:
   - `feat/see-website` becomes `feat-see-website`.
   - `feat/a/b/c` becomes `feat-a-b-c`.
   - `feat/a-b/c` and `feat/a/b-c` both become `feat-a-b-c`.
   - `Feat/X` becomes `feat-x`.
   - `main` becomes `main` and is allowed for branch `main`.
   - Branch `Main` is rejected.
-  - `_x` and `.x` are rejected.
+  - `_x` maps to `x`, and `index.html` maps to `index-html`; flattening can never produce reserved root names.
+  - `///` is rejected because it has no usable address.
   - `feat/podcast/player/keyboard-navigation/focus-ring/visibility-desktop` and `…-mobile` produce different 63-character slugs that end in `-[0-9a-f]{8}` and stay the same across calls.
   - Every output matches the schema pattern.
-- [ ] T006 [P] Create `scripts/pages-root/index.html` as static HTML5.
+- [X] T006 [P] Create `scripts/pages-root/index.html` as static HTML5.
   - Use `lang="en"` and `<title>Signal & Story</title>`.
   - Include `<meta http-equiv="refresh" content="0; url=./main/">` and `<link rel="canonical" href="./main/">`.
   - Include a visible `<a href="./main/">Continue to Signal & Story</a>`.
   - Use no JavaScript.
-- [ ] T007 Create `scripts/pages-tree.mjs`, an ES module that uses only Node built-ins. It operates on a checked-out site folder passed as `--root <dir>` and prints one JSON result line. Subcommands:
+- [X] T007 Create `scripts/pages-tree.mjs`, an ES module that uses only Node built-ins. It operates on a checked-out site folder passed as `--root <dir>` and prints one JSON result line. Subcommands:
   - **`init`:** Copy `scripts/pages-root/index.html` to `<root>/index.html`, create `.nojekyll`, and create `subsites.json` as `{ "updatedAt": <ISO>, "subsites": {} }` if missing. It must be idempotent.
   - **`upsert`** with `--slug --kind <branch|main> --branch --pr --sha --ci-run-url --source <dir>`:
     - If `subsites[slug]` exists with a different `branch`, exit with code 3 and the message `Address collision with <branch>; rename the branch`.
@@ -100,7 +101,7 @@ implemented and tested independently.
   - **`prune`** with `--open-branches <json-file>`: remove every `kind: "branch"` entry and folder whose `branch` is not in the JSON array. Never touch `main`.
 
   The output must satisfy [contracts/subsites-index.schema.json](./contracts/subsites-index.schema.json) and [contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json).
-- [ ] T008 [P] Create `tests/unit/pages-tree.spec.ts` with `@playwright/test`. Use temporary directories and run `scripts/pages-tree.mjs` through `node:child_process`. Cover these cases:
+- [X] T008 [P] Create `tests/unit/pages-tree.spec.ts` with `@playwright/test`. Use temporary directories and run `scripts/pages-tree.mjs` through `node:child_process`. Cover these cases:
   - `init` is idempotent.
   - `upsert` writes `preview.json` and the index entry.
   - A second branch with the same slug exits with code 3 and leaves the folder unchanged.
@@ -108,7 +109,7 @@ implemented and tested independently.
   - `remove` of `main` exits with code 2.
   - `prune` keeps `main` and open branches and removes the others.
   - The size cap exits with code 4 when `PAGES_TREE_MAX_BYTES=1000`.
-- [ ] T009 Run `npx playwright test --project=unit` (covers `tests/unit/branch-slug.spec.ts` and `tests/unit/pages-tree.spec.ts`) and `npm run format`, which runs Prettier and `tsc`. Both must pass.
+- [X] T009 Run `npx playwright test --project=unit` (covers `tests/unit/branch-slug.spec.ts` and `tests/unit/pages-tree.spec.ts`) and `npm run format`, which runs Prettier and `tsc`. Both must pass.
 
 **Checkpoint**: The slug and site-folder logic is proven. User stories can begin.
 

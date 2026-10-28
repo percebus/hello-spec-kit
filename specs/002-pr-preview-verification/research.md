@@ -264,9 +264,12 @@ has two implications:
   `feat/x`. These are rare and are rejected explicitly. Keeping short
   addresses readable was chosen over always hashing.
 
-- **Reserved names.** `main` is reserved for `main`'s subsite. Any slug
-  starting with `_` or `.`, and the root files (`index.html`, `404.html`,
-  `subsites.json`), are also reserved.
+- **Reserved names.** `main` is reserved for `main`'s subsite, so `Main` or
+  `main/` on any other branch is rejected. A branch that flattens to an empty
+  string (for example `///`) is also rejected. Flattening can never produce a
+  slug starting with `_` or `.`, or a root file name such as `index.html` (it
+  becomes `index-html`). `assertAllowed` still checks those as a defense in
+  depth.
 - **Collisions.** `subsites.json` records which branch owns each slug. If a
   different branch already owns the slug, the publish is rejected. The status
   becomes `error` with "Address collision with `<branch>`; rename the branch."

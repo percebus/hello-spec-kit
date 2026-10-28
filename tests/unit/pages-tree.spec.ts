@@ -21,10 +21,14 @@ let root: string;
 let source: string;
 
 function run(args: string[], env: Record<string, string> = {}) {
-  const result = spawnSync(process.execPath, [script, ...args, "--root", root], {
-    encoding: "utf8",
-    env: { ...process.env, ...env },
-  });
+  const result = spawnSync(
+    process.execPath,
+    [script, ...args, "--root", root],
+    {
+      encoding: "utf8",
+      env: { ...process.env, ...env },
+    },
+  );
   return {
     status: result.status,
     stdout: result.stdout.trim(),
@@ -32,7 +36,12 @@ function run(args: string[], env: Record<string, string> = {}) {
   };
 }
 
-function upsert(slug: string, branch: string, sha = shaA, extra: string[] = []) {
+function upsert(
+  slug: string,
+  branch: string,
+  sha = shaA,
+  extra: string[] = [],
+) {
   const kind = slug === "main" ? "main" : "branch";
   return run([
     "upsert",

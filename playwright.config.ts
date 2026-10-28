@@ -1,5 +1,9 @@
 import dotenv from "dotenv";
-import { defineConfig, devices, type PlaywrightTestConfig } from "@playwright/test";
+import {
+  defineConfig,
+  devices,
+  type PlaywrightTestConfig,
+} from "@playwright/test";
 import { defineBddConfig } from "playwright-bdd";
 
 // The preview scanner targets a published subsite whose base path is set per
@@ -106,4 +110,6 @@ function defaultConfig(): PlaywrightTestConfig {
   };
 }
 
-export default defineConfig(previewScan ? previewScanConfig() : defaultConfig());
+export default defineConfig(
+  previewScan ? previewScanConfig() : defaultConfig(),
+);
