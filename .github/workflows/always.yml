@@ -114,7 +114,7 @@ jobs:
             echo "::notice::Subsites are published for same-repo pull requests only"
             exit 0
           fi
-          if ! slug="$(node scripts/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
+          if ! slug="$(node .github/pages/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
             message="$(cat slug-error.txt)"
             echo "::warning::No subsite for this branch: $message"
             set_status error "$message; rename the branch"
@@ -215,7 +215,7 @@ jobs:
           }
 
           if [ "$OP" = "delete" ]; then
-            if ! SLUG="$(node scripts/branch-slug.mjs "$BRANCH")"; then
+            if ! SLUG="$(node .github/pages/branch-slug.mjs "$BRANCH")"; then
               echo "Branch '$BRANCH' never had a subsite"
               echo "changed=false" >> "$GITHUB_OUTPUT"
               exit 0
@@ -229,16 +229,16 @@ jobs:
             git fetch --depth 1 origin gh-pages
             git archive FETCH_HEAD | tar -x -C "$TREE"
           fi
-          node scripts/pages-tree.mjs init --root "$TREE"
+          node .github/pages/pages-tree.mjs init --root "$TREE"
           before="$(tree_hash)"
 
           set +e
           if [ "$OP" = "publish" ]; then
-            node scripts/pages-tree.mjs upsert --root "$TREE" \
+            node .github/pages/pages-tree.mjs upsert --root "$TREE" \
               --slug "$SLUG" --kind "$KIND" --branch "$BRANCH" --pr "$PR" --sha "$SHA" \
               --ci-run-url "$RUN_URL" --source "$SITE" 2> tree-error.txt
           else
-            node scripts/pages-tree.mjs remove --root "$TREE" --slug "$SLUG" 2> tree-error.txt
+            node .github/pages/pages-tree.mjs remove --root "$TREE" --slug "$SLUG" 2> tree-error.txt
           fi
           code=$?
           set -e
@@ -252,7 +252,7 @@ jobs:
           # Also drops subsites whose pull request closed without a cleanup run.
           gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 200 \
             --json headRefName --jq '[.[].headRefName]' > "$RUNNER_TEMP/open-branches.json"
-          node scripts/pages-tree.mjs prune --root "$TREE" \
+          node .github/pages/pages-tree.mjs prune --root "$TREE" \
             --open-branches "$RUNNER_TEMP/open-branches.json"
 
           if [ "$(tree_hash)" = "$before" ]; then

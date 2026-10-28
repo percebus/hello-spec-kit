@@ -16,12 +16,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { SLUG_PATTERN } from "./branch-slug.mjs";
 
-const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_INDEX_SOURCE = path.join(
-  scriptsDirectory,
-  "pages-root",
-  "index.html",
-);
+const pagesDirectory = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_INDEX_SOURCE = path.join(pagesDirectory, "root", "index.html");
 const DEFAULT_MAX_BYTES = 1_000_000_000;
 
 export const EXIT_MAIN_PROTECTED = 2;

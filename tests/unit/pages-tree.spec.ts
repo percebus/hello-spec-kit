@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const script = path.resolve("scripts/pages-tree.mjs");
+const script = path.resolve(".github/pages/pages-tree.mjs");
 const shaA = "a".repeat(40);
 const shaB = "b".repeat(40);
 const ciRunUrl = "https://github.com/percebus/hello-spec-kit/actions/runs/1";

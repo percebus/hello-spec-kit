@@ -3,7 +3,7 @@ import {
   allowedBranchSlug,
   branchSlug,
   SLUG_PATTERN,
-} from "../../scripts/branch-slug.mjs";
+} from "../../.github/pages/branch-slug.mjs";
 
 test.describe("branchSlug", () => {
   for (const [branch, slug] of [

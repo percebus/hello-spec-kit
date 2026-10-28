@@ -459,6 +459,7 @@ behavior now lives in the tasks below.
 - [X] T049 Set the `deploy-pages` environment URL in `.github/workflows/always.yml` to `<page_url><slug>/`, so the deployment link opens the subsite instead of the root redirect to `main/`.
 - [ ] T050 Merge #101 so a push to `main` publishes `main/`. Accepted gap: until then, the root `https://percebus.github.io/hello-spec-kit/` redirects to a missing `main/` (404), because the first branch deployment replaced the whole Pages site.
 - [X] T051 In the `preview-verify` job of `.github/workflows/always.yml`, set `error` "Inconclusive: could not start preview-verify" when `gh workflow run` fails, instead of leaving the status `pending`. Dispatch only works once `preview-verify.lock.yml` is on the default branch, so #101 itself cannot be agentically verified before it merges.
+- [X] T052 Move the CI-only R&D site tooling from `scripts/` to `.github/pages/`, renaming `pages-root/` to `root/`: `.github/pages/branch-slug.mjs`, `.github/pages/pages-tree.mjs`, and `.github/pages/root/index.html`. Update `.github/workflows/always.yml`, `tests/unit/*.spec.ts`, and the docs. Earlier tasks keep their original `scripts/` paths as history.
 
 ---
 
