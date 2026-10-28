@@ -20,43 +20,54 @@ than 63 characters keep 54 characters plus an 8-character hash. Two open
 branches that flatten to the same slug (for example `feat/a-b/c` and
 `feat/a/b-c`) are rejected; rename the second branch.
 
-### Workflows
+### CI flow
 
-| Workflow                                     | Role                                                                                                                                                                                              |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [always.yml](always.yml)                     | Builds and tests as before, then builds the subsite with its base path and uploads it as artifact `site`. Sets `preview-verification` to "Waiting for subsite".                                   |
-| [pages-publish.yml](pages-publish.yml)       | The only writer of the R&D site. Publishes after CI succeeds, deletes subsites when a PR closes or fails verification, and prunes hourly. Runs `main`'s end-to-end tests after publishing `main`. |
-| [preview-verify.md](preview-verify.md)       | Agentic workflow, compiled to `preview-verify.lock.yml`. A deterministic Playwright scan (`tests/preview/`) decides blocking findings; the Copilot agent checks intent and posts the report.      |
-| [preview-override.yml](preview-override.yml) | Maintainer-only override of the merge gate, with a required reason.                                                                                                                               |
-
-- `pages-publish` stores the site tree on the `gh-pages` branch as a single
-  commit and deploys it with `actions/deploy-pages`. **Never edit `gh-pages`
-  by hand.** The Pages source stays "GitHub Actions".
-- `workflow_run`, `pull_request_target`, `schedule`, and
-  `gh workflow run --ref main` use the workflow files on `main`. Changes to
-  these workflows only take effect after they merge; validate them with a
-  follow-up throwaway pull request.
-- `preview-verify` reuses `COPILOT_GITHUB_TOKEN`. After editing
-  `preview-verify.md`, run `gh aw compile preview-verify --validate` and commit
-  both files.
-- Fork pull requests are not published automatically. Review the code first,
-  then dispatch a publish for them.
-
-### Rerun and override
+[always.yml](always.yml) runs, for every branch:
 
 ```text
-gh workflow run pages-publish.yml    -f op=publish -f pr_number=<N>
-gh workflow run preview-override.yml -f pr_number=<N> -f reason="<why>"
+Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
 ```
 
-A rerun republishes the pull request's latest successful CI artifact, which
-recreates a deleted subsite, and verifies it again. An override requires
-`admin` or `maintain` permission and is recorded on the pull request.
+| Job | Role |
+| --- | ---- |
+| `verify` | Builds and tests locally as before. Builds the subsite with its base path and uploads it as artifact `site`. |
+| `deploy-pages` | Publishes the subsite (or `main/`) into the R&D site; deletes it when the pull request closes; prunes subsites of PRs that are no longer open. |
+| `e2e-tests` | Runs the existing tests against the deployed subsite (`main` included). |
+| `preview-verify` | When `PREVIEW_VERIFY=true` and the end-to-end tests pass, dispatches [preview-verify.md](preview-verify.md): a deterministic Playwright scan (`tests/preview/`) decides blocking findings, and the Copilot agent checks intent and posts the report. |
+
+- CI runs one at a time across the repository (`group: ${{ github.workflow }}`,
+  `cancel-in-progress: false`, `queue: max`). Waiting runs are queued, never
+  dropped. `preview-verify` keeps a per-PR group and can run in parallel.
+- A failing subsite stays available until the next push or until the PR
+  closes.
+- Rerun: **Re-run all jobs** on the PR's CI run, or push a new commit. There is
+  no override.
+- `deploy-pages` stores the site tree on the `gh-pages` branch as a single
+  commit and deploys it with `actions/deploy-pages`. **Never edit `gh-pages`
+  by hand.** The Pages source stays "GitHub Actions".
+- `preview-verify` reuses `COPILOT_GITHUB_TOKEN`. After editing
+  `preview-verify.md`, run `npm run format` first, then
+  `gh aw compile preview-verify --validate`, and commit both files.
+- Fork pull requests are verified but not deployed. Push the change to a
+  branch in this repository to get a subsite.
+
+### Environments
+
+Create these under Settings → Environments:
+
+| Environment | Deployment branches | Variables |
+| ----------- | ------------------- | --------- |
+| `main` | `main` | `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false` |
+| `branch` | No restriction | `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true` |
+| `github-pages` | No restriction (PR branches deploy subsites) | — |
+
+`verify` runs in `main` for `refs/heads/main` and in `branch` otherwise. It
+fails with a clear error if `SUBSITE_KIND` is missing.
 
 ### Merge gate
 
-Apply this ruleset once, **after** `pages-publish.yml` and `preview-verify`
-are on `main`. Before then, nothing can set `preview-verification` to
+Apply this ruleset once, **after** the feature is on `main` and a pull request
+has passed end to end. Before then, nothing can set `preview-verification` to
 `success`, and every pull request would be blocked.
 
 ```text
@@ -83,9 +94,8 @@ gh api -X POST repos/percebus/hello-spec-kit/rulesets --input - <<'EOF'
 EOF
 ```
 
-Do not apply force-push or deletion rules to `gh-pages`; `pages-publish`
-force-pushes it on every publish.
-
+Do not apply force-push or deletion rules to `gh-pages`; `deploy-pages`
+force-pushes it on every deployment.
 ## Closed issue auditor
 
 The [agentic Markdown workflow](issue-closed.md) audits completed

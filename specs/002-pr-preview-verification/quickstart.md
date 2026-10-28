@@ -14,8 +14,14 @@ no implementation code.
 - One-time setup is complete
   ([contracts/workflows.md › Repository configuration](./contracts/workflows.md#repository-configuration-one-time-manual)):
   - The Pages source stays **GitHub Actions**.
+  - Environment `main`: deployment branches `main`; variables
+    `SUBSITE_KIND=main` and `PREVIEW_VERIFY=false`.
+  - Environment `branch`: no branch restriction; variables
+    `SUBSITE_KIND=branch` and `PREVIEW_VERIFY=true`.
+  - Environment `github-pages`: deployment branches allow PR branches.
   - The `gh-pages` branch is excluded from force-push protection.
-  - A ruleset on `main` requires `Verify` and `preview-verification`.
+  - A ruleset on `main` requires `Verify` and `preview-verification`, applied
+    last.
 
 ## 1. Local checks before pushing
 
@@ -28,80 +34,74 @@ no implementation code.
 | Slug rule                 | Run the slug helper's unit cases                                                                                       | `feat/see-website` → `feat-see-website`; `feat/a/b/c` → `feat-a-b-c`; `main` and `Main` are rejected for non-`main` branches; `_x` → `x` (flattening can never produce `_`/`.` prefixes or root file names); `///` is rejected; two names over 63 characters that share their first 54 produce different 63-character slugs ending in `-<8 hex>`, stable across calls |
 | Scanner, local            | Serve the subsite build with `npm run start:test` and the same base path; run `npx playwright test --project=preview-scan` | `findings.json` validates against [findings.schema.json](./contracts/findings.schema.json); 0 blocking findings |
 | Existing tests            | `npm test`                                                                                                             | Unchanged; `preview-scan` is not part of the default run                                     |
+| E2E against a subsite     | Serve the subsite build on port 3100, write `.env.subsite` (`BASE_URL=http://127.0.0.1:3100`, `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/feat-x`), run `npm test` with `ENV=subsite` | All tests pass with the banner present, as `e2e-tests` will in CI |
 
 ## 2. Publishing and cleanup (User Story 1, FR-001 to FR-006, FR-020)
 
-1. **Publish `main`.** Merge the feature PR. `pages-publish` publishes `main/`
-   and runs the production end-to-end tests. Then:
+1. **Publish `main`.** Merge the feature PR. CI runs `Verify`, then
+   `Deploy pages` (publishes `main/`), then `E2E tests` against `main/`. Then:
    - `https://percebus.github.io/hello-spec-kit/` redirects to `…/main/`.
    - `…/main/preview.json` reports `kind: main` and the merge SHA.
+   - `Preview verify` is skipped (`PREVIEW_VERIFY=false`).
 2. **Publish a branch.** Open PR A from branch `feat/a`. The status changes
-   from "Waiting for subsite" to "Publishing subsite…", "Verifying…",
-   "Scanning…", and "Reviewing…". Then:
+   from "Waiting for subsite" to "Publishing subsite…", "Running end-to-end
+   tests…", "Verifying…", "Scanning…", and "Reviewing…". Then:
    - A PR comment links `…/hello-spec-kit/feat-a/`.
    - The banner shows PR A and its SHA.
    - `subsites.json` lists `feat-a`.
-3. **Verify in parallel.** While A is reviewing, open PR B from `feat/b`. B's
-   subsite is published after A's _publish_, not after A's _verification_.
-   Both verifications run at the same time, and `main/` and `feat-a/` are
-   unchanged.
-4. **Supersede an older commit.** Push twice quickly to `feat/a`:
-   - The older verification is cancelled or marked `Superseded`.
-   - `feat-a/preview.json` ends on the newest SHA.
-   - Only the newest SHA receives a final verdict.
-5. **Close a PR.** Close PR B. Within 15 minutes, `feat-b/` returns 404 and
-   `subsites.json` no longer lists it.
+3. **Queue, don't drop.** While A's CI run is in progress, push to PR B from
+   `feat/b`. B's run shows as queued, starts after A's finishes, and both
+   `feat-a/` and `feat-b/` exist afterwards. `main/` is unchanged.
+4. **Two quick pushes.** Push twice quickly to `feat/a`. Both CI runs complete
+   in order, `feat-a/preview.json` ends on the newest SHA, and only the newest
+   SHA's status counts toward merging.
+5. **Close a PR.** Close PR B. Its CI run deletes `feat-b/`, which then returns
+   404, and `subsites.json` no longer lists it.
 6. **Merge a PR.** Merge PR A after it passes. Then:
-   - `feat-a/` is deleted.
-   - `main/` is republished with A's change.
-   - Production end-to-end tests pass.
+   - Its `closed` run deletes `feat-a/`.
+   - The push to `main` republishes `main/` with A's change, and `E2E tests`
+     pass.
 7. **Reject a collision.** Open a PR from `feat/a-b/c`, then another from
    `feat/a/b-c`. Both become `feat-a-b-c`. The second PR's status becomes
    `error` with "Address collision with `feat/a-b/c`", and no folder is
    overwritten.
+8. **Missing configuration.** With `SUBSITE_KIND` unset, `Verify` fails with
+   a message pointing to the environment variables.
 
-## 3. Seeded defect scenarios (SC-003, SC-004, and delete-on-failure)
+## 3. Seeded defect scenarios (SC-003, SC-004)
 
 Run each scenario on a throwaway branch with a PR into `main`. Revert the
 change afterward.
 
-| Scenario         | Seeded change                                                         | Expected `preview-verification` | Expected finding                                       | Subsite afterwards |
-| ---------------- | --------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------ | ------------------ |
-| Missing image    | Change the About portrait `src` to a non-existent file                | `failure`                       | `missing-image` on `/about/` at 320 and 1440           | Deleted            |
-| Base-path image  | Hard-code `/hello-spec-kit/…` instead of using `NEXT_PUBLIC_BASE_PATH` (#85 class) | `failure`          | `missing-image` or `broken-link`; links into `main/` count as leaving the subsite | Deleted |
-| Overflow         | Give a landing element `min-width: 600px`                             | `failure`                       | `horizontal-scroll` and `overflow` at 320               | Deleted            |
-| Script error     | Throw in a client component on `/faq/`                                | `failure`                       | `browser-error` on `/faq/`                              | Deleted            |
-| Clean change     | Change copy only                                                      | `success`                       | None blocking; the report lists the navigation path     | Kept               |
-| Intent mismatch  | PR description claims a button that the change does not add           | `success`                       | Advisory `intent-mismatch`                              | Kept               |
+| Scenario         | Seeded change                                                         | Expected `preview-verification` | Expected finding                                       |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------ |
+| Missing image    | Change the About portrait `src` to a non-existent file                | `failure`                       | `missing-image` on `/about/` at 320 and 1440           |
+| Base-path image  | Hard-code `/hello-spec-kit/…` instead of using `NEXT_PUBLIC_BASE_PATH` (#85 class) | `failure`          | `missing-image` or `broken-link`; links into `main/` count as leaving the subsite |
+| Overflow         | Give a landing element `min-width: 600px`                             | `failure`                       | `horizontal-scroll` and `overflow` at 320               |
+| Script error     | Throw in a client component on `/faq/`                                | `failure`                       | `browser-error` on `/faq/`                              |
+| Clean change     | Change copy only                                                      | `success`                       | None blocking; the report lists the navigation path     |
+| Intent mismatch  | PR description claims a button that the change does not add           | `success`                       | Advisory `intent-mismatch`                              |
 
-For every deleted case:
+A seeded defect may already fail `E2E tests` on the subsite. In that case the
+status is `failure` with "End-to-end tests failed on the subsite", and
+`Preview verify` is not dispatched. For every failing case:
 
 - The merge button stays disabled.
-- The report still contains the findings and links to screenshot artifacts.
-- The report states that the subsite was deleted.
+- The subsite stays available until the next push or until the PR closes.
+- When `Preview verify` ran, the report contains the findings and links to
+  screenshot artifacts.
 
-## 4. Rerun and override (FR-018, FR-019)
+## 4. Rerun (FR-018, FR-019)
 
-```text
-gh workflow run pages-publish.yml    -f op=publish -f pr_number=<N>
-gh workflow run preview-override.yml -f pr_number=<N> -f reason="<why>"
-```
-
-- **Rerun**: The subsite is republished if it was deleted, and then verified
-  again.
-- **Override as a maintainer**: The status becomes `success` with
-  `Override by @<you>: <why>`, and the PR gets a comment. The subsite is not
-  republished.
-- **Override as a non-maintainer**: The workflow fails, and the status does not
-  change.
+Use **Re-run all jobs** on the PR's CI run, or push a new commit. Either one
+redeploys the subsite, re-runs `E2E tests`, and dispatches `Preview verify`
+again. There is no override.
 
 ## 5. Fork PR (edge case)
 
-Open a PR from a fork:
-
-1. Nothing is published, and the required check shows **Expected**.
-2. A maintainer reviews the code and runs the rerun command.
-3. The fork PR's subsite is then published and verified like any other PR.
+Open a PR from a fork. `Verify` runs, but nothing is deployed and the required
+check shows **Expected**. To verify the change, a maintainer pushes it to a
+branch in this repository and opens a PR from there.
 
 ## 6. Prompt-injection check (FR-014)
 
