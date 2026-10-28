@@ -12,8 +12,21 @@ updates:
     cooldown:
       default-days: 7
     groups:
-      all:
-        dependency-type: direct
+      dependencies:
+        dependency-type: production
         update-types:
           - minor
           - patch
+
+      devDependencies:
+        dependency-type: development
+        update-types:
+          - major
+          - minor
+          - patch
+
+      # FIXME: Mismatch w/ https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#dependency-type-allow
+      # direct:
+      #   # dependency-type: direct
+      #   update-types:
+      #     - patch
