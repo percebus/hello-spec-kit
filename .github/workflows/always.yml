@@ -163,7 +163,8 @@ jobs:
       ) }}
     runs-on: ubuntu-latest
     environment:
-      url: ${{ steps.deployment.outputs.page_url }}
+      # Link to the subsite this run published, not the site root.
+      url: ${{ steps.deployment.outputs.page_url }}${{ steps.tree.outputs.slug }}/
       name: github-pages
 
     permissions: # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages

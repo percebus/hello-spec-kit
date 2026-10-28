@@ -456,6 +456,8 @@ behavior now lives in the tasks below.
   - `npm test` passes all 228 tests against a local subsite build with `ENV=subsite`, banner present.
 - [X] T047 Update docs to match: `spec.md` (clarifications, FR-001/006/018/019, SC-001/002/008, edge cases, US1 AC3/AC4, US4 AC3), `research.md` (R2, R6, R7, R9–R13), `data-model.md`, `contracts/*`, `quickstart.md`, `plan.md`, `checklists/requirements.md`, `docs/ADR/002-rnd-site-subsites.md`, and `.github/workflows/README.md`.
 - [ ] T048 Owner: create the `main` and `branch` environments with their variables, and allow PR branches on `github-pages` (see `.github/workflows/README.md` › Environments). Do this before merging.
+- [X] T049 Set the `deploy-pages` environment URL in `.github/workflows/always.yml` to `<page_url><slug>/`, so the deployment link opens the subsite instead of the root redirect to `main/`.
+- [ ] T050 Merge #101 so a push to `main` publishes `main/`. Accepted gap: until then, the root `https://percebus.github.io/hello-spec-kit/` redirects to a missing `main/` (404), because the first branch deployment replaced the whole Pages site.
 
 ---
 

@@ -64,6 +64,11 @@ Create these under Settings → Environments:
 `verify` runs in `main` for `refs/heads/main` and in `branch` otherwise. It
 fails with a clear error if `SUBSITE_KIND` is missing.
 
+**Bootstrap:** each deployment publishes the whole stored tree, and the root
+redirects to `main/`. Until the first push to `main` runs this workflow, `main/`
+does not exist and the root returns a 404, even though branch subsites work.
+Merging the pull request that introduces this workflow publishes `main/`.
+
 Environment rules match the run's `GITHUB_REF`. For `pull_request` runs that
 is `refs/pull/<n>/merge`, not the branch name. A rule like `feat/*` therefore
 never matches, and `github-pages` needs the `refs/pull/*/merge` rule. If the
