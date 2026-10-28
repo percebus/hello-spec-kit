@@ -108,7 +108,7 @@ implemented and tested independently.
   - `remove` of `main` exits with code 2.
   - `prune` keeps `main` and open branches and removes the others.
   - The size cap exits with code 4 when `PAGES_TREE_MAX_BYTES=1000`.
-- [ ] T009 Run `npx playwright test --project=unit` and `npm run format`, which runs Prettier and `tsc`. Both must pass.
+- [ ] T009 Run `npx playwright test --project=unit` (covers `tests/unit/branch-slug.spec.ts` and `tests/unit/pages-tree.spec.ts`) and `npm run format`, which runs Prettier and `tsc`. Both must pass.
 
 **Checkpoint**: The slug and site-folder logic is proven. User stories can begin.
 
@@ -413,13 +413,13 @@ merge-blocking expectations in section 3:
   - that `workflow_run` and dispatch only use workflow files from the default branch;
   - follow-up #100.
 - [ ] T038 [P] Update `README.md`. Add a short "Pull request subsites" section linking `.github/workflows/README.md`. Note that the site now lives at `https://percebus.github.io/hello-spec-kit/main/`, and that the root redirects there.
-- [ ] T039 Run `npm run format` (Prettier, then lint and `tsc` through `postformat`), `npx playwright test --project=unit`, and `gh aw compile --validate`. All must pass.
+- [ ] T039 Run `npm run format` (Prettier, then lint and `tsc` through `postformat`), `npx playwright test --project=unit`, and `gh aw compile --validate`, which must regenerate `.github/workflows/preview-verify.lock.yml` with no diff. All must pass.
 - [ ] T040 Review security across `.github/workflows/always.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/preview-verify.md`, and `.github/workflows/preview-override.yml`:
   - no `${{ }}` interpolation of untrusted values in `run:`;
   - `pages-publish` never checks out a PR ref;
   - least-privilege permissions per job;
   - `PREVIEW_*` variables contain only public PR, branch, and SHA values.
-- [ ] T041 Run all of quickstart.md, sections 1–6, on throwaway PRs after merge. Record pass or fail for each row in the feature PR description, and revert the seeded defects.
+- [ ] T041 Run all of `specs/002-pr-preview-verification/quickstart.md`, sections 1–6, on throwaway PRs after merge. Record pass or fail for each row in the feature PR description, and revert the seeded defects.
 
 ---
 
