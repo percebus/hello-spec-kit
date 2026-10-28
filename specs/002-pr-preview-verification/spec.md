@@ -32,6 +32,14 @@ being loaded, frames out of bounds, etc)
   to be clicked to reach the new feature and take notes of the website"
 ```
 
+## Clarifications
+
+### Session 2026-10-28
+
+- Q: Should intent-mismatch findings block merging? → A: No. Only defect
+  findings block merging; intent findings are advisory and visible on the pull
+  request.
+
 ## Requirements _(mandatory)_
 
 ## Assumptions
@@ -124,9 +132,9 @@ being loaded, frames out of bounds, etc)
 - **FR-016**: A pull request MUST NOT be mergeable into `main` until a
   verification run for its latest commit has completed with no blocking
   findings.
-- **FR-017**: [NEEDS CLARIFICATION: Should the automated reviewer's
-  intent-correctness judgment (FR-008) block merges, or only defect findings
-  (FR-010) block while intent mismatches are advisory for human reviewers?]
+- **FR-017**: Only defect findings (FR-010) MUST block merging. The reviewer's
+  intent-correctness judgment (FR-008) MUST be reported as advisory findings,
+  visible on the pull request, for human reviewers to act on.
 - **FR-018**: An inconclusive or failed verification run MUST block merging
   until it is rerun successfully or a maintainer records an explicit,
   auditable override with a reason.
@@ -293,7 +301,8 @@ path and whether the element meets the stated acceptance criteria.
 
 - **Given** a pull request whose description does not match the preview
 - **When** verification runs
-- **Then** the report flags the mismatch with evidence
+- **Then** the report flags the mismatch as an advisory finding with evidence,
+  without blocking the merge
 
 ##### Acceptance Criteria 3
 

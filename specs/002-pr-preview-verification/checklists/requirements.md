@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,7 +31,8 @@
 
 ## Notes
 
-- FR-017 needs a decision on whether intent-correctness findings block merges.
+- FR-017 resolved (2026-10-28): only defect findings block merging; intent
+  findings are advisory.
 - Hosting and workflow choices, including the agentic workflow in the user
   input, are deferred to `/speckit-plan`; the spec only uses neutral terms such
   as "preview" and "automated reviewer".
