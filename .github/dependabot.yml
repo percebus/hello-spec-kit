@@ -9,9 +9,11 @@ updates:
     directory: "/" # Location of package manifests
     dependency-type: direct
     schedule:
-      interval: "weekly"
-    update-types:
-      - "version-update:semver-minor"
-      - "version-update:semver-patch"
-    cooldown:
-      default-days: 7
+      interval: weekly
+    groups:
+      all:
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+        cooldown:
+          default-days: 7
