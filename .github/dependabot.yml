@@ -5,14 +5,13 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
+  - package-ecosystem: npm # See documentation for possible values
     directory: "/" # Location of package manifests
+    dependency-type: direct
     schedule:
       interval: "weekly"
-    allow:
-      dependency-type: direct
-      update-types:
-        - "version-update:semver-minor"
-        - "version-update:semver-patch"
+    update-types:
+      - "version-update:semver-minor"
+      - "version-update:semver-patch"
     cooldown:
       default-days: 7
