@@ -5,6 +5,15 @@
 See the [workflow documentation](.github/workflows/README.md) for closed issue
 auditor setup and usage.
 
+## Installing dependencies
+
+Run `npm install` from the repository root. The project `.npmrc` and the
+`microsoft.npmrc` configuration use the Microsoft package proxy. They remap the
+feed's tarball URL prefix to the proxy so npm 12 recognizes these downloads as
+registry dependencies when `allow-remote=none` is enforced. Keep both
+configurations in sync; do not enable arbitrary remote dependencies to work
+around `EALLOWREMOTE`.
+
 ## Physical keyboard support
 
 Use Tab and Shift+Tab to move between links, native audio controls, and FAQ
