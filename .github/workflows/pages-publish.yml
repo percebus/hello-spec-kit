@@ -225,8 +225,6 @@ jobs:
       SHA: ${{ needs.prepare.outputs.sha }}
       CI_RUN_ID: ${{ needs.prepare.outputs.ci_run_id }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      TREE: ${{ runner.temp }}/tree
-      SITE: ${{ runner.temp }}/site
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -244,6 +242,8 @@ jobs:
         id: tree
         run: |
           set -euo pipefail
+          TREE="$RUNNER_TEMP/tree"
+          SITE="$RUNNER_TEMP/site"
           set_status() {
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
               -f state="$1" -f context="$STATUS_CONTEXT" \
