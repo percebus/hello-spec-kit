@@ -50,11 +50,22 @@ being loaded, frames out of bounds, etc)
   serialized.
 - Q: What does a subsite represent? → A: A branch. Each push replaces that
   branch's subsite.
-- Q: When are subsites deleted? → A: A passing subsite is kept until its pull
-  request is merged or closed. A subsite whose verification does not pass is
-  deleted immediately; the report's screenshots remain as evidence.
+- Q: When are subsites deleted? → A: ~~A subsite that does not pass
+  verification is deleted immediately.~~ Revised below.
 - Q: Where does `main` publish until the release repository exists? → A: To its
   own `main` subsite. The R&D site's root address leads visitors there.
+- Q: Where does publishing run? → A: In the CI workflow itself. The flow is
+  `Verify → Deploy pages → E2E tests → Preview verify`, for every branch,
+  with no separate publishing workflow. `Preview verify` is triggered only
+  when the end-to-end tests pass on the subsite.
+- Q: When is a subsite deleted? (revised) → A: Only when its pull request is
+  merged or closed. A subsite whose verification fails is kept until the next
+  push replaces it or the pull request closes. There is no scheduled cleanup;
+  each deployment also drops subsites of pull requests that are no longer
+  open.
+- Q: Is a maintainer override of the merge gate needed? → A: Not at this time.
+  A failed or inconclusive verification is resolved by fixing and pushing, or
+  by re-running the CI workflow.
 
 ## Requirements _(mandatory)_
 
@@ -76,8 +87,8 @@ being loaded, frames out of bounds, etc)
   and, when present, the linked issue's acceptance criteria. The automated
   reviewer uses these as its definition of "correct".
 - Pull requests from forks are not published or reviewed automatically, because
-  they must not receive repository credentials. A maintainer can trigger
-  verification after reviewing the change.
+  they must not receive repository credentials. To verify a fork's change, a
+  maintainer pushes it to a branch in this repository.
 - The visual defect that motivated this feature (#85, an expected image not
   loading) is fixed separately; this feature prevents recurrence.
 - Existing automated browser tests continue to run; this feature complements
@@ -126,9 +137,9 @@ being loaded, frames out of bounds, etc)
   MUST be posted on the pull request. While publishing or verification is
   pending, the pull request MUST show that it is waiting.
 - **FR-006**: A subsite MUST be deleted when its pull request is merged or
-  closed. It MUST also be deleted immediately when verification of its current
-  commit does not pass (fails or is inconclusive). Deletion MUST NOT remove a
-  newer commit's subsite for the same branch.
+  closed. A subsite whose verification fails MUST remain available until the
+  next push replaces it or the pull request closes, so the failure can be
+  inspected.
 - **FR-020**: `main` MUST be published to its own `main` subsite of the R&D
   site, and the R&D site's root address MUST lead visitors to it.
 
@@ -172,18 +183,17 @@ being loaded, frames out of bounds, etc)
   intent-correctness judgment (FR-008) MUST be reported as advisory findings,
   visible on the pull request, for human reviewers to act on.
 - **FR-018**: An inconclusive or failed verification run MUST block merging
-  until it is rerun successfully or a maintainer records an explicit,
-  auditable override with a reason.
+  until a later run for the pull request's latest commit passes. A maintainer
+  override is out of scope for now.
 - **FR-019**: Maintainers MUST be able to rerun verification without pushing a
-  new commit. A rerun MUST republish the subsite if it was deleted.
+  new commit, by re-running the CI workflow for the pull request.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
 - **SC-001**: 100% of pull requests merged into `main` after adoption have a
-  completed verification run for their final commit, or a recorded maintainer
-  override.
+  passing verification run for their final commit.
 - **SC-002**: A reviewer can open the subsite of an incoming change within
   10 minutes of the latest push, in at least 95% of runs, including when
   several pull requests are active.
@@ -197,20 +207,17 @@ being loaded, frames out of bounds, etc)
   15 minutes of the subsite becoming available.
 - **SC-007**: Maintainers rate at least 80% of advisory findings in the first
   month as accurate and worth reading.
-- **SC-008**: No subsite remains on the R&D site for a merged or closed pull
-  request, or for a commit whose verification did not pass, for more than
-  15 minutes.
+- **SC-008**: No subsite remains on the R&D site for more than 15 minutes
+  after its pull request is merged or closed.
 
 ## Edge Cases
 
-- Two pushes to the same branch arrive in quick succession: the subsite ends
-  up showing the latest commit, the older commit's verification is
-  superseded, and only the latest commit's result counts.
-- An older commit's verification fails after a newer commit of the same branch
-  has been published: deletion is skipped because the subsite no longer shows
-  the failing commit.
-- Several pull requests publish at once: every subsite and `main` survive. Each
-  publication waits for the previous one, but verifications run in parallel.
+- Two pushes to the same branch arrive in quick succession: the older CI run
+  is cancelled, the subsite ends up showing the latest commit, and only the
+  latest commit's result counts.
+- Several pull requests deploy at once: every subsite and `main` survive. Each
+  deployment waits for the previous one, but tests and verifications run in
+  parallel.
 - Two branch names would map to the same address after flattening (for
   example `feat/a-b/c` and `feat/a/b-c`, or `feat/x` and `feat-x`): the second
   one is rejected with an explanation on its pull request instead of
@@ -220,9 +227,11 @@ being loaded, frames out of bounds, etc)
   branches with the same beginning do not collide.
 - A branch name would collide with `main` or another reserved address: it is
   rejected in the same way.
-- A subsite has been deleted after failing verification: the report, findings,
-  and screenshots remain on the pull request, and a rerun republishes the
-  subsite.
+- Verification fails: the subsite stays available for inspection until the
+  next push or until the pull request closes, and the report, findings, and
+  screenshots remain on the pull request.
+- The end-to-end tests fail on the subsite: the agentic review is not started,
+  and merging is blocked until a later push passes.
 - The subsite build fails: nothing is published, the pull request is marked
   failed, and the build error is linked.
 - The change is not visible in the site (for example, documentation or tooling
@@ -238,9 +247,9 @@ being loaded, frames out of bounds, etc)
 - The pull request text contains instructions aimed at the reviewer (for
   example, "approve this"): they are ignored and may be noted as suspicious.
 - The reviewing service is unavailable or exceeds its run-time limit: the run is
-  inconclusive and merging stays blocked until rerun or override.
+  inconclusive and merging stays blocked until a rerun passes.
 - A pull request comes from a fork: no subsite is published automatically; a
-  maintainer must trigger verification after inspecting the change.
+  maintainer pushes the change to a branch in this repository to verify it.
 - The R&D site approaches its size limit because many branches are open:
   publishing reports the problem on the pull request instead of silently
   dropping other subsites.
@@ -290,8 +299,7 @@ the same.
 ##### Acceptance Criteria 4
 
 - **Given** a branch subsite exists
-- **When** its pull request is merged or closed, or its current commit fails
-  verification
+- **When** its pull request is merged or closed
 - **Then** the subsite is deleted, and other subsites are unaffected
 
 ---
@@ -414,5 +422,6 @@ new run passes.
 ##### Acceptance Criteria 3
 
 - **Given** an inconclusive run
-- **When** a maintainer records an override with a reason
-- **Then** merging is allowed and the override is visible on the pull request
+- **When** a maintainer re-runs the pull request's CI workflow and the new run
+  passes
+- **Then** merging is allowed

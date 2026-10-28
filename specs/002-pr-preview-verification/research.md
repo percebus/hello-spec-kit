@@ -58,47 +58,55 @@ https://percebus.github.io/hello-spec-kit/
 - _Serve the site only on the runner's localhost_: rejected because people
   could not open it (User Story 1).
 
-## R2. Publishing runs in `main`'s context, serialized
+## R2. Publishing runs inside the CI workflow, serialized
 
-**Decision**: A single non-agentic workflow, `pages-publish.yml`, performs
-every change to the R&D site. It is triggered by:
+**Decision**: The CI workflow, `always.yml`, publishes subsites itself:
 
-| Trigger                              | Operation                                                         |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| `workflow_run` of CI (`completed`, `success`) | `publish` the run's artifact: a PR branch subsite or `main` |
-| `pull_request_target` (`closed`)     | `delete` the branch's subsite. No PR code is checked out.          |
-| `workflow_dispatch`                  | `publish` (rerun) or `delete` (after failed verification)          |
-| `schedule` (hourly)                  | `prune` subsites whose PR is closed (safety net, SC-008)           |
+```text
+Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (dispatches preview-verify)
+             ▲
+pull_request closed ──┘ (delete the branch's subsite)
+```
 
-Concurrency is set on the single `publish` job, the only job that reads and
-writes `gh-pages` and deploys: `group: pages-publish`,
-`cancel-in-progress: false`, and `queue: max`. `prepare` and `announce` run
-outside the group, so manifest polling and `main`'s end-to-end tests do not
-hold up other publishes. Because a queued publish may wait, `publish` re-checks
-that the PR head still equals the SHA before changing anything.
+| Event                                   | `deploy-pages` operation                                  |
+| --------------------------------------- | --------------------------------------------------------- |
+| `pull_request` opened/synchronize/reopened (same repo) | `publish` the branch's subsite          |
+| `push` to `main`                        | `publish` `main/`                                         |
+| `pull_request` closed (same repo)       | `delete` the branch's subsite, using `main`'s scripts      |
+
+Every deployment also prunes subsites whose pull request is no longer open.
+There is no scheduled cleanup. `deploy-pages` keeps the existing
+`concurrency.group: pages` with `cancel-in-progress: false` and adds
+`queue: max`. The workflow-level group, which cancels older runs for the same
+ref, still drops superseded pushes before they deploy.
 
 **Rationale**:
 
-- **Deploy rules.** `workflow_run`, `pull_request_target`, `schedule`, and
-  dispatches to `main` all run in the default branch context. They therefore
-  satisfy the `github-pages` environment's deployment rules without loosening
-  them.
-- **Trusted workflow code.** The publishing logic is the version on `main`, not
-  workflow code from a PR. Code a PR changes cannot rewrite how other subsites
-  are published.
-- **No lost updates.** Serializing read-modify-write on `gh-pages` prevents
-  lost updates (FR-003). `queue: max` keeps every pending publish instead of
-  the default `queue: single`, which drops all but the newest. Each publish
-  takes about 1 minute, so queues stay short.
-- **Parallel verification.** Verification runs outside this group (FR-001).
+- **Simplicity.** One workflow, the same job names as before (`deploy-pages`
+  and `e2e-tests`), and reruns through GitHub's "Re-run jobs".
+- **No lost updates.** `deploy-pages` replaces the whole site, so each run does
+  a read-modify-write of the `gh-pages` tree. With `queue: max`, every pending
+  deployment waits its turn. The default, `queue: single`, would drop all but
+  the newest.
+- **Parallel testing.** Only `deploy-pages` is serialized; `e2e-tests` and
+  `preview-verify` run in parallel across pull requests (FR-001).
 - **Dispatch works.** `GITHUB_TOKEN` can trigger `workflow_dispatch` runs
   (GitHub Docs, "GITHUB_TOKEN").
 
+**Required setting**: Settings → Environments → `github-pages` → deployment
+branches must allow pull request branches. The default often allows only
+`main`.
+
+**Accepted trade-off**: A `pull_request` run uses the branch's own copy of the
+workflow, so a same-repo pull request could change how it publishes. Same-repo
+authors already have write access, and fork pull requests are never deployed.
+
 **Alternatives considered**:
 
-- _Deploy from the PR's own workflow_: rejected because it requires opening
-  `github-pages` deployments to every branch, and a PR could alter the publish
-  logic.
+- _A separate `pages-publish.yml` driven by `workflow_run` and
+  `pull_request_target` (previous design)_: it always ran `main`'s copy of the
+  publishing logic and needed no environment change. It was rejected by the
+  owner in favor of keeping `deploy-pages` and `e2e-tests` in CI.
 - _One concurrency group per branch_: rejected because concurrent writes to
   `gh-pages` would race.
 
@@ -186,10 +194,13 @@ and `COPILOT_GITHUB_TOKEN`.
 because gh-aw discourages it and it would require pinning the package
 manually.
 
-## R6. Verdict, fallback, and delete-on-failure
+## R6. Verdict and fallback
 
 **Decision**:
 
+- **Gate order.** `preview-verify` is dispatched only after `e2e-tests` pass
+  on the subsite. If the end-to-end tests fail, the status becomes `failure`
+  with "End-to-end tests failed on the subsite".
 - **Scanner verdict.** The `scan` job sets `failure` when there are blocking
   findings.
 - **Agent verdict.** The agent ends by calling `record-verdict`, a custom
@@ -201,29 +212,32 @@ manually.
 - **Fallback.** `finalize` runs with `needs: [agent, detection, safe_outputs]`
   and `if: always()`. The installed compiler, `gh aw` v0.89.21, does not
   support `detection-gate`. It keeps the authored `if: always()`, so
-  `finalize` also runs when detection or the agent fails.
-  - If the status is still `pending`, it sets `error` with "Inconclusive:
-    reviewer did not record a verdict" (FR-015).
-  - If the final state is not `success`, it dispatches `pages-publish` with
-    `op=delete`, `slug`, and `sha`, which deletes the subsite immediately
-    (FR-006).
+  `finalize` also runs when detection or the agent fails. If the status is
+  still `pending`, it sets `error` with "Inconclusive: reviewer did not record
+  a verdict" (FR-015).
+- **No deletion on failure.** A failing subsite stays until the next push or
+  until the pull request closes (FR-006).
 
 **Rationale**:
 
 - The agent never holds a write token.
 - Crashes and timeouts fail closed.
-- Deletion is driven by the final state, so failed scans, inconclusive runs,
-  and crashes are all handled.
+- Keeping a failing subsite lets people inspect the failure in a browser.
 
 **Implementation note**: `record_verdict` is a compiler-generated safe-output
 job, so `finalize` polls the status for up to 60 seconds instead of listing it
 in `needs`. Verified with `gh aw compile preview-verify --validate`.
 
-**Alternatives considered**: Parsing the PR comment was rejected because it is
-fragile and open to prompt injection. Using the workflow conclusion was
-rejected because it cannot express "inconclusive".
+**Alternatives considered**:
 
-## R7. Report and evidence survive deletion (FR-012, FR-013)
+- _Deleting the subsite right away on failure (previous design)_: rejected by
+  the owner because it needed a separate dispatchable publishing workflow.
+- _Parsing the PR comment_: rejected because it is fragile and open to prompt
+  injection.
+- _Using the workflow conclusion_: rejected because it cannot express
+  "inconclusive".
+
+## R7. Report and evidence (FR-012, FR-013)
 
 **Decision**:
 
@@ -231,11 +245,13 @@ rejected because it cannot express "inconclusive".
 - Scanner screenshots are uploaded as artifact `preview-scan-<sha>`.
 - The agent's screenshots go to `preview-agent-<sha>` through the
   `upload-artifact` safe output.
-- When the result is not `success`, the report says that the subsite was
-  deleted and explains how to rerun.
+- The report says that the subsite is kept until the next push or until the
+  pull request closes. When the result is inconclusive, it explains how to
+  rerun: re-run the CI workflow, or push a new commit.
 
-**Rationale**: Artifacts and comments do not depend on the subsite existing.
-gh-aw recommends `upload-artifact` over `upload-asset`.
+**Rationale**: Artifacts and comments outlive the subsite, which is deleted
+when the pull request closes. gh-aw recommends `upload-artifact` over
+`upload-asset`.
 
 **Alternatives considered**: `upload-asset` was rejected because it grows git
 history.
@@ -315,9 +331,14 @@ has two implications:
   case, `app/layout.tsx` renders a `PreviewBanner`
   (`<aside aria-label="Preview build">`) and `robots: { index: false }`.
 - `main` builds leave these variables unset, so `main`'s output has no banner.
-- `pages-publish` writes `<slug>/preview.json`
-  ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json))
-  and polls it until it reports the expected SHA.
+- `deploy-pages` writes `<slug>/preview.json`
+  ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json)).
+  `e2e-tests` polls it until it reports the expected SHA.
+- For pull requests, `e2e-tests` writes a temporary `.env.subsite` with
+  `BASE_URL=https://percebus.github.io` and
+  `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`, then runs `npm test` with
+  `ENV=subsite`. This reuses the existing dotenv mechanism. For `main`, it
+  runs with `ENV=production` as before.
 - `.env.production` and `.env.development` both change to
   `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. Each file is read by two
   consumers, and keeping both files on the same value keeps them consistent:
@@ -357,12 +378,13 @@ has two implications:
 
 **Decision**:
 
-- `pages-publish` never runs code from a PR. It only copies the artifact's
-  files into a folder, using event-derived slug, PR, and SHA values.
-- Fork PRs are skipped when `workflow_run.head_repository` is not this
-  repository. Their CI token cannot set statuses anyway.
-- A maintainer can publish and verify a fork PR after reviewing it, using
-  `workflow_dispatch` with `op=publish` and `pr_number=N`.
+- Same-repo pull requests are deployed by their own CI run. On a closed pull
+  request, `deploy-pages` checks out `main` and uses `main`'s scripts, because
+  the merge ref may no longer exist.
+- Fork pull requests still run `Verify`, but they get no slug, artifact,
+  deployment, or verification, and their token cannot set statuses anyway.
+  To verify a fork's change, a maintainer pushes it to a branch in this
+  repository.
 
 **Residual risk (accepted)**: Same-repo PR authors already have write access.
 Their static files are served on the same origin as `main/`.
@@ -370,40 +392,35 @@ Their static files are served on the same origin as `main/`.
 for the R&D site. All of `percebus`'s project Pages sites share this origin,
 so moving production to a release repository (#100) does not change this risk.
 
-## R11. Override and rerun (FR-018, FR-019)
+## R11. Rerun; no override (FR-018, FR-019)
 
 **Decision**:
 
-- **Rerun**: dispatch `pages-publish.yml` with `op=publish` and `pr_number=N`.
-  - It finds the latest successful CI run for the PR head SHA and republishes
-    its `site` artifact. This recreates the subsite if it was deleted.
-  - It then dispatches `preview-verify`.
-  - If the artifact has expired, it reports that the PR needs a re-run of CI.
-- **Override**: `preview-override.yml`, triggered by `workflow_dispatch` with
-  `pr_number` and `reason`.
-  - It requires the actor to have `admin` or `maintain` permission.
-  - It sets `success` with "Override by @actor: reason" and posts a PR comment.
-  - It does not republish anything.
+- **Rerun**: use "Re-run all jobs" on the pull request's CI run, or push a new
+  commit. Either one redeploys the subsite, re-runs the end-to-end tests, and
+  dispatches `preview-verify` again.
+- **Override**: none for now. The owner decided it is unnecessary at this time.
 
-**Rationale**: Reruns and overrides are explicit and auditable, and they reuse
-the existing publish path.
+**Rationale**: With publishing inside CI, GitHub's built-in rerun covers
+FR-019 without a custom workflow.
+
+**Alternatives considered**: A maintainer-only `preview-override.yml`
+(previous design) was removed at the owner's request.
 
 ## R12. `main` during the interim (FR-020)
 
 **Decision**:
 
-- When CI succeeds on `main`, `pages-publish` publishes to `main/`.
-- It then runs the existing production end-to-end job against
-  `https://percebus.github.io/hello-spec-kit/main/`. This job moves from
-  `always.yml` into `pages-publish`.
+- On pushes to `main`, `deploy-pages` publishes `main/`. `e2e-tests` then runs
+  against `https://percebus.github.io/hello-spec-kit/main/` with
+  `ENV=production`, as before.
 - The root `index.html` uses a meta refresh with a visible link to `./main/`,
   so the old URL keeps working.
-- The `deploy-pages` and `e2e-tests` jobs are removed from `always.yml`.
 - The move to a release repository is tracked in #100. When that happens, the
   root redirect and `main/` will point to the new production URL.
 
-**Rationale**: The root URL keeps working, `main` follows the same publishing
-path as branches, and a single workflow owns the Pages site.
+**Rationale**: The root URL keeps working, and `main` follows the same
+`deploy-pages` → `e2e-tests` path as branches.
 
 **Alternatives considered**: Keeping `main` at the site root was rejected by
 the owner. Mixing root files with subsites also complicates pruning.
@@ -414,8 +431,9 @@ the owner. Mixing root files with subsites also complicates pruning.
   path. The root redirect is static HTML.
 - **Principle II**:
   - The plan adds no npm dependencies.
-  - It adds a publish workflow, an agentic workflow, an override workflow, and
-    a storage branch. These are justified in the plan's Complexity Tracking.
+  - It adds one agentic workflow and a storage branch, and extends the
+    existing CI workflow. These are justified in the plan's Complexity
+    Tracking.
   - It removes the need for a second repository.
 - **Principle III**: The banner is semantic, readable at 320 px, meets contrast
   requirements, and does not appear on `main`.

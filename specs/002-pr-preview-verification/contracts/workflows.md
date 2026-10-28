@@ -1,82 +1,60 @@
 # Contract: Workflow interfaces
 
-Three workflows own all changes to the R&D site and the merge gate:
+Two workflows own the R&D site and the merge gate:
 
-| Workflow                 | Writes                                                               | Runs PR code? |
-| ------------------------ | -------------------------------------------------------------------- | ------------- |
-| `always.yml` (CI)        | `site` artifact; `pending` status                                    | Yes (build/test only, no secrets) |
-| `pages-publish.yml`      | `gh-pages` storage branch, Pages deployment, PR comment, statuses    | **No**        |
-| `preview-verify.md` (gh-aw) | statuses, PR report comment, evidence artifacts                   | No (browses the published subsite only) |
-| `preview-override.yml`   | `success` status and PR comment                                      | No            |
+| Workflow                    | Writes                                                                          | Runs PR code?                               |
+| --------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------- |
+| `always.yml` (CI)           | `site` artifact, `gh-pages` storage branch, Pages deployment, PR comment, statuses | Yes, for same-repo PRs (see research R2)   |
+| `preview-verify.md` (gh-aw) | statuses, PR report comment, evidence artifacts                                 | No (browses the published subsite only)     |
 
-## `always.yml` changes
+## `always.yml`
 
-- **`verify` job (existing)**:
-  - Build and test exactly as before.
-  - **Add**: on same-repo `pull_request`, set the `preview-verification`
-    status to `pending` with "Waiting for subsite" (`statuses: write`).
-  - **Add**: rebuild with explicit `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`
-    and the `NEXT_PUBLIC_PREVIEW_PR`, `_REF`, and `_SHA` variables. For `main`,
-    use `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main` and no preview variables.
-    Upload the result as artifact `site` (retention 14 days).
-  - Compute `<slug>` with the shared slug rule (research R8). It is used only
-    for the base path; `pages-publish` recomputes it from trusted data.
-- **Remove**: the `deploy-pages` and `e2e-tests` jobs. Both move to
-  `pages-publish`.
+**Triggers**: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`),
+`push` to `main`, and `workflow_dispatch`.
 
-## `pages-publish.yml`
+**Concurrency**: the workflow-level group `${{ github.ref }}-${{ github.workflow }}`
+has `cancel-in-progress: true`, so a newer push cancels the older run. The
+`deploy-pages` job also uses `group: pages`, `cancel-in-progress: false`, and
+`queue: max`.
 
-**Concurrency**: on the `publish` job only: `group: pages-publish`,
-`cancel-in-progress: false`, `queue: max`.
+```text
+Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
+```
 
-| Trigger                                                        | Operation                                                                                         |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `workflow_run`: `workflows: ["[C]ontinuous [I]ntegration"]`, `types: [completed]` | If the conclusion is `success` and the head repository is this repository, `publish`. The slug comes from `head_branch` (`main` → `main`), the SHA from `head_sha`, and the PR from `pull_requests[0]`. |
-| `pull_request_target`: `types: [closed]`, `branches: [main]`    | Unconditional `delete` of the branch's slug. **Never checks out PR code.**                       |
-| `workflow_dispatch`: `op` (`publish`\|`delete`\|`prune`), `pr_number`, `slug`, `sha` (optional) | Rerun publish (FR-019), conditional delete after a failed verification (FR-006), or prune. |
-| `schedule`: hourly                                             | `prune`: delete subsites whose PR is no longer open (SC-008 safety net).                          |
+| Job              | Runs when                                                                                     | Does                                                                                                                                                                                                                                                                                         | Permissions                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `verify`         | Not `closed`                                                                                   | Builds and runs `npm test` locally as before. For a same-repo PR, or `main`: computes the slug (an invalid branch name sets `error`; rename the branch), sets `pending` "Waiting for subsite", rebuilds with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (plus `NEXT_PUBLIC_PREVIEW_*` for PRs), and uploads artifact `site`. On failure: `error` "Verify failed; no subsite was published". | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
+| `deploy-pages`   | `verify` succeeded with a slug, **or** a same-repo PR `closed`                                 | Fetches `gh-pages` and runs `scripts/pages-tree.mjs`: `init`, then `upsert` (publish) or `remove` (closed), then `prune` against open PR branches. If the tree changed: force-pushes a single orphan commit, then runs `upload-pages-artifact`, `configure-pages`, and `deploy-pages`. Creates or updates the `<!-- rnd-subsite -->` PR comment. Collision and size errors set `error`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
+| `e2e-tests`      | `deploy-pages` succeeded and not `closed`                                                      | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). PRs: writes `.env.subsite` and runs `npm test` with `ENV=subsite`, after setting `pending` "Running end-to-end tests…". `main`: runs `npm test` with `ENV=production`. Publishes JUnit results. On failure (PR): `failure` "End-to-end tests failed on the subsite". | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
+| `preview-verify` | PR (not `closed`) and `e2e-tests` succeeded                                                    | Sets `pending` "Verifying…" and runs `gh workflow run preview-verify.lock.yml --ref <head branch>` with `pr_number`, `sha`, and `slug`.                                                                                                                                                       | `actions: write`, `statuses: write`                                             |
 
-**Jobs**:
-
-| Job           | Steps                                                                                                                                                         | Permissions / environment                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `prepare`     | Resolve `op`, `slug`, `kind`, `branch`, `pr`, `sha`, and `ci_run_id`. Run the slug, staleness, and (for reruns) artifact checks. Set "Publishing subsite…". | `actions: read`, `pull-requests: read`, `statuses: write`, `contents: read` |
-| `publish`     | Serialized. Re-check staleness. Download artifact `site` (`run-id`). Fetch `gh-pages`, run `scripts/pages-tree.mjs` (`init`, then `upsert` or `remove`, then `prune`). If the tree changed, force-push a single orphan commit, then upload the Pages artifact and run `actions/deploy-pages`. Collision and size errors set `error`. | `contents: write`, `actions: read`, `pages: write`, `id-token: write`, `pull-requests: read`, `statuses: write`; environment `github-pages` |
-| `announce`    | Poll `<slug>/preview.json` until `sha` matches (≤ 5 min). For a branch publish: post or update the PR comment with the subsite address (FR-005), set the status to `pending` "Verifying…", and dispatch `preview-verify` with `pr_number`, `sha`, and `slug`. For a `main` publish: run the end-to-end tests (`ENV=production npm test`) against `/hello-spec-kit/main/`. For a delete: update the PR comment. | `actions: write`, `checks: write`, `pull-requests: write`, `statuses: write`  |
-
-Any `prepare` or `publish` failure on a branch publish sets
-`preview-verification=error` with the reason.
+Reruns use GitHub's "Re-run all jobs" on the PR's CI run (FR-019).
 
 ## `preview-verify` (gh-aw: `.github/workflows/preview-verify.md` → `.lock.yml`)
 
-| Trigger             | Inputs                                                            |
-| ------------------- | ----------------------------------------------------------------- |
+| Trigger             | Inputs                                                                  |
+| ------------------- | ----------------------------------------------------------------------- |
 | `workflow_dispatch` | `pr_number` (number), `sha` (string), and `slug` (string); all required |
 
+`on.bots: ["github-actions[bot]"]` lets CI's `GITHUB_TOKEN` dispatch it.
+
 **Concurrency**: `group: preview-verify-${{ inputs.pr_number }}`,
-`cancel-in-progress: true`. This overrides the gh-aw default, which would
-serialize all dispatches. PRs verify in parallel, and a newer commit cancels an
-older run for the same PR.
+`cancel-in-progress: true`, and `job-discriminator: ${{ inputs.pr_number }}`.
+Different PRs verify in parallel, and a newer commit cancels an older run for
+the same PR.
 
 | Job              | Purpose                                                                                                         | Permissions / secrets                     |
 | ---------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `resolve`        | Stop if the PR is closed or its head is not `sha`.                                                               | `pull-requests: read`                     |
-| `scan`           | Run `npx playwright test --project=preview-scan` with `BASE_URL=https://percebus.github.io` and `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`. Check `preview.json.sha` before and after; a mismatch means `superseded`. Upload `preview-scan-<sha>`. Set `failure` on blocking findings. | `contents: read`, `statuses: write`       |
-| `agent`          | Run the Copilot agent with `playwright-cli` against `/hello-spec-kit/<slug>/` only.                               | gh-aw managed; `COPILOT_GITHUB_TOKEN`     |
-| `safe_outputs`   | Process `add-comment` (report) and `upload-artifact` (`/tmp/gh-aw/preview/*.png`).                                | gh-aw managed                             |
-| `record_verdict` | Custom safe-output job that receives `{ outcome: complete \| inconclusive, reason }`.                            | `statuses: write`                         |
-| `finalize`       | Runs with `if: always()`. Changes `pending` to `error`. If the final state is not `success` and the run was not superseded, dispatch `pages-publish` with `op=delete`, `slug`, and `sha`. | `statuses: write`, `actions: write`       |
+| `resolve`        | Stops if the PR is closed or its head is not `sha`; otherwise sets `pending` "Scanning…".                         | `pull-requests: read`, `statuses: write`  |
+| `scan`           | Runs `npx playwright test --project=preview-scan` with `PREVIEW_SCAN=1`, `BASE_URL=https://percebus.github.io`, and `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`. Checks `preview.json.sha` before and after the scan, and a mismatch means `superseded`. Uploads `preview-scan-<sha>`. Sets `failure` on blocking findings, otherwise `pending` "Reviewing…". | `contents: read`, `statuses: write`       |
+| `agent`          | Runs the Copilot agent with `playwright-cli` against `/hello-spec-kit/<slug>/` only.                              | gh-aw managed; `COPILOT_GITHUB_TOKEN`     |
+| `safe_outputs`   | Processes `add-comment` (report) and `upload-artifact` (`/tmp/gh-aw/preview/*.png`).                              | gh-aw managed                             |
+| `record_verdict` | Custom safe-output job that receives `{ outcome: complete \| inconclusive, reason, advisory_count }`. Changes the status only from `pending`. | `statuses: write`                         |
+| `finalize`       | Runs with `if: always()`. Changes a status still `pending` after 60 s to `error`. It never deletes the subsite.  | `pull-requests: read`, `statuses: write`  |
 
-**Agent tools**: `playwright-cli:*`, `jq`, `cat`, and `ls`; GitHub read
-toolsets `pull_requests` and `issues`; `network.allowed: [defaults, playwright,
-"percebus.github.io"]`.
-
-## `preview-override.yml`
-
-`workflow_dispatch` with `pr_number` and `reason`, both required. It fails
-unless the actor has `admin` or `maintain` permission. It writes the override
-status ([commit-status.md](./commit-status.md)) and a PR comment. It does not
-republish anything.
+**Agent tools**: `playwright-cli:*`, `jq`, `cat`, `ls`, and `gh api:*` (reads
+only); GitHub read toolsets `pull_requests` and `issues`;
+`network.allowed: [defaults, playwright, "percebus.github.io"]`.
 
 ## Build-time environment
 
@@ -87,23 +65,24 @@ republish anything.
 | `NEXT_PUBLIC_PREVIEW_REF` | head branch                 | unset                   |
 | `NEXT_PUBLIC_PREVIEW_SHA` | head SHA                    | unset                   |
 
-`.env.production` and `.env.development` both change to
+`.env.production` and `.env.development` both use
 `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`:
 
 - `next build` loads `.env.production`, so CI's local test build and `main`'s
-  publish build both use `/main`.
+  build both use `/main`.
 - Local tests read the same value from `.env.development`.
-- The post-publish `main` tests keep using `ENV=production`.
+- `e2e-tests` uses `ENV=production` for `main` and a generated `.env.subsite`
+  (git-ignored) with `ENV=subsite` for PRs.
 - The scanner runs with `PREVIEW_SCAN=1`, skips dotenv, and reads `BASE_URL`
   and `NEXT_PUBLIC_BASE_PATH` from the process environment.
 
 ## Repository configuration (one-time, manual)
 
-| Item                     | Value                                                                                   |
-| ------------------------ | --------------------------------------------------------------------------------------- |
-| Pages source             | Stays **GitHub Actions**                                                                |
-| `github-pages` environment | No change. All deployments run from `main`'s context.                                  |
-| `gh-pages` branch        | Created by the first `pages-publish` run. Exclude it from branch rulesets that block force-pushes. |
-| Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                       |
-| Ruleset on `main`        | Require status checks `Verify` and `preview-verification`; require a PR                 |
-| Follow-up                | #100: move production to `hello-spec-kit-release`                                       |
+| Item                          | Value                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| Pages source                  | Stays **GitHub Actions**                                                                |
+| `github-pages` environment    | Deployment branches must allow PR branches, for example "No restriction" or `*`.        |
+| `gh-pages` branch             | Created by the first deployment. Exclude it from rules that block force-pushes.         |
+| Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                            |
+| Ruleset on `main`             | Require status checks `Verify` and `preview-verification`; require a PR                 |
+| Follow-up                     | #100: move production to `hello-spec-kit-release`                                       |
