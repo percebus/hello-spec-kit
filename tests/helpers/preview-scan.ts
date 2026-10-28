@@ -71,10 +71,19 @@ export async function scanSubsite(
       ? `/${url.pathname.slice(basePath.length)}`
       : null;
 
+  // Skips blob:/data: URLs (e.g. synthesized audio previews) and other origins.
+  const sameOriginHttp = (raw: string) => {
+    const url = new URL(raw);
+    return /^https?:$/.test(url.protocol) &&
+      url.origin === base.origin &&
+      !IGNORED_PATHS.has(url.pathname)
+      ? url
+      : null;
+  };
+
   page.on("request", (request) => {
-    const url = new URL(request.url());
-    if (url.origin !== base.origin || IGNORED_PATHS.has(url.pathname)) return;
-    if (!url.pathname.startsWith(basePath)) {
+    const url = sameOriginHttp(request.url());
+    if (url && !url.pathname.startsWith(basePath)) {
       record({
         severity: "blocking",
         category: "broken-link",
@@ -83,9 +92,8 @@ export async function scanSubsite(
     }
   });
   page.on("response", (response) => {
-    const url = new URL(response.url());
-    if (url.origin !== base.origin || IGNORED_PATHS.has(url.pathname)) return;
-    if (response.status() >= 400) {
+    const url = sameOriginHttp(response.url());
+    if (url && response.status() >= 400) {
       record({
         severity: "blocking",
         category: "broken-link",
@@ -94,9 +102,9 @@ export async function scanSubsite(
     }
   });
   page.on("requestfailed", (request) => {
-    const url = new URL(request.url());
+    const url = sameOriginHttp(request.url());
     const errorText = request.failure()?.errorText ?? "unknown error";
-    if (url.origin !== base.origin || errorText.includes("ERR_ABORTED")) return;
+    if (!url || errorText.includes("ERR_ABORTED")) return;
     record({
       severity: "blocking",
       category: "broken-link",
