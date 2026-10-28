@@ -70,8 +70,12 @@ every change to the R&D site. It is triggered by:
 | `workflow_dispatch`                  | `publish` (rerun) or `delete` (after failed verification)          |
 | `schedule` (hourly)                  | `prune` subsites whose PR is closed (safety net, SC-008)           |
 
-Concurrency is set at the workflow level: `group: pages-publish`,
-`cancel-in-progress: false`, and `queue: max`.
+Concurrency is set on the single `publish` job, the only job that reads and
+writes `gh-pages` and deploys: `group: pages-publish`,
+`cancel-in-progress: false`, and `queue: max`. `prepare` and `announce` run
+outside the group, so manifest polling and `main`'s end-to-end tests do not
+hold up other publishes. Because a queued publish may wait, `publish` re-checks
+that the PR head still equals the SHA before changing anything.
 
 **Rationale**:
 
@@ -194,8 +198,10 @@ manually.
     `complete`.
   - It sets `error` when `outcome` is `inconclusive`.
   - It never overwrites `failure`.
-- **Fallback.** `finalize` runs with `if: always()` and
-  `detection-gate: status-only`.
+- **Fallback.** `finalize` runs with `needs: [agent, detection, safe_outputs]`
+  and `if: always()`. The installed compiler, `gh aw` v0.89.21, does not
+  support `detection-gate`. It keeps the authored `if: always()`, so
+  `finalize` also runs when detection or the agent fails.
   - If the status is still `pending`, it sets `error` with "Inconclusive:
     reviewer did not record a verdict" (FR-015).
   - If the final state is not `success`, it dispatches `pages-publish` with
@@ -209,9 +215,9 @@ manually.
 - Deletion is driven by the final state, so failed scans, inconclusive runs,
   and crashes are all handled.
 
-**Implementation note**: Prefer `needs: [record_verdict]` for `finalize` if the
-compiler allows it. Otherwise, poll the status for up to 60 seconds. Confirm
-with `gh aw compile preview-verify --validate`.
+**Implementation note**: `record_verdict` is a compiler-generated safe-output
+job, so `finalize` polls the status for up to 60 seconds instead of listing it
+in `needs`. Verified with `gh aw compile preview-verify --validate`.
 
 **Alternatives considered**: Parsing the PR comment was rejected because it is
 fragile and open to prompt injection. Using the workflow conclusion was

@@ -26,8 +26,8 @@ Three workflows own all changes to the R&D site and the merge gate:
 
 ## `pages-publish.yml`
 
-**Concurrency**: `group: pages-publish`, `cancel-in-progress: false`,
-`queue: max`.
+**Concurrency**: on the `publish` job only: `group: pages-publish`,
+`cancel-in-progress: false`, `queue: max`.
 
 | Trigger                                                        | Operation                                                                                         |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -40,12 +40,11 @@ Three workflows own all changes to the R&D site and the merge gate:
 
 | Job           | Steps                                                                                                                                                         | Permissions / environment                                    |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `prepare`     | Resolve `op`, `slug`, `sha`, and `pr`. Run the staleness and slug checks: reserved name, collision, open PR, and head equal to `sha`. For publish, download artifact `site` from the CI run (`run-id`). | `actions: read`, `pull-requests: read`, `statuses: write`, `contents: read` |
-| `update-tree` | Check out `gh-pages`, or initialize it with `index.html`, `.nojekyll`, and `subsites.json`. Apply the operation: replace `<slug>/` with the artifact plus `preview.json`, or remove `<slug>/`, conditionally for a delete with a SHA. Also prune closed PRs. Enforce the 1 GB limit. Force-push a single orphan commit. Upload the Pages artifact. | `contents: write`                                            |
-| `deploy`      | `actions/deploy-pages`.                                                                                                                                       | `pages: write`, `id-token: write`; environment `github-pages` |
-| `announce`    | Poll `<slug>/preview.json` until `sha` matches (≤ 5 min). For a branch publish: post or update the PR comment with the subsite address (FR-005), set the status to `pending` "Verifying…", and dispatch `preview-verify` with `pr_number`, `sha`, and `slug`. For a `main` publish: run the end-to-end tests (`ENV=production npm test`) against `/hello-spec-kit/main/`. | `actions: write`, `pull-requests: write`, `statuses: write`  |
+| `prepare`     | Resolve `op`, `slug`, `kind`, `branch`, `pr`, `sha`, and `ci_run_id`. Run the slug, staleness, and (for reruns) artifact checks. Set "Publishing subsite…". | `actions: read`, `pull-requests: read`, `statuses: write`, `contents: read` |
+| `publish`     | Serialized. Re-check staleness. Download artifact `site` (`run-id`). Fetch `gh-pages`, run `scripts/pages-tree.mjs` (`init`, then `upsert` or `remove`, then `prune`). If the tree changed, force-push a single orphan commit, then upload the Pages artifact and run `actions/deploy-pages`. Collision and size errors set `error`. | `contents: write`, `actions: read`, `pages: write`, `id-token: write`, `pull-requests: read`, `statuses: write`; environment `github-pages` |
+| `announce`    | Poll `<slug>/preview.json` until `sha` matches (≤ 5 min). For a branch publish: post or update the PR comment with the subsite address (FR-005), set the status to `pending` "Verifying…", and dispatch `preview-verify` with `pr_number`, `sha`, and `slug`. For a `main` publish: run the end-to-end tests (`ENV=production npm test`) against `/hello-spec-kit/main/`. For a delete: update the PR comment. | `actions: write`, `checks: write`, `pull-requests: write`, `statuses: write`  |
 
-Any `prepare`, `update-tree`, or `deploy` failure on a branch publish sets
+Any `prepare` or `publish` failure on a branch publish sets
 `preview-verification=error` with the reason.
 
 ## `preview-verify` (gh-aw: `.github/workflows/preview-verify.md` → `.lock.yml`)

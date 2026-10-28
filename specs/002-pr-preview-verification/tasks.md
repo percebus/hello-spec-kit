@@ -298,7 +298,7 @@ deleted subsite. The clean case shows `success` and keeps its subsite.
        - `inconclusive`: `error` with "Inconclusive: <reason>".
     4. If the state is not `pending`, never change it. This preserves `failure` and `Superseded`.
 - [X] T027 [US2] Add a custom `finalize` job to `.github/workflows/preview-verify.md`.
-  - **Job settings:** `needs: [agent, detection, safe_outputs]`, `detection-gate: status-only`, `if: always()`, and permissions `statuses: write`, `actions: write`, `pull-requests: read`.
+  - **Job settings:** `needs: [agent, detection, safe_outputs]`, `if: always()`, and permissions `statuses: write`, `actions: write`, `pull-requests: read`. (`detection-gate` is not supported by `gh aw` v0.89.21; the compiler preserves `if: always()`.)
   - **Restrictions:** Do NOT read custom-job outputs or artifacts. Use inputs and the API.
   - **Steps:**
     1. Poll the status for up to 60 s while it is `pending`. If it is still `pending`, set `error` with "Inconclusive: reviewer did not record a verdict" (FR-015).

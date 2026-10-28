@@ -355,13 +355,13 @@ Call `add_comment` with `item_number: ${{ inputs.pr_number }}` and this body
 
 ### Blocking findings (<N>)
 
-| ID | Category | Page | Width | Description | Evidence |
-| -- | -------- | ---- | ----- | ----------- | -------- |
+| ID  | Category | Page | Width | Description | Evidence |
+| --- | -------- | ---- | ----- | ----------- | -------- |
 
 ### Advisory findings (<M>)
 
-| ID | Category | Page | Width | Description | Evidence |
-| -- | -------- | ---- | ----- | ----------- | -------- |
+| ID  | Category | Page | Width | Description | Evidence |
+| --- | -------- | ---- | ----- | ----------- | -------- |
 
 ### Coverage
 

@@ -55,10 +55,18 @@ const pageFileName = (pagePath: string, viewport: number) =>
 
 export async function scanSubsite(
   page: Page,
-  { baseURL, viewports = [320, 1440], artifact, screenshotDir, maxPages = 100 }: ScanOptions,
+  {
+    baseURL,
+    viewports = [320, 1440],
+    artifact,
+    screenshotDir,
+    maxPages = 100,
+  }: ScanOptions,
 ): Promise<Pick<ScanReport, "pagesVisited" | "findings">> {
   const base = new URL(baseURL);
-  const basePath = base.pathname.endsWith("/") ? base.pathname : `${base.pathname}/`;
+  const basePath = base.pathname.endsWith("/")
+    ? base.pathname
+    : `${base.pathname}/`;
   const raw: RawFinding[] = [];
   const externalLinks = new Set<string>();
   const current = { page: "/", viewport: viewports[0] };
@@ -120,7 +128,10 @@ export async function scanSubsite(
   );
   page.on("console", (message) => {
     // Failed resource loads are already reported by the network listeners.
-    if (message.type() !== "error" || message.text().startsWith("Failed to load resource")) {
+    if (
+      message.type() !== "error" ||
+      message.text().startsWith("Failed to load resource")
+    ) {
       return;
     }
     record({
@@ -135,7 +146,10 @@ export async function scanSubsite(
   const seen = new Set(queue);
 
   for (const [index, viewport] of viewports.entries()) {
-    await page.setViewportSize({ width: viewport, height: VIEWPORT_HEIGHTS[viewport] ?? 900 });
+    await page.setViewportSize({
+      width: viewport,
+      height: VIEWPORT_HEIGHTS[viewport] ?? 900,
+    });
     const pages = index === 0 ? queue : pagesVisited;
 
     for (let i = 0; i < pages.length && i < maxPages; i++) {
@@ -144,7 +158,9 @@ export async function scanSubsite(
       current.viewport = viewport;
       if (index === 0) pagesVisited.push(pagePath);
 
-      await page.goto(new URL(pagePath.slice(1), base).href, { waitUntil: "load" });
+      await page.goto(new URL(pagePath.slice(1), base).href, {
+        waitUntil: "load",
+      });
       await settle(page);
 
       if (index === 0) {
@@ -195,7 +211,10 @@ export async function scanSubsite(
     source: "scanner" as const,
     ...finding,
     description: finding.description.slice(0, MAX_DESCRIPTION),
-    evidence: { artifact, file: `screenshots/${pageFileName(finding.page, finding.viewport)}` },
+    evidence: {
+      artifact,
+      file: `screenshots/${pageFileName(finding.page, finding.viewport)}`,
+    },
   }));
 
   await captureEvidence(page, base, screenshotDir, findings);
@@ -204,13 +223,19 @@ export async function scanSubsite(
 
 async function settle(page: Page) {
   await page.evaluate(async () => {
-    for (let y = 0; y < document.documentElement.scrollHeight; y += window.innerHeight) {
+    for (
+      let y = 0;
+      y < document.documentElement.scrollHeight;
+      y += window.innerHeight
+    ) {
       window.scrollTo(0, y);
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     window.scrollTo(0, 0);
   });
-  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
+  await page
+    .waitForLoadState("networkidle", { timeout: 10_000 })
+    .catch(() => undefined);
 }
 
 function collectLinks(page: Page) {
@@ -219,7 +244,9 @@ function collectLinks(page: Page) {
   );
 }
 
-function inspectPage(page: Page): Promise<Omit<RawFinding, "page" | "viewport">[]> {
+function inspectPage(
+  page: Page,
+): Promise<Omit<RawFinding, "page" | "viewport">[]> {
   return page.evaluate(() => {
     const results: Omit<RawFinding, "page" | "viewport">[] = [];
     const describe = (element: Element) => {
@@ -250,7 +277,9 @@ function inspectPage(page: Page): Promise<Omit<RawFinding, "page" | "viewport">[
       }
     }
 
-    for (const media of document.querySelectorAll<HTMLMediaElement>("audio, video")) {
+    for (const media of document.querySelectorAll<HTMLMediaElement>(
+      "audio, video",
+    )) {
       if (media.error) {
         results.push({
           severity: "blocking",
@@ -274,7 +303,10 @@ function inspectPage(page: Page): Promise<Omit<RawFinding, "page" | "viewport">[
       /auto|scroll/.test(getComputedStyle(element).overflowX);
     const clips = (element: Element) => {
       const style = getComputedStyle(element);
-      return /hidden|clip/.test(style.overflowX) || /hidden|clip/.test(style.overflowY);
+      return (
+        /hidden|clip/.test(style.overflowX) ||
+        /hidden|clip/.test(style.overflowY)
+      );
     };
     const offenders: { element: Element; reason: string }[] = [];
 
@@ -287,7 +319,11 @@ function inspectPage(page: Page): Promise<Omit<RawFinding, "page" | "viewport">[
 
       let insideScroller = false;
       let clippedBy: Element | null = null;
-      for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      for (
+        let parent = element.parentElement;
+        parent;
+        parent = parent.parentElement
+      ) {
         if (isScrollContainer(parent)) {
           insideScroller = true;
           break;
@@ -312,14 +348,21 @@ function inspectPage(page: Page): Promise<Omit<RawFinding, "page" | "viewport">[
           reason: `extends past the ${viewportWidth}px viewport (left ${Math.round(rect.left)}px, right ${Math.round(rect.right)}px)`,
         });
       } else if (clippedBy) {
-        offenders.push({ element, reason: `is clipped by ${describe(clippedBy)}` });
+        offenders.push({
+          element,
+          reason: `is clipped by ${describe(clippedBy)}`,
+        });
       }
     }
 
     const offending = new Set(offenders.map(({ element }) => element));
     for (const { element, reason } of offenders) {
       let reportedAncestor = false;
-      for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      for (
+        let parent = element.parentElement;
+        parent;
+        parent = parent.parentElement
+      ) {
         if (offending.has(parent)) {
           reportedAncestor = true;
           break;
@@ -353,10 +396,18 @@ function dedupe(findings: RawFinding[]) {
   });
 }
 
-async function captureEvidence(page: Page, base: URL, screenshotDir: string, findings: Finding[]) {
+async function captureEvidence(
+  page: Page,
+  base: URL,
+  screenshotDir: string,
+  findings: Finding[],
+) {
   const targets = new Map<string, { page: string; viewport: number }>();
   for (const finding of findings) {
-    targets.set(finding.evidence.file, { page: finding.page, viewport: finding.viewport });
+    targets.set(finding.evidence.file, {
+      page: finding.page,
+      viewport: finding.viewport,
+    });
   }
   if (targets.size === 0) return;
 
@@ -366,7 +417,9 @@ async function captureEvidence(page: Page, base: URL, screenshotDir: string, fin
       width: target.viewport,
       height: VIEWPORT_HEIGHTS[target.viewport] ?? 900,
     });
-    await page.goto(new URL(target.page.slice(1), base).href, { waitUntil: "load" });
+    await page.goto(new URL(target.page.slice(1), base).href, {
+      waitUntil: "load",
+    });
     await settle(page);
     await page.screenshot({
       path: path.join(screenshotDir, path.basename(file)),
@@ -377,5 +430,8 @@ async function captureEvidence(page: Page, base: URL, screenshotDir: string, fin
 
 export function writeFindings(directory: string, report: ScanReport) {
   mkdirSync(directory, { recursive: true });
-  writeFileSync(path.join(directory, "findings.json"), `${JSON.stringify(report, null, 2)}\n`);
+  writeFileSync(
+    path.join(directory, "findings.json"),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
 }

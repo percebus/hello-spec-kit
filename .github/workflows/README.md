@@ -22,12 +22,12 @@ branches that flatten to the same slug (for example `feat/a-b/c` and
 
 ### Workflows
 
-| Workflow | Role |
-| -------- | ---- |
-| [always.yml](always.yml) | Builds and tests as before, then builds the subsite with its base path and uploads it as artifact `site`. Sets `preview-verification` to "Waiting for subsite". |
-| [pages-publish.yml](pages-publish.yml) | The only writer of the R&D site. Publishes after CI succeeds, deletes subsites when a PR closes or fails verification, and prunes hourly. Runs `main`'s end-to-end tests after publishing `main`. |
-| [preview-verify.md](preview-verify.md) | Agentic workflow, compiled to `preview-verify.lock.yml`. A deterministic Playwright scan (`tests/preview/`) decides blocking findings; the Copilot agent checks intent and posts the report. |
-| [preview-override.yml](preview-override.yml) | Maintainer-only override of the merge gate, with a required reason. |
+| Workflow                                     | Role                                                                                                                                                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [always.yml](always.yml)                     | Builds and tests as before, then builds the subsite with its base path and uploads it as artifact `site`. Sets `preview-verification` to "Waiting for subsite".                                   |
+| [pages-publish.yml](pages-publish.yml)       | The only writer of the R&D site. Publishes after CI succeeds, deletes subsites when a PR closes or fails verification, and prunes hourly. Runs `main`'s end-to-end tests after publishing `main`. |
+| [preview-verify.md](preview-verify.md)       | Agentic workflow, compiled to `preview-verify.lock.yml`. A deterministic Playwright scan (`tests/preview/`) decides blocking findings; the Copilot agent checks intent and posts the report.      |
+| [preview-override.yml](preview-override.yml) | Maintainer-only override of the merge gate, with a required reason.                                                                                                                               |
 
 - `pages-publish` stores the site tree on the `gh-pages` branch as a single
   commit and deploys it with `actions/deploy-pages`. **Never edit `gh-pages`

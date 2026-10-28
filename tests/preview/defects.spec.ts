@@ -9,7 +9,9 @@ const pr = Number(process.env.PREVIEW_PR) || 0;
 
 async function publishedSha(request: APIRequestContext) {
   const response = await request.get(`preview.json?t=${Date.now()}`);
-  return response.ok() ? ((await response.json()) as { sha?: string }).sha : undefined;
+  return response.ok()
+    ? ((await response.json()) as { sha?: string }).sha
+    : undefined;
 }
 
 function markSuperseded(observed: string | undefined) {
@@ -56,8 +58,9 @@ test("subsite has no blocking defects", async ({ page, request, baseURL }) => {
 
   const blocking = findings
     .filter((finding) => finding.severity === "blocking")
-    .map(({ id, category, page: pagePath, viewport, description }) =>
-      `${id} ${category} ${pagePath} @${viewport}px: ${description}`,
+    .map(
+      ({ id, category, page: pagePath, viewport, description }) =>
+        `${id} ${category} ${pagePath} @${viewport}px: ${description}`,
     );
   expect(blocking, `${blocking.length} blocking finding(s)`).toEqual([]);
 });
