@@ -80,21 +80,27 @@ pull_request_closed.yml:  Delete subsite
 Every deployment also prunes subsites whose pull request is no longer open.
 There is no scheduled cleanup.
 
-**Concurrency**: The whole CI workflow uses `group: ${{ github.workflow }}`,
-`cancel-in-progress: false`, and `queue: max`. Only one CI run executes at a
-time across the repository, and every waiting run is kept in order.
-Separately, the two jobs that rewrite the site, `always.yml` › `deploy-pages`
+**Jobs** (revised 2026-10-29): `verify` is an isolated build and test job,
+with no environment, no status writes, and no publishing. `deploy-pages`
+computes the slug, builds the subsite with its base path, uploads artifact
+`site` for inspection, and publishes `out/` directly.
+
+**Concurrency** (revised 2026-10-29): CI uses
+`group: ${{ github.ref }}-${{ github.workflow }}` with
+`cancel-in-progress: true`. A newer push to the same ref cancels the older
+run, and different refs run in parallel. The two jobs that rewrite the site,
+`always.yml` › `deploy-pages`
 and `pull_request_closed.yml` › `delete-subsite`, share the job-level group
 `pages` with `queue: max`. A delete therefore starts as soon as its pull
 request closes and waits only for an in-flight deployment, not for a whole CI
 run. The two must not overlap, because whichever force-pushes last would undo
 the other: a lost `main/` publish, or a deleted subsite that reappears.
 
-**Environments**: Only `verify` selects an environment:
-`main` for `refs/heads/main`, otherwise `branch`. It reads `vars.SUBSITE_KIND`
-(`main`|`branch`) and passes it as a job output, so later jobs need no event checks. `deploy-pages` and
-`delete-subsite` use the `github-pages` environment. The only per-run check
-left is same-repo (fork) detection.
+**Kind**: The workflow-level `env.KIND` is
+`${{ github.ref_name == 'main' && 'main' || 'branch' }}`; there are no `main`
+or `branch` environments. `deploy-pages` and `delete-subsite` use the
+`github-pages` environment. The only per-run check left is same-repo (fork)
+detection in `deploy-pages`' job `if`.
 
 **Why a separate closed workflow**: `pull_request_target` runs the default
 branch's workflow with `GITHUB_REF=refs/heads/main`. That passes
@@ -107,26 +113,26 @@ conflicts, which `pull_request` events skip. It never checks out PR code.
 - **Simplicity.** One workflow, the same job names as before (`deploy-pages`
   and `e2e-tests`), and reruns through GitHub's "Re-run jobs".
 - **No lost updates.** `deploy-pages` replaces the whole site, so each run does
-  a read-modify-write of the `gh-pages` tree. With one run at a time, writes
-  cannot race. `queue: max` is required because the default, `queue: single`,
-  would cancel every waiting run except the newest and drop other branches'
-  runs.
-- **Configuration over conditions.** Behavior differences between `main` and
-  branches live in environment variables the owner controls.
+  a read-modify-write of the `gh-pages` tree. The job-level `pages` group
+  serializes those writes. `queue: max` is required because the default,
+  `queue: single`, would cancel every waiting deployment except the newest and
+  drop other branches' changes.
+- **Isolated tests.** `verify` holds only read access plus test reporting.
 
 **Accepted trade-offs**:
 
-- CI no longer runs pull requests in parallel or cancels superseded pushes.
-  Each push runs in full, in order. The agentic `preview-verify` keeps its own
-  per-PR group and still runs in parallel.
-- A `pull_request` run uses the branch's own copy of the workflow, so a
-  same-repo pull request could change how it publishes. Same-repo authors
-  already have write access, and fork pull requests are never deployed.
+- A newer push cancels the older run, even mid-deployment. The `gh-pages`
+  push is atomic, and the next deployment redeploys the whole stored tree, so
+  the site self-heals. On `main`, a merge that lands during an older merge's
+  run cancels it; that older run never succeeds, so its post-merge review does
+  not run.
+- `deploy-pages` builds pull request code while it holds `contents: write`.
+  Same-repo authors already have write access, and fork pull requests are
+  never deployed. A `pull_request` run also uses the branch's own copy of the
+  workflow.
 
-**Required settings**: Environments `main` (deployment branches: `main`;
-vars `SUBSITE_KIND=main`), `branch` (no restriction;
-vars `SUBSITE_KIND=branch`), and `github-pages`
-(deployment branches: no restriction).
+**Required settings**: Environment `github-pages` with deployment branches
+unrestricted (or `main` plus `refs/pull/*/merge`).
 
 **Alternatives considered**:
 
@@ -134,11 +140,15 @@ vars `SUBSITE_KIND=branch`), and `github-pages`
   `pull_request_target` (previous design)_: it always ran `main`'s copy of the
   publishing logic and needed no environment change. It was rejected by the
   owner in favor of keeping `deploy-pages` and `e2e-tests` in CI.
-- _Per-ref concurrency with a job-level `pages` queue (previous design)_: it
-  allowed parallel CI across pull requests. It was replaced by the owner's
-  simpler one-at-a-time rule.
-- _Event checks (`github.event_name`) in every job_: replaced by environment
-  variables at the owner's request.
+- _One CI run at a time across the repository_ (`group: ${{ github.workflow }}`,
+  `queue: max`; earlier design): no cancellation and no lost runs, but slow
+  under load. Replaced by per-ref cancellation, with only deployments
+  serialized.
+- _`main` and `branch` environments with a `SUBSITE_KIND` variable (earlier
+  design)_: replaced by an inline `ref_name` expression, so `verify` stays an
+  isolated job.
+- _Building the subsite in `verify` and passing it as an artifact (earlier
+  design)_: replaced so that `verify` publishes nothing.
 
 ## R3. Merge gate signal (FR-016, FR-018)
 
@@ -394,10 +404,10 @@ has two implications:
 
 **Decision**:
 
-- CI keeps its existing build and local test as they are. It then builds the
-  publishable site again with an explicit
+- `verify` keeps its existing build and local test as they are. `deploy-pages`
+  builds the publishable site separately with an explicit
   `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (`/hello-spec-kit/main` for
-  `main`) and uploads it as artifact `site`.
+  `main`), uploads it as artifact `site`, and publishes `out/`.
 - Branch builds also set `NEXT_PUBLIC_PREVIEW_PR`, `_REF`, and `_SHA`. In that
   case, `app/layout.tsx` renders a `PreviewBanner`
   (`<aside aria-label="Preview build">`) and `robots: { index: false }`.
