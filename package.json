@@ -17,6 +17,8 @@
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
     "playwright:test": "playwright test --fully-parallel --workers=4",
+    "_node:test": "node --test",
+    "node:test:aw": "npm run _node:test -- ./.github/aw/scripts/*.test.mjs",
     "postinstall": "npm run playwright:install",
     "lint": "npm run prettier:check && npm run tsc",
     "format": "npm run prettier:write",
@@ -28,7 +30,7 @@
     "start:test": "node scripts/serve-static-export.mjs",
     "prebuild": "npm run lint",
     "build": "npm run next:build",
-    "test": "npm run playwright:test"
+    "test": "npm run node:test:aw && npm run playwright:test"
   },
   "dependencies": {
     "next": "^16.4.0-canary.51",

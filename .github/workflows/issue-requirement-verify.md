@@ -66,7 +66,7 @@ safe-outputs:
         - name: Publish conclusive checks
           env:
             GH_TOKEN: ${{ github.token }}
-          run: node scripts/publish-issue-requirements.mjs
+          run: node .github/aw/scripts/publish-issue-requirements.mjs
 steps:
   - name: Collect unverified requirements
     env:
@@ -77,7 +77,7 @@ steps:
       gh api --paginate --slurp \
         "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100&sort=created&direction=asc" \
         > /tmp/gh-aw/requirements/pages.json
-      node scripts/select-issue-requirements.mjs \
+      node .github/aw/scripts/select-issue-requirements.mjs \
         /tmp/gh-aw/requirements/pages.json "$GITHUB_RUN_NUMBER" \
         > /tmp/gh-aw/requirements/candidates.json
 ---

@@ -264,8 +264,8 @@ jobs:
               -f description="Running end-to-end tests…" -f target_url="$RUN_URL" > /dev/null
           fi
 
-      - name: npm test
-        run: npm test
+      - name: playwright test
+        run: npm run playwright:test
         env:
           ENV: subsite
 

@@ -153,7 +153,8 @@ This avoids ordering ambiguity between separate deferred label handlers.
 These API calls are not an atomic transaction; inspect the safe-output job if
 any fail. Errors fail the job rather than silently marking verification complete.
 
-After editing, run `node --test scripts/*issue-requirements.test.mjs`,
+Workflow-only helpers and their tests live in [../aw/scripts/](../aw/scripts/).
+After editing, run `node --test .github/aw/scripts/*issue-requirements.test.mjs`,
 `npm run format`, then `gh aw compile issue-requirement-verify --validate`.
 Commit the Markdown and generated lockfile together; do not edit the lockfile.
 
