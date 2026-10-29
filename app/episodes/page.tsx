@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { EpisodePlayer } from "../components/episode-player";
 import { episodes } from "../lib/episodes";
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
   title: "Episodes",
@@ -24,9 +27,16 @@ export default function EpisodesPage() {
         {episodes.map((episode) => (
           <li key={episode.slug}>
             <article className="episode-card">
+              <Image
+                className="episode-card-artwork"
+                src={`${basePath}/designing-for-trust.svg`}
+                width={800}
+                height={800}
+                alt="Interlocking shapes representing balance and trust."
+              />
               <p className="episode-number">Episode {episode.episodeNumber}</p>
               <h2>{episode.title}</h2>
-              <p>{episode.summary}</p>
+              <p className="episode-summary">{episode.summary}</p>
               <dl className="episode-meta">
                 <div>
                   <dt>Published</dt>

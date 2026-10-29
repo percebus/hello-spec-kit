@@ -246,8 +246,9 @@ can be found, read, and operated by mouse, touch, or keyboard.
   with an average rating of at least 4 out of 5.
 * **SC-007**: The landing page, episodes page, about page, and FAQ page load
   without visible broken content or browser errors during acceptance testing.
-* **SC-008**: 100% of episode cards expose the required title, artwork,
-  publication date, duration, summary, and playback action.
+* **SC-008**: 100% of episode cards rendered in the current listing view expose
+  the required title, artwork, publication date, duration, summary, and playback
+  action, regardless of the total catalog size or pagination.
 * **SC-009**: Every primary user journey completes without browser-specific
   failures in the latest stable Chrome, Edge, Firefox, and Safari releases.
 * **SC-010**: All text, essential user-interface components, and focus
