@@ -1,4 +1,5 @@
 export type Episode = {
+  id: string;
   slug: string;
   episodeNumber: number;
   title: string;
@@ -134,6 +135,7 @@ const episodeTopics = [
 export const episodes: readonly Episode[] = episodeTopics.map(
   (episode, index) => ({
     ...episode,
+    id: episode.slug,
     episodeNumber: 20 - index,
     publishedAt: `September ${28 - index}, 2026`,
     duration: `${32 + ((index * 7) % 24)} min`,

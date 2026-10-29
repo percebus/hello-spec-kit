@@ -26,13 +26,13 @@ export default function EpisodesPage() {
       <ol className="episode-grid" aria-label="All episodes">
         {episodes.map((episode) => (
           <li key={episode.slug}>
-            <article className="episode-card">
+            <article className="episode-card" data-episode-id={episode.id}>
               <Image
                 className="episode-card-artwork"
-                src={`${basePath}/designing-for-trust.svg`}
+                src={`${basePath}/episodes/${episode.id}.svg`}
                 width={800}
-                height={800}
-                alt="Interlocking shapes representing balance and trust."
+                height={300}
+                alt={`Artwork for ${episode.title}`}
               />
               <p className="episode-number">Episode {episode.episodeNumber}</p>
               <h2>{episode.title}</h2>
