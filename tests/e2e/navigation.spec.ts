@@ -168,11 +168,9 @@ for (const width of [320, 1440]) {
               new RegExp(`${expectedPath("/episodes/")}$`),
             );
 
-            const episodeCard = page
-              .getByRole("article")
-              .filter({
-                has: page.getByRole("heading", { name: episode.title }),
-              });
+            const episodeCard = page.getByRole("article").filter({
+              has: page.getByRole("heading", { name: episode.title }),
+            });
             await expect(episodeCard).toContainText(
               `Episode ${episode.number}`,
             );
