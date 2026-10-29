@@ -16,9 +16,11 @@ const primaryPages = [
 // SRC: https://github.com/percebus/hello-spec-kit/issues/38
 
 // SC-004: Every journey can be completed with keyboard-only input
+// SC-012: Every journey can be completed on mobile- and desktop-sized displays
 // SRC: https://github.com/percebus/hello-spec-kit/issues/57
+// SRC: https://github.com/percebus/hello-spec-kit/issues/63
 for (const width of [320, 1440]) {
-  test.describe(`FR-013 / SC-004: physical keyboard at ${width}px`, () => {
+  test.describe(`FR-013 / SC-004 / SC-012: ${width}px`, () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
     });
