@@ -68,15 +68,15 @@ are dropped.
 | Field     | Source                                             | Rules                                                              |
 | --------- | -------------------------------------------------- | ------------------------------------------------------------------ |
 | `kind`    | Environment variable `SUBSITE_KIND` (`main`\|`branch`) | Environment `main` for `refs/heads/main`, otherwise `branch`; any other value fails `verify` |
-| `preview_verify` | Environment variable `PREVIEW_VERIFY` (`true`\|`false`) | Whether `preview-verify` is dispatched after `e2e-tests`          |
+| `preview_verify` | Environment variable `PREVIEW_VERIFY` (`true`\|`false`) | `true` on `main`: dispatch the post-merge review after `e2e-tests`; `false` on branches |
 | `slug`    | `main`, or the branch slug (research R8)           | Empty for forks, non-PR branch runs, or reserved names, so nothing is deployed |
 | `op`      | `publish` in `always.yml`; `delete` in `pull_request_closed.yml` | Both run the `replace-pages-artifact` action from the default branch's checkout (closed) or the run's checkout (publish) |
 
 ### Verification Run
 
-This is one `preview-verify` run for a `(pr, sha, slug)`, dispatched by CI only
-after `e2e-tests` pass. Its concurrency group is `preview-verify-<pr>` with
-`cancel-in-progress: true`. Different PRs run in parallel.
+This is one post-merge `preview-verify` run for a merged `pr`, the `main`
+commit `sha`, and `slug=main`. CI dispatches it after `main/` passes
+`e2e-tests`. Its concurrency group is `preview-verify-<pr>`.
 
 | Field            | Type                                         | Rules                                                                                     |
 | ---------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -85,9 +85,12 @@ after `e2e-tests` pass. Its concurrency group is `preview-verify-<pr>` with
 | `agentOutcome`   | `complete` \| `inconclusive` \| `missing`     | From the `record-verdict` safe output                                                     |
 | `navigationPath` | ordered steps                                | Recorded by the agent                                                                      |
 | `intentChecked`  | text                                         | Summary of the PR and issue criteria checked                                               |
-| `finalState`     | commit-status state                          | See the table below                                                                        |
+| `finalState`     | commit-status state (informational, on `main`) | See the table below                                                                      |
+| `storiesDone`    | `done` \| `not-done` \| `unknown`             | `not-done` when `scanResult = blocking` or any `intent-mismatch`; `unknown` when inconclusive |
+| `linkedIssues`   | issue numbers                                | The PR's `closingIssuesReferences`; the only issues commented on or reopened              |
+| `reopened`       | issue numbers                                | Closed linked issues reopened when `storiesDone = not-done` (FR-021)                       |
 
-**Final-state derivation** (FR-016 to FR-018):
+**Final-state derivation**:
 
 | `scanResult` | `agentOutcome` | `finalState`            |
 | ------------ | -------------- | ----------------------- |
@@ -101,16 +104,19 @@ after `e2e-tests` pass. Its concurrency group is `preview-verify-<pr>` with
 ### Finding
 
 The schema is defined in [contracts/findings.schema.json](./contracts/findings.schema.json).
-Only `scanner` findings can be `blocking` (FR-017). Every finding carries
-screenshot evidence in an artifact, so it remains available after the subsite
-is deleted (FR-012, FR-013).
+Only `scanner` findings can be `blocking`. Blocking findings and agent
+`intent-mismatch` findings make the stories not done (FR-021). Every finding
+carries screenshot evidence in an artifact (FR-012, FR-013).
 
 ### Verification Report
 
-There is one PR comment per run, using the format in
+There is one comment on the merged PR and one on each linked issue per run,
+all with the same body, using the format in
 [contracts/verification-report.md](./contracts/verification-report.md).
 
 ## Commit status lifecycle (`preview-verification`)
+
+Pre-merge, on the PR head SHA (the merge gate):
 
 ```text
 (push to same-repo PR) ── verify ──▶ pending "Waiting for subsite"
@@ -119,15 +125,22 @@ There is one PR comment per run, using the format in
   pending "Publishing subsite…" ──collision/size/deploy error──▶ error
         ▼ e2e-tests
   pending "Running end-to-end tests…" ──fail──▶ failure
-        ▼ preview-verify (dispatch)
-  pending "Verifying…" ▶ "Scanning…" ──blocking──▶ failure
-        │                    └─crash──▶ error
-        ▼
-  pending "Reviewing…" ──inconclusive/missing──▶ error
         │
-        └──complete──▶ success
+        └──pass──▶ success "Subsite passed end-to-end tests"
 ```
 
-There is no override. Any non-`success` state is resolved by pushing a fix or
-by re-running the CI workflow. The subsite is never deleted by a status; it is
+Post-merge, on the `main` commit (informational; effects go to the PR and
+issues):
+
+```text
+(merge → push to main) ── verify ▶ deploy-pages ▶ e2e-tests ▶ preview-verify (dispatch)
+  pending "Scanning…" ──blocking──▶ failure            ─┐
+        │            └─main moved on──▶ error "Superseded" (nothing posted)
+        ▼                                               ├─▶ report on PR + issues
+  pending "Reviewing…" ──inconclusive/missing──▶ error ─┤   (reopen issues if not done)
+        └──complete──▶ success ─────────────────────────┘
+```
+
+There is no override. Any pre-merge non-`success` state is resolved by pushing
+a fix or by re-running the CI workflow. The subsite is never deleted by a status; it is
 deleted only when the pull request closes.

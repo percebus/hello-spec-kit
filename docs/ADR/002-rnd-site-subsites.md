@@ -28,25 +28,30 @@ https://percebus.github.io/hello-spec-kit/
 
 - **Storage and publishing**: The site tree lives on a `gh-pages` storage
   branch as a single orphan commit. The CI workflow runs
-  `Verify → Deploy pages → E2E tests → Preview verify` for every branch.
+  `Verify → Deploy pages → E2E tests` for every branch, then
+  `Preview verify` on `main`. `pull_request_closed.yml` deletes closed pull
+  requests' subsites.
   `deploy-pages` changes one folder at a time and redeploys the whole tree
   with `actions/deploy-pages`. CI runs one at a time
   (`group: ${{ github.workflow }}`, `queue: max`), so deployments never lose
   each other's changes. Differences between `main` and branches come from the
   `main` and `branch` environments' variables.
-- **Verification**: A deterministic Playwright scanner (`preview-scan`) crawls
-  each subsite at 320 px and 1440 px. It is the only source of merge-blocking
-  findings: missing images, broken links, overflow, horizontal scrolling, and
-  browser errors. A GitHub Agentic Workflow (`preview-verify`), dispatched
-  only after the end-to-end tests pass on the subsite, clicks through to the
-  change, checks its intent as advisory feedback, and posts the report.
-  Subsites, including failing ones, are kept until their pull request closes.
+- **Verification** (after merge): Once `main/` passes its end-to-end tests, a
+  deterministic Playwright scanner (`preview-scan`) crawls it at 320 px and
+  1440 px for blocking defects: missing images, broken links, overflow,
+  horizontal scrolling, and browser errors. A GitHub Agentic Workflow
+  (`preview-verify`) clicks through to the change and checks it against the
+  merged pull request's stories. The report is posted on the pull request and
+  on every issue it closes. Those issues are reopened when there is a blocking
+  defect or an intent mismatch. Subsites, including failing ones, are kept
+  until their pull request closes.
 - **Addresses**: A branch name becomes a flat slug. It is lowercased and every
   run of characters outside `[a-z0-9]` becomes `-`. Names longer than 63
   characters keep 54 characters plus an 8-hex SHA-256 suffix of the original
   name. `main` is reserved, and collisions are rejected explicitly.
 - **Merge gate**: The `preview-verification` commit status is required on
-  `main`, alongside `Verify`. There is no override.
+  `main`, alongside `Verify`. It passes when the subsite passes the
+  end-to-end tests. There is no override.
 
 ## Justification
 

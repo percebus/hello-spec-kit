@@ -1,42 +1,51 @@
 # Contract: `preview-verification` commit status
 
-This is the single required status check for merging into `main` (FR-016).
-It is written through
+Before merge, this is the single required status check for merging into
+`main` (FR-016). After merge, the post-merge review writes the same context on
+the `main` commit for information only. It is written through
 `POST /repos/percebus/hello-spec-kit/statuses/{sha}` with `GITHUB_TOKEN`
 `statuses: write`.
 
 | Field         | Value                                                                  |
 | ------------- | ---------------------------------------------------------------------- |
 | `context`     | `preview-verification` (exact; the ruleset references this string)     |
-| `sha`         | PR head SHA being verified                                             |
+| `sha`         | PR head SHA (pre-merge) or `main` commit (post-merge review)           |
 | `target_url`  | Workflow run URL                                                       |
 | `description` | ≤ 140 characters; prefixes listed below                                |
 
-## States and writers
+## Pre-merge states (PR head SHA)
 
 | State     | Description (prefix)                                  | Written by                                 | Blocks merge? |
 | --------- | ----------------------------------------------------- | ------------------------------------------ | ------------- |
 | `pending` | `Waiting for subsite`                                 | `always.yml` › `verify`                    | Yes           |
 | `pending` | `Publishing subsite…`                                 | `always.yml` › `deploy-pages`              | Yes           |
 | `pending` | `Running end-to-end tests…`                           | `always.yml` › `e2e-tests`                 | Yes           |
-| `pending` | `Verifying…`                                          | `always.yml` › `preview-verify`            | Yes           |
-| `pending` | `Scanning…` / `Reviewing…`                            | `preview-verify` jobs                      | Yes           |
+| `success` | `Subsite passed end-to-end tests`                     | `always.yml` › `e2e-tests`                 | No            |
 | `failure` | `End-to-end tests failed on the subsite`              | `always.yml` › `e2e-tests`                 | Yes           |
-| `failure` | `N blocking finding(s)`                               | `preview-verify` › `scan`                  | Yes           |
 | `error`   | `Verify failed; no subsite was published`             | `always.yml` › `verify`                    | Yes           |
 | `error`   | `<reason>; rename the branch` / `Address collision with <branch>; rename the branch` | `always.yml` › `verify`, `deploy-pages` | Yes |
-| `error`   | `Inconclusive: <reason>`                              | `deploy-pages`, `scan`, `record-verdict`, `finalize` | Yes |
-| `error`   | `Superseded by a newer commit`                        | `preview-verify` › `scan`, `finalize` (older SHA only) | No; not the head |
-| `success` | `No blocking findings (M advisory)`                   | `preview-verify` › `record-verdict` only   | No            |
+| `error`   | `Inconclusive: publishing the subsite failed`         | `always.yml` › `deploy-pages`              | Yes           |
+
+## Post-merge states (`main` commit, informational)
+
+| State     | Description (prefix)                                  | Written by                                 |
+| --------- | ----------------------------------------------------- | ------------------------------------------ |
+| `pending` | `Scanning…` / `Reviewing…`                            | `preview-verify` › `resolve`, `scan`       |
+| `failure` | `N blocking finding(s)`                               | `preview-verify` › `scan`                  |
+| `error`   | `Inconclusive: <reason>`                              | `scan`, `record-verdict`, `finalize`       |
+| `error`   | `Superseded: main moved on before the scan finished`  | `preview-verify` › `scan`                  |
+| `success` | `No blocking findings (M advisory)`                   | `preview-verify` › `record-verdict` only   |
+
+Whether the stories are done is reported on the PR and its closing issues, not
+through the status. Issues are reopened when not done (FR-021).
 
 ## Invariants
 
-1. Only `record-verdict` may set `success`, and only after a clean scan and a
-   `complete` agent outcome. There is no override.
-2. If the current state for `sha` is `failure`, `record-verdict` MUST NOT set
-   `success`.
-3. Writers act only on the run's own `sha`, never on the PR's current head.
-   Older SHAs are left unchanged.
+1. Pre-merge, only `e2e-tests` may set `success`. There is no override.
+2. Post-merge, only `record-verdict` may set `success`, and only after a clean
+   scan and a `complete` agent outcome. If the current state is `failure`, it
+   MUST NOT set `success`.
+3. Writers act only on the run's own `sha`. Older SHAs are left unchanged.
 4. Fork PRs receive no automatic status. The ruleset therefore reports the
    check as "Expected", which blocks merging until the change is pushed to a
    branch in this repository.

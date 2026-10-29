@@ -13,8 +13,10 @@ address redirects there. Locally, `npm run dev` and the tests serve it under
 
 Every pull request into `main` is published as its own subsite, such as
 `https://percebus.github.io/hello-spec-kit/feat-a-b-c/` for branch
-`feat/a/b/c`. It is then scanned at 320 px and 1440 px and reviewed by an
-agent before it can merge. See the
+`feat/a/b/c`, and must pass the end-to-end tests there before it can merge.
+After the merge, `main/` is scanned at 320 px and 1440 px and reviewed by an
+agent. The report is posted on the pull request and on the issues it closes,
+and those issues are reopened if the stories are not done. See the
 [workflow documentation](.github/workflows/README.md#rd-site-and-pull-request-subsites).
 
 ## Installing dependencies
