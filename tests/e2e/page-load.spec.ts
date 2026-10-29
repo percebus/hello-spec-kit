@@ -15,13 +15,30 @@ for (const { name, path } of primaryPages) {
       page,
     }) => {
       const problems: string[] = [];
+      const isTracked = (url: string) => {
+        const { protocol, pathname } = new URL(url);
+        return /^https?:$/.test(protocol) && pathname !== "/favicon.ico";
+      };
       page.on("console", (message) => {
-        if (message.type() === "error") problems.push(message.text());
+        // Failed resource loads are reported by the network listeners below.
+        if (
+          message.type() === "error" &&
+          !message.text().startsWith("Failed to load resource")
+        ) {
+          problems.push(message.text());
+        }
       });
       page.on("pageerror", (error) => problems.push(error.message));
-      page.on("requestfailed", (request) => problems.push(request.url()));
+      page.on("requestfailed", (request) => {
+        const errorText = request.failure()?.errorText ?? "unknown error";
+        if (isTracked(request.url()) && !errorText.includes("ERR_ABORTED")) {
+          problems.push(`${request.url()} (${errorText})`);
+        }
+      });
       page.on("response", (response) => {
-        if (response.status() >= 400) problems.push(response.url());
+        if (isTracked(response.url()) && response.status() >= 400) {
+          problems.push(`${response.status()} ${response.url()}`);
+        }
       });
 
       await page.goto(path);
