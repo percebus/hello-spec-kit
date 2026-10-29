@@ -35,15 +35,16 @@ or size errors it sets `error` with the reason. The caller must run in the
 **Triggers**: `pull_request` (`opened`, `synchronize`, `reopened`), `push` to
 `main`, and `workflow_dispatch`.
 
-**Concurrency**: `group: ${{ github.workflow }}`, `cancel-in-progress: false`,
-and `queue: max`. One CI run executes at a time across the repository, and
-every waiting run is kept. In addition, `deploy-pages` uses the job-level
-group `pages` (`cancel-in-progress: false`, `queue: max`), which it shares
-with `pull_request_closed.yml` › `delete-subsite`.
+**Concurrency**: `group: ${{ github.ref }}-${{ github.workflow }}` with
+`cancel-in-progress: true`, so a newer push to the same ref cancels the older
+run, and different refs run in parallel. Only `deploy-pages` is serialized,
+through the job-level group `pages` (`cancel-in-progress: false`,
+`queue: max`), which it shares with `pull_request_closed.yml` ›
+`delete-subsite`.
 
-**Environments**: `verify` runs in `main` (for `refs/heads/main`) or `branch`
-(everything else). It exports `vars.SUBSITE_KIND` as the job output `kind`,
-which the later jobs use instead of checking `github.event_name`. `deploy-pages` runs in `github-pages`.
+**Kind**: the workflow-level `env.KIND` is
+`${{ github.ref_name == 'main' && 'main' || 'branch' }}`. No `main` or
+`branch` environment is used. `deploy-pages` runs in `github-pages`.
 
 ```text
 Verify ──▶ Deploy pages ──▶ E2E tests
@@ -54,9 +55,9 @@ When this workflow succeeds on a push to `main`, `preview-verify` starts on
 
 | Job              | Runs when                                                                                     | Does                                                                                                                                                                                                                                                                                         | Permissions                                                                     |
 | ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `verify`         | Always                                                                                         | Builds and runs `npm test` locally as before. `kind=main`: slug `main`. `kind=branch` with a same-repo PR: computes the slug (an invalid branch name sets `error`; rename the branch) and sets `pending` "Waiting for subsite". Any other `SUBSITE_KIND` value fails the job. With a slug, it rebuilds with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (plus `NEXT_PUBLIC_PREVIEW_*` for PRs) and uploads artifact `site`. On failure: `error` "Verify failed; no subsite was published". | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write`; environment `main` or `branch` |
-| `deploy-pages`   | `verify` produced a slug                                                                      | Downloads `site` and runs the `replace-pages-artifact` action with `op: publish`. On failure, a still-`pending` status becomes `error` "Inconclusive: publishing the subsite failed". The environment URL is `<page_url><slug>/`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
-| `e2e-tests`      | `deploy-pages` succeeded and `verify` produced a slug                                          | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). Writes `.env.subsite` (`BASE_URL`, `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`) and runs `npm test` with `ENV=subsite`, for `main` and branches alike. For `kind=branch`, it sets `pending` "Running end-to-end tests…", then `success` "Subsite passed end-to-end tests" or `failure` "End-to-end tests failed on the subsite", which is the merge gate. Publishes JUnit results. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
+| `verify`         | Always                                                                                         | Isolated build and `npm test`, as before. It has no environment, publishes nothing, and writes no status; a failing `Verify` check blocks the merge by itself. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write` |
+| `deploy-pages`   | `verify` succeeded, and the ref is `main` or a same-repo PR (forks are skipped)                | `kind=main`: slug `main`. `kind=branch`: computes the slug (an invalid branch name sets `error`; rename the branch) and sets `pending` "Building subsite…". With a slug, it runs `npm install`, builds with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (plus `NEXT_PUBLIC_PREVIEW_*` for PRs), uploads artifact `site`, and runs the `replace-pages-artifact` action with `op: publish` and `source: out`. On failure, any status other than `error` becomes `error` "Inconclusive: building or publishing the subsite failed". Outputs `slug`; the environment URL is `<page_url><slug>/`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
+| `e2e-tests`      | `deploy-pages` succeeded with a `slug` output                                                  | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). Writes `.env.subsite` (`BASE_URL`, `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`) and runs `npm test` with `ENV=subsite`, for `main` and branches alike. For `kind=branch`, it sets `pending` "Running end-to-end tests…", then `success` "Subsite passed end-to-end tests" or `failure` "End-to-end tests failed on the subsite", which is the merge gate. Publishes JUnit results. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
 
 Reruns use GitHub's "Re-run all jobs" on the PR's CI run (FR-019).
 
@@ -135,8 +136,7 @@ up;
 | Item                          | Value                                                                                   |
 | ----------------------------- | --------------------------------------------------------------------------------------- |
 | Pages source                  | Stays **GitHub Actions**                                                                |
-| Environment `main`            | Deployment branches: `main`. Variables: `SUBSITE_KIND=main`.    |
-| Environment `branch`          | Deployment branches: no restriction. Variables: `SUBSITE_KIND=branch`. |
+
 | Environment `github-pages`    | Selected branches and tags: `main` and `refs/pull/*/merge`, because `pull_request` runs deploy as `GITHUB_REF=refs/pull/<n>/merge`. "No restriction" also works. |
 | `gh-pages` branch             | Created by the first deployment. Exclude it from rules that block force-pushes.         |
 | Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                            |

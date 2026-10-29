@@ -484,6 +484,13 @@ behavior now lives in the tasks below.
   - Drop `gh api` (no token in the sandbox) and `issue_read` from the agent's tools.
   - A PR with no linked issues is reviewed against its own title, body, and files instead of being inconclusive.
   - #106: the Google domains are Chromium's own background traffic, and blocking them is correct. No change.
+- [X] T060 Restructure `.github/workflows/always.yml` (owner decision, 2026-10-29):
+  - Workflow concurrency `${{ github.ref }}-${{ github.workflow }}` with `cancel-in-progress: true`. Only `deploy-pages` keeps the job-level `pages` group (`cancel-in-progress: false`, `queue: max`).
+  - `verify` is isolated: no environment, no status writes, no subsite build. Its `preview-verification error` step was removed, because a failed `Verify` check already blocks the merge.
+  - `env.KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}` replaces the `main`/`branch` environments and `SUBSITE_KIND`.
+  - The slug, subsite build, and `site` artifact upload move into `deploy-pages`, which skips forks, sets `pending` "Building subsite…", publishes `out/` directly, and outputs `slug` for `e2e-tests`.
+  - `deploy-pages`' error step now also covers build failures.
+  - Owner: the `main` and `branch` environments can be deleted.
 
 ---
 

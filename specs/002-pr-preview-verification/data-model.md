@@ -60,15 +60,16 @@ inspection until the next push or until the pull request closes (FR-006).
 
 ### CI Run
 
-This is one run of `always.yml`. Runs share a single workflow-wide concurrency
-group (`group: ${{ github.workflow }}`, `cancel-in-progress: false`,
-`queue: max`), so they execute one at a time, first in, first out, and none
-are dropped.
+This is one run of `always.yml`. Its concurrency group is
+`${{ github.ref }}-${{ github.workflow }}` with `cancel-in-progress: true`, so
+a newer push to the same ref cancels the older run, and different refs run in
+parallel. Only `deploy-pages` is serialized, through the job-level group
+`pages` with `queue: max`.
 
 | Field     | Source                                             | Rules                                                              |
 | --------- | -------------------------------------------------- | ------------------------------------------------------------------ |
-| `kind`    | Environment variable `SUBSITE_KIND` (`main`\|`branch`) | Environment `main` for `refs/heads/main`, otherwise `branch`; any other value fails `verify` |
-| `slug`    | `main`, or the branch slug (research R8)           | Empty for forks, non-PR branch runs, or reserved names, so nothing is deployed |
+| `kind`    | Workflow `env.KIND`: `github.ref_name == 'main' && 'main' \|\| 'branch'` | No GitHub environment is involved                      |
+| `slug`    | `deploy-pages` output: `main`, or the branch slug (research R8) | Empty for reserved names, so nothing is deployed. `deploy-pages` skips forks and non-PR branch runs. |
 | `op`      | `publish` in `always.yml`; `delete` in `pull_request_closed.yml` | Both run the `replace-pages-artifact` action from the default branch's checkout (closed) or the run's checkout (publish) |
 
 ### Verification Run
@@ -120,10 +121,9 @@ all with the same body, using the format in
 Pre-merge, on the PR head SHA (the merge gate):
 
 ```text
-(push to same-repo PR) ── verify ──▶ pending "Waiting for subsite"
-        │ verify fails ─────────────────────▶ error "Verify failed…"
+(push to same-repo PR) ── verify (no status; failure ⇒ check stays "Expected")
         ▼ deploy-pages
-  pending "Publishing subsite…" ──collision/size/deploy error──▶ error
+  pending "Building subsite…" ▶ "Publishing subsite…" ──collision/size/build/deploy error──▶ error
         ▼ e2e-tests
   pending "Running end-to-end tests…" ──fail──▶ failure
         │

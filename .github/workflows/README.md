@@ -31,14 +31,17 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succ
 
 | Job            | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `verify`       | Builds and tests locally as before. Builds the subsite with its base path and uploads it as artifact `site`.                                                                                                                                                                                                                                                                                                                                                                               |
-| `deploy-pages` | Publishes the subsite (or `main/`) into the R&D site and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `verify`       | Isolated build and tests, as before. No environment, no status, and nothing published.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `deploy-pages` | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                           |
 | `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included). For pull requests, sets `preview-verification` to `success` or `failure`, which is the merge gate.                                                                                                                                                                                                                                                                                                                 |
 | (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI succeeds on a push to `main`, so `main/` is published and has passed its end-to-end tests. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
 
-- CI runs one at a time across the repository (`group: ${{ github.workflow }}`,
-  `cancel-in-progress: false`, `queue: max`). Waiting runs are queued, never
-  dropped.
+- CI concurrency is per ref (`group: ${{ github.ref }}-${{ github.workflow }}`,
+  `cancel-in-progress: true`): a newer push cancels the older run, and
+  different branches run in parallel. Only `deploy-pages` is serialized,
+  through the job-level group `pages` (`queue: max`).
+- `main` versus branch behavior comes from the workflow-level
+  `env.KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}`.
 - When a pull request closes or merges,
   [pull_request_closed.yml](pull_request_closed.yml) deletes its subsite. It
   runs on `pull_request_target`, so it uses the default branch's workflow and
@@ -65,14 +68,12 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succ
 
 Create these under Settings → Environments:
 
-| Environment    | Deployment branches                                                                  | Variables             |
-| -------------- | ------------------------------------------------------------------------------------ | --------------------- |
-| `main`         | `main`                                                                               | `SUBSITE_KIND=main`   |
-| `branch`       | No restriction                                                                       | `SUBSITE_KIND=branch` |
-| `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") | —                     |
+| Environment    | Deployment branches                                                                  |
+| -------------- | ------------------------------------------------------------------------------------ |
+| `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") |
 
-`verify` runs in `main` for `refs/heads/main` and in `branch` otherwise. It
-fails with a clear error if `SUBSITE_KIND` is missing.
+The `main` and `branch` environments from earlier versions are no longer used
+and can be deleted.
 
 **Bootstrap:** each deployment publishes the whole stored tree, and the root
 redirects to `main/`. Until the first push to `main` runs this workflow, `main/`

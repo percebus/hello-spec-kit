@@ -14,10 +14,6 @@ no implementation code.
 - One-time setup is complete
   ([contracts/workflows.md › Repository configuration](./contracts/workflows.md#repository-configuration-one-time-manual)):
   - The Pages source stays **GitHub Actions**.
-  - Environment `main`: deployment branches `main`; variables
-    `SUBSITE_KIND=main`.
-  - Environment `branch`: no branch restriction; variables
-    `SUBSITE_KIND=branch`.
   - Environment `github-pages`: deployment branches and tags allow `main` and
     `refs/pull/*/merge`, because `pull_request` runs deploy from the merge ref.
   - The `gh-pages` branch is excluded from force-push protection.
@@ -46,18 +42,19 @@ no implementation code.
    - Once CI succeeds, `preview-verify` starts on `workflow_run` and reviews
      the merged PR.
 2. **Publish a branch.** Open PR A from branch `feat/a`. The status changes
-   from "Waiting for subsite" to "Publishing subsite…", "Running end-to-end
+   from "Building subsite…" to "Publishing subsite…", "Running end-to-end
    tests…", and then `success` "Subsite passed end-to-end tests". No agent
    runs on the PR. Then:
    - A PR comment links `…/hello-spec-kit/feat-a/`.
    - The banner shows PR A and its SHA.
    - `subsites.json` lists `feat-a`.
-3. **Queue, don't drop.** While A's CI run is in progress, push to PR B from
-   `feat/b`. B's run shows as queued, starts after A's finishes, and both
-   `feat-a/` and `feat-b/` exist afterwards. `main/` is unchanged.
-4. **Two quick pushes.** Push twice quickly to `feat/a`. Both CI runs complete
-   in order, `feat-a/preview.json` ends on the newest SHA, and only the newest
-   SHA's status counts toward merging.
+3. **Parallel PRs, serialized deploys.** While A's CI run is in progress, push
+   to PR B from `feat/b`. B's `Verify` runs in parallel with A's run. B's
+   `Deploy pages` waits for A's in the `pages` group, and both `feat-a/` and
+   `feat-b/` exist afterwards. `main/` is unchanged.
+4. **Two quick pushes.** Push twice quickly to `feat/a`. The older CI run is
+   cancelled, `feat-a/preview.json` ends on the newest SHA, and only the
+   newest SHA gets a status.
 5. **Close a PR.** Close PR B. `pull_request_closed.yml` deletes `feat-b/`, which then returns
    404, and `subsites.json` no longer lists it.
 6. **Merge a PR.** Merge PR A after it passes. Then:
@@ -69,8 +66,7 @@ no implementation code.
    `feat/a/b-c`. Both become `feat-a-b-c`. The second PR's status becomes
    `error` with "Address collision with `feat/a-b/c`", and no folder is
    overwritten.
-8. **Missing configuration.** With `SUBSITE_KIND` unset, `Verify` fails with
-   a message pointing to the environment variables.
+8. **Fork PR.** A fork's `Verify` runs, but `Deploy pages` is skipped.
 
 ## 3. Post-merge review scenarios (SC-003, SC-004, FR-021)
 

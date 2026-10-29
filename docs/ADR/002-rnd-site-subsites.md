@@ -32,10 +32,10 @@ https://percebus.github.io/hello-spec-kit/
   `main`, `preview-verify` starts on `workflow_run`. `pull_request_closed.yml` deletes closed pull
   requests' subsites.
   `deploy-pages` changes one folder at a time and redeploys the whole tree
-  with `actions/deploy-pages`. CI runs one at a time
-  (`group: ${{ github.workflow }}`, `queue: max`), so deployments never lose
-  each other's changes. Differences between `main` and branches come from the
-  `main` and `branch` environments' variables.
+  with `actions/deploy-pages`. A newer push cancels the older run for the same
+  ref. Deployments are serialized through the job-level `pages` group
+  (`queue: max`), so they never lose each other's changes. `main` versus
+  branch behavior comes from `github.ref_name`.
 - **Verification** (after merge): Once `main/` passes its end-to-end tests, a
   deterministic Playwright scanner (`preview-scan`) crawls it at 320 px and
   1440 px for blocking defects: missing images, broken links, overflow,
