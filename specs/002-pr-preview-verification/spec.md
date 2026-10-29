@@ -218,8 +218,8 @@ being loaded, frames out of bounds, etc)
   subsite whose end-to-end tests passed for their final commit, and received
   a post-merge verification report.
 - **SC-002**: A reviewer can open the subsite of an incoming change within
-  10 minutes of the latest push, in at least 95% of runs when no other CI run
-  is queued.
+  10 minutes of the latest push, in at least 95% of runs when no other
+  deployment is queued.
 - **SC-003**: A merged change that removes or breaks an expected image on any
   primary page leaves its linked issues reopened, with a blocking
   "missing image" finding in the report, in 100% of seeded test cases.
