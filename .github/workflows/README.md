@@ -118,6 +118,46 @@ EOF
 Do not apply force-push or deletion rules to `gh-pages`; `deploy-pages`
 force-pushes it on every deployment.
 
+## Open requirement verification
+
+[issue-requirement-verify.md](issue-requirement-verify.md) runs daily and supports
+manual dispatch. It scans every page of open issues, selects literal `FR-` or
+`SC-` title prefixes, and skips issues with the exact `ai:verified` label.
+An issue is eligible when `ai:checked` is absent or its latest GitHub `labeled`
+event is strictly older than seven days. Issue-event reads are paginated;
+issue modification time is not a substitute for label age. Missing event
+history fails explicitly rather than guessing. There are no dated labels.
+
+Each run selects at most ten issues in issue-number order, rotating the starting
+offset with the workflow run number. This bounds cost without letting repeatedly
+unsatisfied issues permanently block the rest of a stable queue. Every candidate
+gets a fresh, sequential sub-agent and an isolated named Playwright browser
+session against `https://percebus.github.io/hello-spec-kit/main/`.
+
+Only requirements fully demonstrated in the deployed UI receive `ai:verified`
+and an evidence comment identifying the actual worker model, exposed reasoning
+effort, Copilot CLI version, gh-aw harness version, UTC time, and Actions run.
+The existing `COPILOT_GITHUB_TOKEN` secret authenticates Copilot. Workers inherit
+the configured Copilot model; they must not invent attribution when runtime
+metadata is unavailable. Every conclusive check adds `ai:checked`, removing and
+re-adding it when stale so GitHub records the new check time. Unsatisfied issues
+become eligible again after one week; ambiguous or failed checks do not refresh
+the marker and remain retryable. Diagnostics go in the run summary. No issues
+close. Verified issues are skipped permanently until `ai:verified` is removed
+(and any recent `ai:checked` ages out or is removed).
+
+GitHub reads are read-only and writes use an isolated custom gh-aw safe-output
+job. It creates missing labels, rechecks eligibility and unchanged requirements,
+and deterministically performs comment, label removal, then label addition.
+This avoids ordering ambiguity between separate deferred label handlers.
+These API calls are not an atomic transaction; inspect the safe-output job if
+any fail. Errors fail the job rather than silently marking verification complete.
+
+Workflow-only helpers and their tests live in [../aw/scripts/](../aw/scripts/).
+After editing, run `node --test .github/aw/scripts/*issue-requirements.test.mjs`,
+`npm run format`, then `gh aw compile issue-requirement-verify --validate`.
+Commit the Markdown and generated lockfile together; do not edit the lockfile.
+
 ## Closed issue auditor
 
 The [agentic Markdown workflow](issue-closed.md) audits completed
