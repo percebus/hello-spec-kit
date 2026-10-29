@@ -2,7 +2,8 @@
 name: Audit closed issues
 on:
   issues:
-    types: [closed]
+    types:
+      - closed
   workflow_dispatch:
     inputs:
       issue_number:
@@ -22,12 +23,15 @@ permissions:
 engine: copilot
 tools:
   github:
-    toolsets: [issues, pull_requests]
+    toolsets:
+      - issues
+      - pull_requests
     allowed:
       - issue_read
       - pull_request_read
       - search_pull_requests
-  bash: ["gh api:*"]
+  bash:
+    - gh api:*
 network: defaults
 safe-outputs:
   update-issue:

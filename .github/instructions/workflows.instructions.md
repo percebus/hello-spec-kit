@@ -7,10 +7,10 @@ applyTo: '.github/**/*.yml'
 
 ## Linting
 
-`prettier` is configured. So prefer
+`prettier` is configured with its defaults, which favor double quotes. So prefer
 
 1. No quotes when possible
-2. Single quotes over double quotes
+2. Double quotes when quotes are needed (prettier's default; do not override it)
 
 ## YAML over JSON
 

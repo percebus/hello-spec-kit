@@ -5,9 +5,12 @@ on:
   # its end-to-end tests. Must match always.yml's `name:`. Re-running main's CI
   # re-runs this review.
   workflow_run:
-    workflows: ["[C]ontinuous [I]ntegration"]
-    types: [completed]
-    branches: [main]
+    workflows:
+      - "[C]ontinuous [I]ntegration"
+    types:
+      - completed
+    branches:
+      - main
 if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
 concurrency:
   group: preview-verify-${{ github.event.workflow_run.head_sha }}
@@ -23,16 +26,23 @@ engine: copilot
 tools:
   playwright:
   github:
-    toolsets: [pull_requests, issues]
+    toolsets:
+      - pull_requests
+      - issues
     allowed:
       - pull_request_read
       - issue_read
-  bash: ["playwright-cli:*", "jq", "cat", "ls", "gh api:*"]
+  bash:
+    - playwright-cli:*
+    - jq
+    - cat
+    - ls
+    - gh api:*
 network:
   allowed:
     - defaults
     - playwright
-    - "percebus.github.io"
+    - percebus.github.io
 
 steps:
   - name: Download scan results
@@ -135,7 +145,10 @@ jobs:
             -f description="$description" -f target_url="$RUN_URL" > /dev/null
 
   finalize:
-    needs: [agent, detection, safe_outputs]
+    needs:
+      - agent
+      - detection
+      - safe_outputs
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -180,28 +193,31 @@ safe-outputs:
     target: "*"
     max: 5
   upload-artifact:
-    allowed-paths: ["/tmp/gh-aw/preview/*.png"]
+    allowed-paths:
+      - /tmp/gh-aw/preview/*.png
     max-uploads: 10
     retention-days: 14
   jobs:
     record-verdict:
-      description: "Record the verification verdict for this commit. Call exactly once, last."
+      description: Record the verification verdict for this commit. Call exactly once, last.
       runs-on: ubuntu-latest
-      output: "Verdict recorded."
+      output: Verdict recorded.
       permissions:
         statuses: write
       inputs:
         outcome:
-          description: "complete when the review finished; inconclusive when it could not"
+          description: complete when the review finished; inconclusive when it could not
           required: true
           type: choice
-          options: [complete, inconclusive]
+          options:
+            - complete
+            - inconclusive
         reason:
           description: "Required for inconclusive: why the review could not finish (max 120 characters)"
           required: false
           type: string
         advisory_count:
-          description: "Number of advisory findings in the report (scanner + agent)"
+          description: Number of advisory findings in the report (scanner + agent)
           required: false
           type: string
       steps:

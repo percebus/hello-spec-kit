@@ -30,7 +30,7 @@ permissions:
 
 env:
   CI: true
-  ENV: "development"
+  ENV: development
   PAGES_ORIGIN: https://percebus.github.io
   SITE_URL: https://percebus.github.io/hello-spec-kit
   STATUS_CONTEXT: preview-verification
@@ -138,7 +138,7 @@ jobs:
         with:
           name: site
           path: ./out
-          retention-days: "14"
+          retention-days: 14
 
       - name: preview-verification error
         if: ${{ failure() && env.KIND == 'branch' && env.PR != '' }}
@@ -214,9 +214,11 @@ jobs:
   # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests
-    needs: [verify, deploy-pages]
     if: ${{ needs.deploy-pages.result == 'success' && needs.verify.outputs.slug != '' }}
     runs-on: ubuntu-latest
+    needs:
+      - verify
+      - deploy-pages
 
     permissions:
       contents: read

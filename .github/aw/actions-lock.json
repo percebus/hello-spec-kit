@@ -9,11 +9,6 @@
       "repo": "github/gh-aw-actions/setup",
       "version": "v0.89.21",
       "sha": "924af5fdc64061cfbf66fb584c8b07e2ac230c60"
-    },
-    "percebus/github-actions-node/.github/actions/setup@main": {
-      "repo": "percebus/github-actions-node/.github/actions/setup",
-      "version": "main",
-      "sha": "bea9f963ec584931c19433250c6273f47bbadffd"
     }
   }
 }

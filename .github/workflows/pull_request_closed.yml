@@ -1,4 +1,4 @@
-name: "Pull request closed"
+name: Pull request closed
 
 # Deletes a closed (or merged) pull request's R&D subsite
 # (https://percebus.github.io/hello-spec-kit/<slug>/).
@@ -10,8 +10,10 @@ name: "Pull request closed"
 
 on:
   pull_request_target:
-    types: [closed]
-    branches: [main]
+    types:
+      - closed
+    branches:
+      - main
 
 # Runs as soon as the pull request closes; it does not wait for CI. Only the
 # job that rewrites the site is serialized, through the job-level "pages" group
