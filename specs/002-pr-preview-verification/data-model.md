@@ -68,19 +68,20 @@ are dropped.
 | Field     | Source                                             | Rules                                                              |
 | --------- | -------------------------------------------------- | ------------------------------------------------------------------ |
 | `kind`    | Environment variable `SUBSITE_KIND` (`main`\|`branch`) | Environment `main` for `refs/heads/main`, otherwise `branch`; any other value fails `verify` |
-| `preview_verify` | Environment variable `PREVIEW_VERIFY` (`true`\|`false`) | `true` on `main`: dispatch the post-merge review after `e2e-tests`; `false` on branches |
 | `slug`    | `main`, or the branch slug (research R8)           | Empty for forks, non-PR branch runs, or reserved names, so nothing is deployed |
 | `op`      | `publish` in `always.yml`; `delete` in `pull_request_closed.yml` | Both run the `replace-pages-artifact` action from the default branch's checkout (closed) or the run's checkout (publish) |
 
 ### Verification Run
 
-This is one post-merge `preview-verify` run for a merged `pr`, the `main`
-commit `sha`, and `slug=main`. CI dispatches it after `main/` passes
-`e2e-tests`. Its concurrency group is `preview-verify-<pr>`.
+This is one post-merge `preview-verify` run for the `main` commit `sha`
+(`workflow_run.head_sha`) and the merged `pr` behind it. It starts on
+`workflow_run` when CI succeeds on a push to `main`, after `main/` passes
+`e2e-tests`. Its concurrency group is `preview-verify-<sha>`.
 
 | Field            | Type                                         | Rules                                                                                     |
 | ---------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `pr`, `sha`, `slug` | from dispatch inputs                      | Immutable                                                                                 |
+| `sha`            | `github.event.workflow_run.head_sha`          | Immutable                                                                                 |
+| `pr`             | `resolve` via `GET /commits/{sha}/pulls`      | Merged into `main`; none means a direct push, and nothing runs                            |
 | `scanResult`     | `clean` \| `blocking` \| `error` \| `superseded` | `superseded` if `preview.json.sha` differs from `sha` before or after the scan             |
 | `agentOutcome`   | `complete` \| `inconclusive` \| `missing`     | From the `record-verdict` safe output                                                     |
 | `navigationPath` | ordered steps                                | Recorded by the agent                                                                      |
@@ -133,7 +134,7 @@ Post-merge, on the `main` commit (informational; effects go to the PR and
 issues):
 
 ```text
-(merge → push to main) ── verify ▶ deploy-pages ▶ e2e-tests ▶ preview-verify (dispatch)
+(merge → push to main) ── CI: verify ▶ deploy-pages ▶ e2e-tests ── success ──▶ preview-verify (workflow_run)
   pending "Scanning…" ──blocking──▶ failure            ─┐
         │            └─main moved on──▶ error "Superseded" (nothing posted)
         ▼                                               ├─▶ report on PR + issues

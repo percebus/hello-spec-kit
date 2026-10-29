@@ -2,13 +2,13 @@ name: "[C]ontinuous [I]ntegration"
 
 # Every same-repo branch with a pull request into main is published as an R&D
 # subsite (https://percebus.github.io/hello-spec-kit/<slug>/) and tested; passing
-# end-to-end tests is the merge gate. main lives at …/main/; after a merge, the
-# preview-verify agentic workflow reviews main/ against the merged stories.
+# end-to-end tests is the merge gate. main lives at …/main/; when CI succeeds on
+# main, preview-verify.md (workflow_run) reviews main/ against the merged stories.
 # See specs/002-pr-preview-verification.
 #
 # Environments (Settings → Environments):
-#   main   → vars SUBSITE_KIND=main,   PREVIEW_VERIFY=true;  deployment branches: main
-#   branch → vars SUBSITE_KIND=branch, PREVIEW_VERIFY=false; deployment branches: no restriction
+#   main   → vars SUBSITE_KIND=main;   deployment branches: main
+#   branch → vars SUBSITE_KIND=branch; deployment branches: no restriction
 #   github-pages → deployment branches: no restriction
 
 on:
@@ -53,7 +53,6 @@ jobs:
 
     outputs:
       kind: ${{ vars.SUBSITE_KIND }}
-      preview_verify: ${{ vars.PREVIEW_VERIFY }}
       slug: ${{ steps.subsite.outputs.slug }}
 
     env:
@@ -211,6 +210,7 @@ jobs:
               -f description="Inconclusive: publishing the subsite failed" \
               -f target_url="$RUN_URL" > /dev/null
           fi
+
   # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests
@@ -287,37 +287,3 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
             -f state="$state" -f context="$STATUS_CONTEXT" \
             -f description="$description" -f target_url="$RUN_URL" > /dev/null
-
-  # Post-merge review (PREVIEW_VERIFY=true on the main environment): once main/
-  # passes its end-to-end tests, verify the merged pull request's stories and
-  # report on the pull request and the issues it closes.
-  preview-verify:
-    name: Preview verify
-    needs: [verify, e2e-tests]
-    if: ${{ needs.e2e-tests.result == 'success' && needs.verify.outputs.preview_verify == 'true' }}
-    runs-on: ubuntu-latest
-
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-
-    steps:
-      - name: dispatch preview-verify
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REF: ${{ github.ref_name }}
-          SHA: ${{ github.sha }}
-          SLUG: ${{ needs.verify.outputs.slug }}
-        run: |
-          set -euo pipefail
-          pr="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
-            --jq '[.[] | select(.merged_at != null and .base.ref == "main")][0].number // empty')"
-          if [ -z "$pr" ]; then
-            echo "::notice::$SHA did not come from a merged pull request; nothing to verify"
-            exit 0
-          fi
-          # Dispatch requires preview-verify.lock.yml to exist on the default branch.
-          gh workflow run preview-verify.lock.yml --repo "$GITHUB_REPOSITORY" --ref "$REF" \
-            -f pr_number="$pr" -f sha="$SHA" -f slug="$SLUG"
-          echo "Dispatched preview-verify for #$pr at $SHA"

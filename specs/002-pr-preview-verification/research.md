@@ -66,7 +66,8 @@ action, `.github/actions/replace-pages-artifact`:
 
 ```text
 always.yml (PR):          Verify ──▶ Deploy pages ──▶ E2E tests (merge gate)
-always.yml (main):        Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (post-merge review)
+always.yml (main):        Verify ──▶ Deploy pages ──▶ E2E tests
+preview-verify.md:        workflow_run (CI succeeded on main) ──▶ post-merge review
 pull_request_closed.yml:  Delete subsite
 ```
 
@@ -91,8 +92,7 @@ the other: a lost `main/` publish, or a deleted subsite that reappears.
 
 **Environments**: Only `verify` selects an environment:
 `main` for `refs/heads/main`, otherwise `branch`. It reads `vars.SUBSITE_KIND`
-(`main`|`branch`) and `vars.PREVIEW_VERIFY` (`true` on `main`, `false` on branches) and passes them as
-job outputs, so later jobs need no event checks. `deploy-pages` and
+(`main`|`branch`) and passes it as a job output, so later jobs need no event checks. `deploy-pages` and
 `delete-subsite` use the `github-pages` environment. The only per-run check
 left is same-repo (fork) detection.
 
@@ -113,8 +113,6 @@ conflicts, which `pull_request` events skip. It never checks out PR code.
   runs.
 - **Configuration over conditions.** Behavior differences between `main` and
   branches live in environment variables the owner controls.
-- **Dispatch works.** `GITHUB_TOKEN` can trigger `workflow_dispatch` runs
-  (GitHub Docs, "GITHUB_TOKEN").
 
 **Accepted trade-offs**:
 
@@ -126,8 +124,8 @@ conflicts, which `pull_request` events skip. It never checks out PR code.
   already have write access, and fork pull requests are never deployed.
 
 **Required settings**: Environments `main` (deployment branches: `main`;
-vars `SUBSITE_KIND=main`, `PREVIEW_VERIFY=true`), `branch` (no restriction;
-vars `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=false`), and `github-pages`
+vars `SUBSITE_KIND=main`), `branch` (no restriction;
+vars `SUBSITE_KIND=branch`), and `github-pages`
 (deployment branches: no restriction).
 
 **Alternatives considered**:
@@ -233,9 +231,11 @@ manually.
 **Decision** (revised 2026-10-29):
 
 - **When.** The scanner and the agent run **after a pull request merges**,
-  not on every push. `always.yml` dispatches `preview-verify` only when the
-  `main` environment's `PREVIEW_VERIFY` is `true` and `main/` has passed its
-  end-to-end tests. It looks up the merged pull request with
+  not on every push. `preview-verify.md` triggers on `workflow_run` when CI
+  completes successfully for a `push` to `main`, so `main/` has passed its
+  end-to-end tests. CI doesn't dispatch it, and no `actions: write` or
+  environment variable is needed. Its `resolve` job looks up the merged pull
+  request with
   `GET /repos/{repo}/commits/{sha}/pulls`. Direct pushes without a pull
   request are skipped.
 - **What it reviews.** `main/` at the merge commit. The PR's subsite is
@@ -456,8 +456,9 @@ so moving production to a release repository (#100) does not change this risk.
 **Decision**:
 
 - **Rerun**: use "Re-run all jobs" on the pull request's CI run, or push a new
-  commit. Either one redeploys the subsite, re-runs the end-to-end tests, and
-  dispatches `preview-verify` again.
+  commit. Either one redeploys the subsite and re-runs the end-to-end tests.
+  Re-running `main`'s CI run also re-runs the post-merge review once it
+  succeeds.
 - **Override**: none for now. The owner decided it is unnecessary at this time.
 
 **Rationale**: With publishing inside CI, GitHub's built-in rerun covers

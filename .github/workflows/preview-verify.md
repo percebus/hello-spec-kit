@@ -1,27 +1,18 @@
 ---
 name: Preview verify
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: Merged pull request number
-        required: true
-        type: number
-      sha:
-        description: Commit on main that was published to the subsite
-        required: true
-        type: string
-      slug:
-        description: Subsite slug (https://percebus.github.io/hello-spec-kit/<slug>/), normally main
-        required: true
-        type: string
-  # The CI workflow (always.yml) dispatches this workflow with GITHUB_TOKEN
-  # after a push to main publishes main/ and its end-to-end tests pass.
-  bots: ["github-actions[bot]"]
+  # Runs after CI succeeds on a push to main: main/ is published and has passed
+  # its end-to-end tests. Must match always.yml's `name:`. Re-running main's CI
+  # re-runs this review.
+  workflow_run:
+    workflows: ["[C]ontinuous [I]ntegration"]
+    types: [completed]
+    branches: [main]
+if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
 concurrency:
-  group: preview-verify-${{ inputs.pr_number }}
+  group: preview-verify-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
-  job-discriminator: ${{ inputs.pr_number }}
+  job-discriminator: ${{ github.event.workflow_run.head_sha }}
 timeout-minutes: 30
 permissions:
   contents: read
@@ -48,7 +39,7 @@ steps:
     uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
     continue-on-error: true
     with:
-      name: preview-scan-${{ inputs.sha }}
+      name: preview-scan-${{ github.event.workflow_run.head_sha }}
       path: /tmp/gh-aw/preview/scan
 
 jobs:
@@ -59,23 +50,26 @@ jobs:
       statuses: write
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}
+      pr: ${{ steps.check.outputs.pr }}
     steps:
-      - name: Check merged pull request
+      - name: Find merged pull request
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ inputs.pr_number }}
-          SHA: ${{ inputs.sha }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")"
-          if [ "$(jq -r '.merged_at // empty' <<< "$pr_json")" = "" ]; then
-            echo "Pull request #$PR is not merged"
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
+            --jq '[.[] | select(.merged_at != null and .base.ref == "main")][0].number // empty')"
+          if [ -z "$pr" ]; then
+            echo "$SHA did not come from a merged pull request; nothing to verify"
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "Verifying #$pr at $SHA"
           echo "proceed=true" >> "$GITHUB_OUTPUT"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
             -f state=pending -f context=preview-verification \
             -f description="Scanning…" -f target_url="$RUN_URL" > /dev/null
@@ -102,23 +96,23 @@ jobs:
         env:
           PREVIEW_SCAN: "1"
           BASE_URL: https://percebus.github.io
-          NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/${{ inputs.slug }}
-          PREVIEW_PR: ${{ inputs.pr_number }}
-          PREVIEW_SHA: ${{ inputs.sha }}
+          NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/main
+          PREVIEW_PR: ${{ needs.resolve.outputs.pr }}
+          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
         # PREVIEW_REF is left unset: main/ has no preview banner, so banner.spec skips.
         run: npx playwright test --project=preview-scan
       - name: Upload scan results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: preview-scan-${{ inputs.sha }}
+          name: preview-scan-${{ github.event.workflow_run.head_sha }}
           path: test-results/preview-scan/
           retention-days: 14
           if-no-files-found: warn
       - name: Record scan result
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ inputs.sha }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -150,7 +144,7 @@ jobs:
       - name: Settle verdict
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ inputs.sha }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -214,7 +208,7 @@ safe-outputs:
         - name: Record verdict
           env:
             GH_TOKEN: ${{ github.token }}
-            SHA: ${{ inputs.sha }}
+            SHA: ${{ github.event.workflow_run.head_sha }}
             RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           run: |
             set -euo pipefail
@@ -254,10 +248,13 @@ safe-outputs:
 
 # Post-merge verification
 
-Pull request #${{ inputs.pr_number }} in `${{ github.repository }}` was merged
-into `main`, and commit `${{ inputs.sha }}` is published at:
+A pull request in `${{ github.repository }}` was merged into `main`, and
+commit `${{ github.event.workflow_run.head_sha }}` is published at:
 
-`https://percebus.github.io/hello-spec-kit/${{ inputs.slug }}/`
+`https://percebus.github.io/hello-spec-kit/main/`
+
+The merged pull request's number is the `pr` field of
+`/tmp/gh-aw/preview/scan/findings.json`; below it is called **PR**.
 
 Decide whether the stories this pull request promised to deliver are actually
 done, and report back on the pull request and on every issue it closes.
@@ -289,7 +286,7 @@ The deterministic scanner already crawled the site at 320 px and 1440 px.
 - Read the pull request title, body, and changed files with
   `pull_request_read`.
 - Read the issues it closes, the **linked issues**, with
-  `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){closingIssuesReferences(first:10){nodes{number title body state}}}}}' -f o=<owner> -F n=${{ inputs.pr_number }} -f r=<repo>`.
+  `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){closingIssuesReferences(first:10){nodes{number title body state}}}}}' -f o=<owner> -F n=<PR> -f r=<repo>`.
   Extract their acceptance criteria (Given/When/Then). Only these issues may
   receive comments or be reopened.
 - Derive 1–5 observable checks. If the change has no visible effect
@@ -314,7 +311,7 @@ Agent findings are always **advisory** in the report. Number them
 `agent-0001`, `agent-0002`, … For each one, save a screenshot to
 `/tmp/gh-aw/preview/agent-<nnnn>-<width>.png` with
 `playwright-cli screenshot --filename <path>`. Then call `upload_artifact`
-with name `preview-agent-${{ inputs.sha }}` for the screenshots.
+with name `preview-agent-${{ github.event.workflow_run.head_sha }}` for the screenshots.
 
 If you cannot reach the change or cannot determine the intended behavior,
 the review is **inconclusive**.
@@ -337,8 +334,8 @@ Build this body (see
 ```markdown
 ## Post-merge verification — <✅ Done | ❌ Not done | ⚠️ Inconclusive>
 
-**Site**: https://percebus.github.io/hello-spec-kit/${{ inputs.slug }}/ (PR #${{ inputs.pr_number }}, `main` @ `<first 7 of sha>`)
-**Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} · **Evidence**: artifacts `preview-scan-${{ inputs.sha }}`, `preview-agent-${{ inputs.sha }}`
+**Site**: https://percebus.github.io/hello-spec-kit/main/ (PR #<PR>, `main` @ `<first 7 of sha>`)
+**Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} · **Evidence**: artifacts `preview-scan-${{ github.event.workflow_run.head_sha }}`, `preview-agent-${{ github.event.workflow_run.head_sha }}`
 
 ### Intent checked
 
@@ -370,7 +367,7 @@ Pages checked at 320 px and 1440 px: <count> (<list>)
 - When **inconclusive**, add one paragraph with the reason and how to rerun:
   re-run the `main` CI workflow run for this commit.
 
-Call `add_comment` once with `item_number: ${{ inputs.pr_number }}`, then once
+Call `add_comment` once with `item_number: <PR>`, then once
 per linked issue with that issue's number, using the same body each time.
 
 ## 6. Reopen linked issues when not done
