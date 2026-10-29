@@ -471,7 +471,13 @@ behavior now lives in the tasks below.
   - `.github/workflows/preview-verify.md`: `resolve` requires a merged PR. `scan` leaves `PREVIEW_REF` unset so the banner check skips on `main/`. The agent posts the same report on the PR and each closing issue (`add-comment` `max: 6`). It reopens closed linked issues through `update-issue` (`status`, `max: 5`) when there is a blocking finding or an intent mismatch; inconclusive never reopens.
   - Recompiled with `gh aw compile preview-verify --validate`.
   - Docs: spec FR-007/013/014/016–019, new FR-021, SC-001/003–006, edge cases, US2–US4; research R3/R6/R7; data model; contracts; quickstart §2–4 and §6; plan; READMEs; ADR-002.
-- [ ] T056 Owner: flip the environment variables. Set `main` to `PREVIEW_VERIFY=true` and `branch` to `PREVIEW_VERIFY=false`.
+- [X] T057 Run `.github/workflows/pull_request_closed.yml` as soon as the PR closes. Drop its workflow-level membership in CI's queue. Instead, serialize only the site writers through the job-level group `pages` (`queue: max`) on `delete-subsite` and on `always.yml` › `deploy-pages`. Update the docs.
+- [X] T056 ~~Owner: flip the environment variables. Set `main` to `PREVIEW_VERIFY=true` and `branch` to `PREVIEW_VERIFY=false`.~~ Superseded by T058; `PREVIEW_VERIFY` is no longer used and can be deleted from both environments.
+- [X] T058 Trigger `.github/workflows/preview-verify.md` with `workflow_run` instead of a dispatch from CI:
+  - Trigger: `[C]ontinuous [I]ntegration` completed on `main`, with `if: conclusion == 'success' && event == 'push'`.
+  - `resolve` finds the merged PR for `head_sha` and passes `pr` to `scan`; the agent reads it from `findings.json`. Concurrency is keyed by `head_sha`.
+  - `.github/workflows/always.yml` drops its `preview-verify` job, the `preview_verify` output, and `PREVIEW_VERIFY`.
+  - Recompiled with `gh aw compile preview-verify --validate`, and updated the docs.
 
 ---
 

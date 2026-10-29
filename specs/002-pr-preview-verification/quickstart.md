@@ -15,9 +15,9 @@ no implementation code.
   ([contracts/workflows.md › Repository configuration](./contracts/workflows.md#repository-configuration-one-time-manual)):
   - The Pages source stays **GitHub Actions**.
   - Environment `main`: deployment branches `main`; variables
-    `SUBSITE_KIND=main` and `PREVIEW_VERIFY=true`.
+    `SUBSITE_KIND=main`.
   - Environment `branch`: no branch restriction; variables
-    `SUBSITE_KIND=branch` and `PREVIEW_VERIFY=false`.
+    `SUBSITE_KIND=branch`.
   - Environment `github-pages`: deployment branches and tags allow `main` and
     `refs/pull/*/merge`, because `pull_request` runs deploy from the merge ref.
   - The `gh-pages` branch is excluded from force-push protection.
@@ -43,8 +43,8 @@ no implementation code.
    `Deploy pages` (publishes `main/`), then `E2E tests` against `main/`. Then:
    - `https://percebus.github.io/hello-spec-kit/` redirects to `…/main/`.
    - `…/main/preview.json` reports `kind: main` and the merge SHA.
-   - `Preview verify` dispatches the post-merge review for the merged PR
-     (`PREVIEW_VERIFY=true` on `main`).
+   - Once CI succeeds, `preview-verify` starts on `workflow_run` and reviews
+     the merged PR.
 2. **Publish a branch.** Open PR A from branch `feat/a`. The status changes
    from "Waiting for subsite" to "Publishing subsite…", "Running end-to-end
    tests…", and then `success` "Subsite passed end-to-end tests". No agent
@@ -63,7 +63,7 @@ no implementation code.
 6. **Merge a PR.** Merge PR A after it passes. Then:
    - `pull_request_closed.yml` deletes `feat-a/`.
    - The push to `main` republishes `main/` with A's change, `E2E tests`
-     pass, and `Preview verify` posts a "Post-merge verification" report on
+     pass, and `preview-verify` posts a "Post-merge verification" report on
      PR A and on each issue it closes.
 7. **Reject a collision.** Open a PR from `feat/a-b/c`, then another from
    `feat/a/b-c`. Both become `feat-a-b-c`. The second PR's status becomes
@@ -101,8 +101,8 @@ For every scenario:
 - **Pre-merge:** use **Re-run all jobs** on the PR's CI run, or push a new
   commit. Either one redeploys the subsite and re-runs `E2E tests`.
 - **Post-merge review:** use **Re-run all jobs** on the `main` CI run for the
-  merge commit. It redeploys `main/`, re-runs `E2E tests`, and dispatches
-  `Preview verify` again.
+  merge commit. It redeploys `main/` and re-runs `E2E tests`; when it
+  succeeds, `preview-verify` runs again.
 
 There is no override.
 

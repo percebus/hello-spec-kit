@@ -28,8 +28,8 @@ https://percebus.github.io/hello-spec-kit/
 
 - **Storage and publishing**: The site tree lives on a `gh-pages` storage
   branch as a single orphan commit. The CI workflow runs
-  `Verify → Deploy pages → E2E tests` for every branch, then
-  `Preview verify` on `main`. `pull_request_closed.yml` deletes closed pull
+  `Verify → Deploy pages → E2E tests` for every branch. When CI succeeds on
+  `main`, `preview-verify` starts on `workflow_run`. `pull_request_closed.yml` deletes closed pull
   requests' subsites.
   `deploy-pages` changes one folder at a time and redeploys the whole tree
   with `actions/deploy-pages`. CI runs one at a time

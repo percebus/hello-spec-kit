@@ -25,16 +25,16 @@ branches that flatten to the same slug (for example `feat/a-b/c` and
 [always.yml](always.yml) runs:
 
 ```text
-pull request: Verify ──▶ Deploy pages ──▶ E2E tests             (merge gate)
-main:         Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (post-merge review)
+pull request: Verify ──▶ Deploy pages ──▶ E2E tests   (merge gate)
+main:         Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succeeded)──▶ preview-verify.md (post-merge review)
 ```
 
-| Job              | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `verify`         | Builds and tests locally as before. Builds the subsite with its base path and uploads it as artifact `site`.                                                                                                                                                                                                                                                                                                                                               |
-| `deploy-pages`   | Publishes the subsite (or `main/`) into the R&D site and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                                                                                   |
-| `e2e-tests`      | Runs the existing tests against the deployed subsite (`main` included). For pull requests, sets `preview-verification` to `success` or `failure`, which is the merge gate.                                                                                                                                                                                                                                                                                 |
-| `preview-verify` | `main` only (`PREVIEW_VERIFY=true`). After `main/` passes its end-to-end tests, it finds the merged pull request and dispatches [preview-verify.md](preview-verify.md). A deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
+| Job            | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `verify`       | Builds and tests locally as before. Builds the subsite with its base path and uploads it as artifact `site`.                                                                                                                                                                                                                                                                                                                                                                               |
+| `deploy-pages` | Publishes the subsite (or `main/`) into the R&D site and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included). For pull requests, sets `preview-verification` to `success` or `failure`, which is the merge gate.                                                                                                                                                                                                                                                                                                                 |
+| (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI succeeds on a push to `main`, so `main/` is published and has passed its end-to-end tests. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
 
 - CI runs one at a time across the repository (`group: ${{ github.workflow }}`,
   `cancel-in-progress: false`, `queue: max`). Waiting runs are queued, never
@@ -42,9 +42,9 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Previe
 - When a pull request closes or merges,
   [pull_request_closed.yml](pull_request_closed.yml) deletes its subsite. It
   runs on `pull_request_target`, so it uses the default branch's workflow and
-  never checks out PR code. It joins CI's queue by name
-  (`"[C]ontinuous [I]ntegration"`), so keep it in sync if `always.yml` is
-  renamed. It only takes effect once it is on `main`.
+  never checks out PR code. It starts as soon as the pull request closes and
+  waits only for an in-flight `deploy-pages`, through the shared job-level
+  group `pages`. It only takes effect once it is on `main`.
 - Both workflows share the composite action [replace-pages-artifact](../actions/replace-pages-artifact/action.yml)
   for publish/delete, prune, deploy, and the PR comment.
 - A failing subsite stays available until the next push or until the PR
@@ -65,11 +65,11 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Previe
 
 Create these under Settings → Environments:
 
-| Environment    | Deployment branches                                                                  | Variables                                     |
-| -------------- | ------------------------------------------------------------------------------------ | --------------------------------------------- |
-| `main`         | `main`                                                                               | `SUBSITE_KIND=main`, `PREVIEW_VERIFY=true`    |
-| `branch`       | No restriction                                                                       | `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=false` |
-| `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") | —                                             |
+| Environment    | Deployment branches                                                                  | Variables             |
+| -------------- | ------------------------------------------------------------------------------------ | --------------------- |
+| `main`         | `main`                                                                               | `SUBSITE_KIND=main`   |
+| `branch`       | No restriction                                                                       | `SUBSITE_KIND=branch` |
+| `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") | —                     |
 
 `verify` runs in `main` for `refs/heads/main` and in `branch` otherwise. It
 fails with a clear error if `SUBSITE_KIND` is missing.

@@ -1,4 +1,4 @@
-name: "Pull request closed"
+name: Pull request closed
 
 # Deletes a closed (or merged) pull request's R&D subsite
 # (https://percebus.github.io/hello-spec-kit/<slug>/).
@@ -10,16 +10,14 @@ name: "Pull request closed"
 
 on:
   pull_request_target:
-    types: [closed]
-    branches: [main]
+    types:
+      - closed
+    branches:
+      - main
 
-# Shares the CI workflow's queue so a delete never races a deployment: both
-# read-modify-write the gh-pages tree. Must equal always.yml's `name:`, which
-# is what `${{ github.workflow }}` resolves to there.
-concurrency:
-  group: "[C]ontinuous [I]ntegration"
-  cancel-in-progress: false
-  queue: max
+# Runs as soon as the pull request closes; it does not wait for CI. Only the
+# job that rewrites the site is serialized, through the job-level "pages" group
+# shared with always.yml › deploy-pages (see below).
 
 permissions:
   contents: read
@@ -33,6 +31,13 @@ jobs:
     environment:
       url: ${{ steps.site.outputs.page_url }}
       name: github-pages
+
+    # Same group as always.yml › deploy-pages: both read-modify-write the
+    # gh-pages tree and redeploy the whole site, so they must not overlap.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+      queue: max
 
     permissions:
       contents: write

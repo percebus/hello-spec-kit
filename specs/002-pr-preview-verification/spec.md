@@ -74,8 +74,8 @@ being loaded, frames out of bounds, etc)
   and on every issue it closes, and those issues are reopened when the stories
   are not done.
 - Q: How does CI distinguish `main` from branch runs? → A: Through GitHub
-  environments `main` and `branch`, whose variables (`SUBSITE_KIND`,
-  `PREVIEW_VERIFY`) drive the jobs instead of event checks. CI concurrency is
+  environments `main` and `branch`, whose variable (`SUBSITE_KIND`) drives
+  the jobs instead of event checks. CI concurrency is
   a single workflow-wide group that is never cancelled.
 
 ## Requirements _(mandatory)_
