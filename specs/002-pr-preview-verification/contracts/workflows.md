@@ -53,8 +53,8 @@ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify
 | ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `verify`         | Always                                                                                         | Builds and runs `npm test` locally as before. `kind=main`: slug `main`. `kind=branch` with a same-repo PR: computes the slug (an invalid branch name sets `error`; rename the branch) and sets `pending` "Waiting for subsite". Any other `SUBSITE_KIND` value fails the job. With a slug, it rebuilds with `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>` (plus `NEXT_PUBLIC_PREVIEW_*` for PRs) and uploads artifact `site`. On failure: `error` "Verify failed; no subsite was published". | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write`; environment `main` or `branch` |
 | `deploy-pages`   | `verify` produced a slug                                                                      | Downloads `site` and runs the `replace-pages-artifact` action with `op: publish`. On failure, a still-`pending` status becomes `error` "Inconclusive: publishing the subsite failed". The environment URL is `<page_url><slug>/`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
-| `e2e-tests`      | `deploy-pages` succeeded and `verify` produced a slug                                          | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). Writes `.env.subsite` (`BASE_URL`, `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`) and runs `npm test` with `ENV=subsite`, for `main` and branches alike. For `kind=branch`, it sets `pending` "Running end-to-end tests…", and on failure sets `failure` "End-to-end tests failed on the subsite". Publishes JUnit results. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
-| `preview-verify` | `e2e-tests` succeeded and `preview_verify == 'true'`                                           | Sets `pending` "Verifying…" and runs `gh workflow run preview-verify.lock.yml --ref <head branch>` with `pr_number`, `sha`, and `slug`.                                                                                                                                                       | `actions: write`, `statuses: write`                                             |
+| `e2e-tests`      | `deploy-pages` succeeded and `verify` produced a slug                                          | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). Writes `.env.subsite` (`BASE_URL`, `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`) and runs `npm test` with `ENV=subsite`, for `main` and branches alike. For `kind=branch`, it sets `pending` "Running end-to-end tests…", then `success` "Subsite passed end-to-end tests" or `failure` "End-to-end tests failed on the subsite", which is the merge gate. Publishes JUnit results. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
+| `preview-verify` | `e2e-tests` succeeded and `preview_verify == 'true'` (`main` only)                                           | Looks up the merged pull request for the `main` commit (`GET /commits/{sha}/pulls`; skips direct pushes) and runs `gh workflow run preview-verify.lock.yml --ref main` with `pr_number`, `sha`, and `slug=main`. | `actions: write`, `statuses: write`                                             |
 
 Reruns use GitHub's "Re-run all jobs" on the PR's CI run (FR-019).
 
@@ -82,23 +82,23 @@ prune step removes subsites of closed pull requests.
 
 | Trigger             | Inputs                                                                  |
 | ------------------- | ----------------------------------------------------------------------- |
-| `workflow_dispatch` | `pr_number` (number), `sha` (string), and `slug` (string); all required |
+| `workflow_dispatch` | `pr_number` (merged PR), `sha` (`main` commit), and `slug` (`main`); all required |
 
-`on.bots: ["github-actions[bot]"]` lets CI's `GITHUB_TOKEN` dispatch it.
+`on.bots: ["github-actions[bot]"]` lets CI's `GITHUB_TOKEN` dispatch it. It runs
+**after a merge**, against `main/`, from `always.yml`'s `preview-verify` job.
 
 **Concurrency**: `group: preview-verify-${{ inputs.pr_number }}`,
 `cancel-in-progress: true`, and `job-discriminator: ${{ inputs.pr_number }}`.
-Different PRs verify in parallel, and a newer commit cancels an older run for
-the same PR.
+Reviews of different merged PRs can run in parallel.
 
 | Job              | Purpose                                                                                                         | Permissions / secrets                     |
 | ---------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `resolve`        | Stops if the PR is closed or its head is not `sha`; otherwise sets `pending` "Scanning…".                         | `pull-requests: read`, `statuses: write`  |
-| `scan`           | Runs `npx playwright test --project=preview-scan` with `PREVIEW_SCAN=1`, `BASE_URL=https://percebus.github.io`, and `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`. Checks `preview.json.sha` before and after the scan, and a mismatch means `superseded`. Uploads `preview-scan-<sha>`. Sets `failure` on blocking findings, otherwise `pending` "Reviewing…". | `contents: read`, `statuses: write`       |
-| `agent`          | Runs the Copilot agent with `playwright-cli` against `/hello-spec-kit/<slug>/` only.                              | gh-aw managed; `COPILOT_GITHUB_TOKEN`     |
-| `safe_outputs`   | Processes `add-comment` (report) and `upload-artifact` (`/tmp/gh-aw/preview/*.png`).                              | gh-aw managed                             |
+| `resolve`        | Stops if the PR is not merged; otherwise sets `pending` "Scanning…" on the `main` commit.                         | `pull-requests: read`, `statuses: write`  |
+| `scan`           | Runs `npx playwright test --project=preview-scan` with `PREVIEW_SCAN=1`, `BASE_URL=https://percebus.github.io`, and `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`. Leaves `PREVIEW_REF` unset, so the banner check skips on `main/`. Checks `preview.json.sha` before and after the scan; a mismatch means `superseded` ("main moved on"). Uploads `preview-scan-<sha>`. Sets `failure` on blocking findings, otherwise `pending` "Reviewing…". | `contents: read`, `statuses: write`       |
+| `agent`          | Runs the Copilot agent with `playwright-cli` against `/hello-spec-kit/<slug>/` only. It decides done / not done / inconclusive (FR-021). | gh-aw managed; `COPILOT_GITHUB_TOKEN`     |
+| `safe_outputs`   | Processes `add-comment` (`max: 6`: the report on the PR and each closing issue), `update-issue` (`status`, `max: 5`: reopen closing issues when not done), and `upload-artifact` (`/tmp/gh-aw/preview/*.png`). | gh-aw managed                             |
 | `record_verdict` | Custom safe-output job that receives `{ outcome: complete \| inconclusive, reason, advisory_count }`. Changes the status only from `pending`. | `statuses: write`                         |
-| `finalize`       | Runs with `if: always()`. Changes a status still `pending` after 60 s to `error`. It never deletes the subsite.  | `pull-requests: read`, `statuses: write`  |
+| `finalize`       | Runs with `if: always()`. Changes a status still `pending` after 60 s to `error`.                               | `statuses: write`                         |
 
 **Agent tools**: `playwright-cli:*`, `jq`, `cat`, `ls`, and `gh api:*` (reads
 only); GitHub read toolsets `pull_requests` and `issues`;
@@ -129,8 +129,8 @@ only); GitHub read toolsets `pull_requests` and `issues`;
 | Item                          | Value                                                                                   |
 | ----------------------------- | --------------------------------------------------------------------------------------- |
 | Pages source                  | Stays **GitHub Actions**                                                                |
-| Environment `main`            | Deployment branches: `main`. Variables: `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`.    |
-| Environment `branch`          | Deployment branches: no restriction. Variables: `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true`. |
+| Environment `main`            | Deployment branches: `main`. Variables: `SUBSITE_KIND=main`, `PREVIEW_VERIFY=true`.    |
+| Environment `branch`          | Deployment branches: no restriction. Variables: `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=false`. |
 | Environment `github-pages`    | Selected branches and tags: `main` and `refs/pull/*/merge`, because `pull_request` runs deploy as `GITHUB_REF=refs/pull/<n>/merge`. "No restriction" also works. |
 | `gh-pages` branch             | Created by the first deployment. Exclude it from rules that block force-pushes.         |
 | Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                            |

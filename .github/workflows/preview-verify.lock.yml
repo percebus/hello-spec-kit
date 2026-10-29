@@ -1,5 +1,5 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"94acddf0c4144df066bcc0f9f48479a9ad22a86b0a88471f7f562fa5f90412e9","body_hash":"8a9555e98afa63ca13f963f68b1db0643fb7848d52477e8f84074afea91e6d59","compiler_version":"v0.89.21","strict":true,"agent_id":"copilot","engine_versions":{"copilot":"1.0.87"}}
-# gh-aw-manifest: {"version":1,"secrets":["COPILOT_GITHUB_TOKEN","GH_AW_DEFAULT_OTLP_ENDPOINT","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"249970729cb0ef3589644e2896645e5dc5ba9c38","version":"249970729cb0ef3589644e2896645e5dc5ba9c38"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"924af5fdc64061cfbf66fb584c8b07e2ac230c60","version":"v0.89.21"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.23","digest":"sha256:2c78aaba1c108e130e2d6d01e4f2cca334ea04c53e6f258913ac34173fe7e3b2","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.23@sha256:2c78aaba1c108e130e2d6d01e4f2cca334ea04c53e6f258913ac34173fe7e3b2"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.23","digest":"sha256:c15c3d1208df10c5b588a3657be53742aa982ae0909d1eb1812525268794ca64","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.23@sha256:c15c3d1208df10c5b588a3657be53742aa982ae0909d1eb1812525268794ca64"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.23","digest":"sha256:02ffc56dd40158223064ef03a78c2d9717473c93723b4e403d455ea6f0b09ae0","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.23@sha256:02ffc56dd40158223064ef03a78c2d9717473c93723b4e403d455ea6f0b09ae0"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.25","digest":"sha256:9be0a86220e807a0ecc89e53d7453468f7a53fbc6b3d1efd2299025ffe01d086","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.25@sha256:9be0a86220e807a0ecc89e53d7453468f7a53fbc6b3d1efd2299025ffe01d086"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:11c2c544876cdbaffefe0f7f1283b74838c209654b4934a78e23ed11f750490f","pinned_image":"ghcr.io/github/gh-aw-node@sha256:11c2c544876cdbaffefe0f7f1283b74838c209654b4934a78e23ed11f750490f"},{"image":"ghcr.io/github/github-mcp-server:v1.12.2","digest":"sha256:508a0857ec762b1ab1cece29193345b501fab1dd9d1228a7b617062954cecac6","pinned_image":"ghcr.io/github/github-mcp-server:v1.12.2@sha256:508a0857ec762b1ab1cece29193345b501fab1dd9d1228a7b617062954cecac6"}],"mcp_servers":[{"name":"github","tools":["issue_read","pull_request_read"]},{"name":"safeoutputs","tools":["add_comment","missing_data","missing_tool","noop","record_verdict","upload_artifact"]}]}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"61771762846d7d0b92f25b977e458d6d5331718090c5e596a2a500922e3a5c03","body_hash":"3dbda3d9117a2f9ef03c433fcb0d78c151679dd892c922dd5c4d2167a011c95e","compiler_version":"v0.89.21","strict":true,"agent_id":"copilot","engine_versions":{"copilot":"1.0.87"}}
+# gh-aw-manifest: {"version":1,"secrets":["COPILOT_GITHUB_TOKEN","GH_AW_DEFAULT_OTLP_ENDPOINT","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"249970729cb0ef3589644e2896645e5dc5ba9c38","version":"249970729cb0ef3589644e2896645e5dc5ba9c38"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"924af5fdc64061cfbf66fb584c8b07e2ac230c60","version":"v0.89.21"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.23","digest":"sha256:2c78aaba1c108e130e2d6d01e4f2cca334ea04c53e6f258913ac34173fe7e3b2","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.23@sha256:2c78aaba1c108e130e2d6d01e4f2cca334ea04c53e6f258913ac34173fe7e3b2"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.23","digest":"sha256:c15c3d1208df10c5b588a3657be53742aa982ae0909d1eb1812525268794ca64","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.23@sha256:c15c3d1208df10c5b588a3657be53742aa982ae0909d1eb1812525268794ca64"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.23","digest":"sha256:02ffc56dd40158223064ef03a78c2d9717473c93723b4e403d455ea6f0b09ae0","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.23@sha256:02ffc56dd40158223064ef03a78c2d9717473c93723b4e403d455ea6f0b09ae0"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.25","digest":"sha256:9be0a86220e807a0ecc89e53d7453468f7a53fbc6b3d1efd2299025ffe01d086","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.25@sha256:9be0a86220e807a0ecc89e53d7453468f7a53fbc6b3d1efd2299025ffe01d086"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:11c2c544876cdbaffefe0f7f1283b74838c209654b4934a78e23ed11f750490f","pinned_image":"ghcr.io/github/gh-aw-node@sha256:11c2c544876cdbaffefe0f7f1283b74838c209654b4934a78e23ed11f750490f"},{"image":"ghcr.io/github/github-mcp-server:v1.12.2","digest":"sha256:508a0857ec762b1ab1cece29193345b501fab1dd9d1228a7b617062954cecac6","pinned_image":"ghcr.io/github/github-mcp-server:v1.12.2@sha256:508a0857ec762b1ab1cece29193345b501fab1dd9d1228a7b617062954cecac6"}],"mcp_servers":[{"name":"github","tools":["issue_read","pull_request_read"]},{"name":"safeoutputs","tools":["add_comment","missing_data","missing_tool","noop","record_verdict","update_issue","upload_artifact"]}]}
 # This file was automatically generated by gh-aw (v0.89.21). DO NOT EDIT. To debug this workflow, load the skill at https://github.com/github/gh-aw/blob/main/debug.md
 #
 #    ___                   _   _
@@ -62,15 +62,15 @@ on:
         required: false
         type: string
       pr_number:
-        description: Pull request number
+        description: Merged pull request number
         required: true
         type: number
       sha:
-        description: Commit published to the subsite
+        description: Commit on main that was published to the subsite
         required: true
         type: string
       slug:
-        description: Subsite slug (https://percebus.github.io/hello-spec-kit/<slug>/)
+        description: Subsite slug (https://percebus.github.io/hello-spec-kit/<slug>/), normally main
         required: true
         type: string
 
@@ -293,7 +293,7 @@ jobs:
           GH_AW_INPUTS_SHA: ${{ inputs.sha }}
           GH_AW_INPUTS_SLUG: ${{ inputs.slug }}
           GH_AW_PROMPT_CONTENT_0000: "<system>\n"
-          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: add_comment, missing_tool, missing_data, noop, record_verdict\n"
+          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: add_comment(max:6), update_issue(max:5), missing_tool, missing_data, noop, record_verdict\n"
           GH_AW_PROMPT_CONTENT_0002: "</safe-output-tools>\n"
           GH_AW_PROMPT_CONTENT_0003: "<github-context>\nThe following GitHub context information is available for this workflow:\n{{#if github.actor}}\n- **actor**: __GH_AW_GITHUB_ACTOR__\n{{/if}}\n{{#if github.repository}}\n- **repository**: __GH_AW_GITHUB_REPOSITORY__\n{{/if}}\n{{#if github.workspace}}\n- **workspace**: __GH_AW_GITHUB_WORKSPACE__\n{{/if}}\n{{#if github.event.issue.number || (github.aw.context.item_type == 'issue' && github.aw.context.item_number)}}\n- **issue-number**: #__GH_AW_EXPR_802A9F6A__\n{{/if}}\n{{#if github.event.discussion.number || (github.aw.context.item_type == 'discussion' && github.aw.context.item_number)}}\n- **discussion-number**: #__GH_AW_EXPR_1A3A194A__\n{{/if}}\n{{#if github.event.pull_request.number || (github.aw.context.item_type == 'pull_request' && github.aw.context.item_number)}}\n- **pull-request-number**: #__GH_AW_EXPR_463A214A__\n{{/if}}\n{{#if github.event.comment.id || github.aw.context.comment_id}}\n- **comment-id**: __GH_AW_EXPR_FF1D34CE__\n{{/if}}\n{{#if github.run_id}}\n- **workflow-run-id**: __GH_AW_GITHUB_RUN_ID__\n{{/if}}\n</github-context>\n\n"
           GH_AW_PROMPT_CONTENT_0004: "</system>\n"
@@ -603,7 +603,7 @@ jobs:
         env:
           GH_AW_FILE_ROOT: "${{ runner.temp }}/gh-aw"
           GH_AW_FILE_CONFIG: "{\"files\":[{\"path\":\"safeoutputs/config.json\",\"content_env\":\"GH_AW_SAFE_OUTPUTS_CONFIG\"}]}"
-          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"add_comment\":{\"max\":1,\"target\":\"*\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"record-verdict\":{\"description\":\"Record the verification verdict for this commit. Call exactly once, last.\",\"inputs\":{\"advisory_count\":{\"default\":null,\"description\":\"Number of advisory findings in the report (scanner + agent)\",\"required\":false,\"type\":\"string\"},\"outcome\":{\"default\":null,\"description\":\"complete when the review finished; inconclusive when it could not\",\"options\":[\"complete\",\"inconclusive\"],\"required\":true,\"type\":\"choice\"},\"reason\":{\"default\":null,\"description\":\"Required for inconclusive: why the review could not finish (max 120 characters)\",\"required\":false,\"type\":\"string\"}},\"output\":\"Verdict recorded.\"},\"report_incomplete\":{},\"upload_artifact\":{\"allowed-paths\":[\"/tmp/gh-aw/preview/*.png\"],\"max-size-bytes\":104857600,\"max-uploads\":10,\"retention-days\":14}}"
+          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"add_comment\":{\"max\":6,\"target\":\"*\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"record-verdict\":{\"description\":\"Record the verification verdict for this commit. Call exactly once, last.\",\"inputs\":{\"advisory_count\":{\"default\":null,\"description\":\"Number of advisory findings in the report (scanner + agent)\",\"required\":false,\"type\":\"string\"},\"outcome\":{\"default\":null,\"description\":\"complete when the review finished; inconclusive when it could not\",\"options\":[\"complete\",\"inconclusive\"],\"required\":true,\"type\":\"choice\"},\"reason\":{\"default\":null,\"description\":\"Required for inconclusive: why the review could not finish (max 120 characters)\",\"required\":false,\"type\":\"string\"}},\"output\":\"Verdict recorded.\"},\"report_incomplete\":{},\"update_issue\":{\"allow_body\":true,\"allow_status\":true,\"max\":5,\"target\":\"*\"},\"upload_artifact\":{\"allowed-paths\":[\"/tmp/gh-aw/preview/*.png\"],\"max-size-bytes\":104857600,\"max-uploads\":10,\"retention-days\":14}}"
         with:
           script: |
             const path = require('path');
@@ -617,7 +617,8 @@ jobs:
           GH_AW_TOOLS_META_JSON: |
             {
               "description_suffixes": {
-                "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added. Target: *. Supports reply_to_id for discussion threading."
+                "add_comment": " CONSTRAINTS: Maximum 6 comment(s) can be added. Target: *. Supports reply_to_id for discussion threading.",
+                "update_issue": " CONSTRAINTS: Maximum 5 issue(s) can be updated. Target: *."
               },
               "repo_params": {},
               "dynamic_tools": [
@@ -767,6 +768,57 @@ jobs:
                     "maxLength": 1024
                   }
                 }
+              },
+              "update_issue": {
+                "defaultMax": 1,
+                "fields": {
+                  "assignees": {
+                    "type": "array",
+                    "itemType": "string",
+                    "itemSanitize": true,
+                    "itemMaxLength": 39
+                  },
+                  "body": {
+                    "type": "string",
+                    "sanitize": true,
+                    "maxLength": 65000
+                  },
+                  "issue_number": {
+                    "issueOrPRNumber": true
+                  },
+                  "labels": {
+                    "type": "array"
+                  },
+                  "milestone": {
+                    "optionalPositiveInteger": true
+                  },
+                  "operation": {
+                    "type": "string",
+                    "enum": [
+                      "replace",
+                      "append",
+                      "prepend",
+                      "replace-island"
+                    ]
+                  },
+                  "repo": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "closed"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "sanitize": true,
+                    "maxLength": 128
+                  }
+                },
+                "customValidation": "requiresOneOf:status,title,body,labels,assignees,milestone"
               },
               "upload_artifact": {
                 "defaultMax": 10,
@@ -1845,7 +1897,6 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: read
       statuses: write
     steps:
       - name: Configure GH_HOST for enterprise compatibility
@@ -1871,29 +1922,17 @@ jobs:
               -f target_url="$RUN_URL" > /dev/null
           }
 
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")"
-          current=false
-          if [ "$(jq -r .state <<< "$pr_json")" = "open" ] \
-            && [ "$(jq -r .head.sha <<< "$pr_json")" = "$SHA" ]; then
-            current=true
-          fi
-
           # record_verdict runs in a separate job; give it time to land.
           for _ in $(seq 1 12); do
             [ "$(status | cut -f1)" != "pending" ] && break
             sleep 5
           done
           if [ "$(status | cut -f1)" = "pending" ]; then
-            if [ "$current" = "true" ]; then
-              set_status error "Inconclusive: reviewer did not record a verdict"
-            else
-              set_status error "Superseded by a newer commit"
-            fi
+            set_status error "Inconclusive: reviewer did not record a verdict"
           fi
           echo "Final status: $(status)"
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ inputs.pr_number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SHA: ${{ inputs.sha }}
 
@@ -1962,7 +2001,6 @@ jobs:
       statuses: write
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}
-      ref: ${{ steps.check.outputs.ref }}
     steps:
       - name: Configure GH_HOST for enterprise compatibility
         id: ghes-host-config
@@ -1973,19 +2011,17 @@ jobs:
           GH_HOST="${GITHUB_SERVER_URL#https://}"
           GH_HOST="${GH_HOST#http://}"
           echo "GH_HOST=${GH_HOST}" >> "$GITHUB_ENV"
-      - name: Check pull request head
+      - name: Check merged pull request
         id: check
         run: |
           set -euo pipefail
           pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")"
-          if [ "$(jq -r .state <<< "$pr_json")" != "open" ] \
-            || [ "$(jq -r .head.sha <<< "$pr_json")" != "$SHA" ]; then
-            echo "Pull request #$PR is closed or no longer at $SHA"
+          if [ "$(jq -r '.merged_at // empty' <<< "$pr_json")" = "" ]; then
+            echo "Pull request #$PR is not merged"
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "proceed=true" >> "$GITHUB_OUTPUT"
-          echo "ref=$(jq -r .head.ref <<< "$pr_json")" >> "$GITHUB_OUTPUT"
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
             -f state=pending -f context=preview-verification \
             -f description="Scanning…" -f target_url="$RUN_URL" > /dev/null
@@ -2107,7 +2143,7 @@ jobs:
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
           GH_AW_SAFE_OUTPUT_JOBS: "{\"record_verdict\":\"\"}"
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"max\":1,\"target\":\"*\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{},\"upload_artifact\":{\"allowed-paths\":[\"/tmp/gh-aw/preview/*.png\"],\"max-size-bytes\":104857600,\"max-uploads\":10,\"retention-days\":14}}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"max\":6,\"target\":\"*\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{},\"update_issue\":{\"allow_body\":true,\"allow_status\":true,\"max\":5,\"target\":\"*\"},\"upload_artifact\":{\"allowed-paths\":[\"/tmp/gh-aw/preview/*.png\"],\"max-size-bytes\":104857600,\"max-uploads\":10,\"retention-days\":14}}"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -2160,7 +2196,6 @@ jobs:
           BASE_URL: https://percebus.github.io
           NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/${{ inputs.slug }}
           PREVIEW_PR: ${{ inputs.pr_number }}
-          PREVIEW_REF: ${{ needs.resolve.outputs.ref }}
           PREVIEW_SCAN: "1"
           PREVIEW_SHA: ${{ inputs.sha }}
         continue-on-error: true
@@ -2177,7 +2212,7 @@ jobs:
           set -euo pipefail
           results=test-results/preview-scan
           if [ -f "$results/superseded" ]; then
-            state=error description="Superseded by a newer commit"
+            state=error description="Superseded: main moved on before the scan finished"
           elif [ ! -f "$results/findings.json" ]; then
             state=error description="Inconclusive: scan did not complete"
           else

@@ -42,6 +42,11 @@
   time, with `main`/`branch` environments instead of event checks. Subsites
   are deleted only when their pull request closes, and there is no override.
   FR-001, FR-006, FR-018, FR-019, SC-001, SC-002, and SC-008 were updated.
+- Review timing revised (2026-10-29): the scan and the agent run after merge,
+  against `main/`. The pre-merge gate is the subsite's end-to-end tests.
+  Reports go to the merged PR and its closing issues, and those issues are
+  reopened when the stories are not done. FR-021 was added; FR-007, FR-013,
+  FR-014, FR-016 to FR-019, SC-001, and SC-003 to SC-006 were updated.
 - Hosting and workflow choices, including the agentic workflow in the user
   input, are deferred to `/speckit-plan`; the spec only uses neutral terms such
   as "preview" and "automated reviewer".

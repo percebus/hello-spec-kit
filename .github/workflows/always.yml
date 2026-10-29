@@ -1,13 +1,14 @@
 name: "[C]ontinuous [I]ntegration"
 
 # Every same-repo branch with a pull request into main is published as an R&D
-# subsite (https://percebus.github.io/hello-spec-kit/<slug>/), tested, and then
-# verified by the preview-verify agentic workflow. main lives at …/main/.
+# subsite (https://percebus.github.io/hello-spec-kit/<slug>/) and tested; passing
+# end-to-end tests is the merge gate. main lives at …/main/; after a merge, the
+# preview-verify agentic workflow reviews main/ against the merged stories.
 # See specs/002-pr-preview-verification.
 #
 # Environments (Settings → Environments):
-#   main   → vars SUBSITE_KIND=main,   PREVIEW_VERIFY=false; deployment branches: main
-#   branch → vars SUBSITE_KIND=branch, PREVIEW_VERIFY=true;  deployment branches: no restriction
+#   main   → vars SUBSITE_KIND=main,   PREVIEW_VERIFY=true;  deployment branches: main
+#   branch → vars SUBSITE_KIND=branch, PREVIEW_VERIFY=false; deployment branches: no restriction
 #   github-pages → deployment branches: no restriction
 
 on:
@@ -266,15 +267,24 @@ jobs:
           files_pattern: test-results/junit.xml
           list-tests: all
 
-      - name: preview-verification failure
-        if: ${{ failure() && env.KIND == 'branch' }}
+      # Pre-merge gate: a branch subsite that passes its end-to-end tests may merge.
+      - name: preview-verification result
+        if: ${{ !cancelled() && env.KIND == 'branch' }}
+        env:
+          OUTCOME: ${{ job.status }}
         run: |
+          if [ "$OUTCOME" = "success" ]; then
+            state=success description="Subsite passed end-to-end tests"
+          else
+            state=failure description="End-to-end tests failed on the subsite"
+          fi
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-            -f state=failure -f context="$STATUS_CONTEXT" \
-            -f description="End-to-end tests failed on the subsite" \
-            -f target_url="$RUN_URL" > /dev/null
+            -f state="$state" -f context="$STATUS_CONTEXT" \
+            -f description="$description" -f target_url="$RUN_URL" > /dev/null
 
-  # Only after the subsite passes its end-to-end tests.
+  # Post-merge review (PREVIEW_VERIFY=true on the main environment): once main/
+  # passes its end-to-end tests, verify the merged pull request's stories and
+  # report on the pull request and the issues it closes.
   preview-verify:
     name: Preview verify
     needs: [verify, e2e-tests]
@@ -283,27 +293,25 @@ jobs:
 
     permissions:
       actions: write
-      statuses: write
+      contents: read
+      pull-requests: read
 
     steps:
       - name: dispatch preview-verify
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ github.head_ref }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.pull_request.head.sha }}
+          REF: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
           SLUG: ${{ needs.verify.outputs.slug }}
         run: |
           set -euo pipefail
-          set_status() {
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state="$1" -f context="$STATUS_CONTEXT" \
-              -f description="$2" -f target_url="$RUN_URL" > /dev/null
-          }
-          # Dispatch requires preview-verify.lock.yml to exist on the default branch.
-          set_status pending "Verifying…"
-          if ! gh workflow run preview-verify.lock.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
-            -f pr_number="$PR" -f sha="$SHA" -f slug="$SLUG"; then
-            set_status error "Inconclusive: could not start preview-verify"
-            exit 1
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
+            --jq '[.[] | select(.merged_at != null and .base.ref == "main")][0].number // empty')"
+          if [ -z "$pr" ]; then
+            echo "::notice::$SHA did not come from a merged pull request; nothing to verify"
+            exit 0
           fi
+          # Dispatch requires preview-verify.lock.yml to exist on the default branch.
+          gh workflow run preview-verify.lock.yml --repo "$GITHUB_REPOSITORY" --ref "$REF" \
+            -f pr_number="$pr" -f sha="$SHA" -f slug="$SLUG"
+          echo "Dispatched preview-verify for #$pr at $SHA"

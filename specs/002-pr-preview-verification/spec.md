@@ -67,6 +67,12 @@ being loaded, frames out of bounds, etc)
 - Q: Is a maintainer override of the merge gate needed? → A: Not at this time.
   A failed or inconclusive verification is resolved by fixing and pushing, or
   by re-running the CI workflow.
+- Q: When should the automated reviewer (deterministic scan and agent) run?
+  (Session 2026-10-29) → A: After a pull request merges into `main`, against
+  `main/`, rather than on every push. Before merging, the gate is the
+  subsite's end-to-end tests. The report is posted on the merged pull request
+  and on every issue it closes, and those issues are reopened when the stories
+  are not done.
 - Q: How does CI distinguish `main` from branch runs? → A: Through GitHub
   environments `main` and `branch`, whose variables (`SUBSITE_KIND`,
   `PREVIEW_VERIFY`) drive the jobs instead of event checks. CI concurrency is
@@ -150,9 +156,10 @@ being loaded, frames out of bounds, etc)
 
 #### Automated verification
 
-- **FR-007**: For each published subsite, an automated reviewer MUST navigate the site
-  like a visitor—starting from the landing page and following visible links and
-  controls—to reach the pages affected by the incoming change.
+- **FR-007**: After a pull request merges into `main` and `main`'s subsite
+  passes its end-to-end tests, an automated reviewer MUST navigate `main`'s
+  subsite like a visitor—starting from the landing page and following visible
+  links and controls—to reach the pages affected by the merged change.
 - **FR-008**: The reviewer MUST determine what to verify from the pull request
   description, changed content, and linked issue acceptance criteria, and MUST
   report whether the observed behavior matches that intent.
@@ -168,48 +175,59 @@ being loaded, frames out of bounds, etc)
   layout shifts) as advisory findings.
 - **FR-012**: Every finding MUST include the page, viewport width, a plain
   description, and visual evidence such as a screenshot.
-- **FR-013**: The reviewer MUST publish a verification report on the pull
-  request that lists the subsite address, the navigation path taken, the
-  intent checked, and every finding grouped by severity. The report and its
-  screenshots MUST remain available after the subsite is deleted.
+- **FR-013**: The reviewer MUST publish the same verification report on the
+  merged pull request and on every issue that pull request closes. The report
+  lists the site address, the navigation path taken, the intent checked, and
+  every finding grouped by severity. Screenshots MUST remain available as run
+  artifacts.
 - **FR-014**: The reviewer MUST treat pull request text, issue text, and page
   content as untrusted data, never as instructions, and MUST NOT modify
-  repository content, `main`'s subsite, or other pull requests.
+  repository content, the site, other pull requests, or issues other than
+  those the merged pull request closes.
+- **FR-021**: When the scanner reports a blocking finding (FR-010) or the
+  reviewer reports an intent mismatch (FR-008), the stories are not done. The
+  reviewer MUST reopen every closed issue that the merged pull request closes.
+  An inconclusive review MUST NOT reopen issues.
 - **FR-015**: If the reviewer cannot reach the change, cannot determine the
   intended behavior, or cannot finish, the run MUST be marked inconclusive with
   a reason rather than passing.
 
 #### Merge gate
 
-- **FR-016**: A pull request MUST NOT be mergeable into `main` until a
-  verification run for its latest commit has completed with no blocking
-  findings.
-- **FR-017**: Only defect findings (FR-010) MUST block merging. The reviewer's
-  intent-correctness judgment (FR-008) MUST be reported as advisory findings,
-  visible on the pull request, for human reviewers to act on.
-- **FR-018**: An inconclusive or failed verification run MUST block merging
-  until a later run for the pull request's latest commit passes. A maintainer
-  override is out of scope for now.
-- **FR-019**: Maintainers MUST be able to rerun verification without pushing a
-  new commit, by re-running the CI workflow for the pull request.
+- **FR-016**: A pull request MUST NOT be mergeable into `main` until its
+  latest commit's subsite has been published and has passed the end-to-end
+  tests.
+- **FR-017**: The automated reviewer (FR-007 to FR-015) MUST NOT block merging;
+  it runs after the merge. Its findings act through the linked issues
+  (FR-021).
+- **FR-018**: A failed or inconclusive pre-merge run (build, publish, or
+  end-to-end tests) MUST block merging until a later run for the pull
+  request's latest commit passes. A maintainer override is out of scope for
+  now.
+- **FR-019**: Maintainers MUST be able to rerun the pre-merge checks, or the
+  post-merge review, without pushing a new commit, by re-running the
+  corresponding CI workflow run.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% of pull requests merged into `main` after adoption have a
-  passing verification run for their final commit.
+- **SC-001**: 100% of pull requests merged into `main` after adoption had a
+  subsite whose end-to-end tests passed for their final commit, and received
+  a post-merge verification report.
 - **SC-002**: A reviewer can open the subsite of an incoming change within
   10 minutes of the latest push, in at least 95% of runs when no other CI run
   is queued.
-- **SC-003**: A change that removes or breaks an expected image on any primary
-  page is blocked from merging in 100% of seeded test cases.
-- **SC-004**: A change that causes content to overflow its frame at 320 px or
-  1440 px is blocked from merging in 100% of seeded test cases.
-- **SC-005**: Zero visual defects of the blocking categories reach `main` in
-  the first 30 days after adoption.
-- **SC-006**: The verification report for a typical change is complete within
-  15 minutes of the subsite becoming available.
+- **SC-003**: A merged change that removes or breaks an expected image on any
+  primary page leaves its linked issues reopened, with a blocking
+  "missing image" finding in the report, in 100% of seeded test cases.
+- **SC-004**: A merged change that causes content to overflow its frame at
+  320 px or 1440 px leaves its linked issues reopened, with a blocking
+  overflow finding in the report, in 100% of seeded test cases.
+- **SC-005**: Zero stories with visual defects of the blocking categories stay
+  closed in the first 30 days after adoption.
+- **SC-006**: The post-merge verification report is posted within 15 minutes
+  of `main`'s subsite passing its end-to-end tests.
 - **SC-007**: Maintainers rate at least 80% of advisory findings in the first
   month as accurate and worth reading.
 - **SC-008**: No subsite remains on the R&D site for more than 15 minutes
@@ -221,8 +239,11 @@ being loaded, frames out of bounds, etc)
   complete in order, the subsite ends up showing the latest commit, and only
   the latest commit's result counts toward merging.
 - Several pull requests push at once: their CI runs queue and run one at a
-  time, none are dropped, and every subsite and `main` survive. The agentic
-  reviews they dispatch can run in parallel.
+  time, none are dropped, and every subsite and `main` survive.
+- Two pull requests merge in quick succession: each gets its own post-merge
+  review. If `main/` changes before a review's scan finishes, that review is
+  superseded and posts nothing; the later merge's review covers the site.
+- A commit lands on `main` without a pull request: no post-merge review runs.
 - Two branch names would map to the same address after flattening (for
   example `feat/a-b/c` and `feat/a/b-c`, or `feat/x` and `feat-x`): the second
   one is rejected with an explanation on its pull request instead of
@@ -232,11 +253,13 @@ being loaded, frames out of bounds, etc)
   branches with the same beginning do not collide.
 - A branch name would collide with `main` or another reserved address: it is
   rejected in the same way.
-- Verification fails: the subsite stays available for inspection until the
-  next push or until the pull request closes, and the report, findings, and
-  screenshots remain on the pull request.
-- The end-to-end tests fail on the subsite: the agentic review is not started,
-  and merging is blocked until a later push passes.
+- The end-to-end tests fail on the subsite: merging is blocked until a later
+  push passes, and the subsite stays available for inspection.
+- The post-merge review finds the stories are not done: its report appears on
+  the merged pull request and on each linked issue, and those issues are
+  reopened, even though they were closed automatically by the merge.
+- A merged pull request closes no issues: the report is posted on the pull
+  request only, and nothing is reopened.
 - The subsite build fails: nothing is published, the pull request is marked
   failed, and the build error is linked.
 - The change is not visible in the site (for example, documentation or tooling
@@ -251,8 +274,9 @@ being loaded, frames out of bounds, etc)
   blocking, because they are outside the change's control.
 - The pull request text contains instructions aimed at the reviewer (for
   example, "approve this"): they are ignored and may be noted as suspicious.
-- The reviewing service is unavailable or exceeds its run-time limit: the run is
-  inconclusive and merging stays blocked until a rerun passes.
+- The reviewing service is unavailable or exceeds its run-time limit: the
+  post-merge review is inconclusive, no issues are reopened, and it can be
+  rerun from `main`'s CI run.
 - A pull request comes from a fork: no subsite is published automatically; a
   maintainer pushes the change to a branch in this repository to verify it.
 - The R&D site approaches its size limit because many branches are open:
@@ -311,9 +335,10 @@ the same.
 
 ### User Story 2 - Detect noticeable defects automatically (Priority: P2)
 
-As a maintainer, I get an automated report that visits the subsite like a
-visitor and flags noticeable defects—images not loading, content out of its
-frame, broken pages, browser errors—at mobile and desktop widths.
+As a maintainer, after a pull request merges I get an automated report that
+visits `main`'s subsite like a visitor and flags noticeable defects—images not
+loading, content out of its frame, broken pages, browser errors—at mobile and
+desktop widths, on the pull request and on the issues it closes.
 
 #### Priority
 
@@ -323,29 +348,29 @@ understanding its intent.
 
 #### Independent Test
 
-Push a change that references a missing image and another that makes a block
+Merge a change that references a missing image and another that makes a block
 wider than a 320 px viewport, then confirm that each report lists the defect
-with its page, width, and screenshot.
+with its page, width, and screenshot, and that the linked issues are reopened.
 
 #### Acceptance Scenarios
 
 ##### Acceptance Criteria 1
 
-- **Given** a subsite where an expected image fails to load
-- **When** verification runs
+- **Given** a merged change after which an expected image fails to load
+- **When** the post-merge verification runs
 - **Then** the report contains a blocking "missing image" finding with page,
-  viewport width, and screenshot
+  viewport width, and screenshot, and the linked issues are reopened
 
 ##### Acceptance Criteria 2
 
-- **Given** a subsite where content overflows its frame at 320 px
-- **When** verification runs
+- **Given** a merged change after which content overflows its frame at 320 px
+- **When** the post-merge verification runs
 - **Then** the report contains a blocking overflow finding at 320 px
 
 ##### Acceptance Criteria 3
 
-- **Given** a subsite with no defects
-- **When** verification runs
+- **Given** a merged change with no defects
+- **When** the post-merge verification runs
 - **Then** the report states that the primary pages were checked at both widths
   and found no blocking findings
 
@@ -364,9 +389,10 @@ clicking through the site, and report whether it behaves as described.
 
 #### Independent Test
 
-Open a pull request that adds a visible element to a page that is two clicks
-from the landing page, and confirm that the report describes the navigation
-path and whether the element meets the stated acceptance criteria.
+Merge a pull request that adds a visible element to a page that is two clicks
+from the landing page, and confirm that the report on the pull request and on
+its linked issue describes the navigation path and whether the element meets
+the stated acceptance criteria.
 
 #### Acceptance Scenarios
 
@@ -374,30 +400,32 @@ path and whether the element meets the stated acceptance criteria.
 
 - **Given** a pull request describing a new feature reachable from the landing
   page
-- **When** verification runs
+- **When** it merges and the post-merge verification runs
 - **Then** the report lists the clicks used to reach it and states whether the
   observed behavior matches the description
 
 ##### Acceptance Criteria 2
 
-- **Given** a pull request whose description does not match the subsite
-- **When** verification runs
-- **Then** the report flags the mismatch as an advisory finding with evidence,
-  without blocking the merge
+- **Given** a merged pull request whose linked issue's acceptance criteria are
+  not met on `main`'s subsite
+- **When** the post-merge verification runs
+- **Then** the report flags the mismatch with evidence on the pull request and
+  the issue, and the issue is reopened
 
 ##### Acceptance Criteria 3
 
 - **Given** the reviewer cannot locate the described change
 - **When** verification finishes
-- **Then** the run is inconclusive with an explanation, not a pass
+- **Then** the run is inconclusive with an explanation, not a pass, and no
+  issue is reopened
 
 ---
 
-### User Story 4 - Block merges that fail verification (Priority: P4)
+### User Story 4 - Block merges whose subsite fails its tests (Priority: P4)
 
-As the repository owner, I want merging into `main` to require a successful
-verification of the latest commit, so breaking visual changes cannot reach
-`main` unnoticed.
+As the repository owner, I want merging into `main` to require that the latest
+commit's subsite passes the end-to-end tests, so changes that break the site
+cannot reach `main` unnoticed.
 
 #### Priority
 
@@ -406,15 +434,15 @@ subsites and reports exist.
 
 #### Independent Test
 
-Attempt to merge a pull request with a blocking finding and confirm that merging
-is prevented. Then fix it, push, and confirm that merging is allowed after the
-new run passes.
+Attempt to merge a pull request whose subsite fails the end-to-end tests and
+confirm that merging is prevented. Then fix it, push, and confirm that merging
+is allowed after the new run passes.
 
 #### Acceptance Scenarios
 
 ##### Acceptance Criteria 1
 
-- **Given** the latest verification run has a blocking finding
+- **Given** the latest commit's subsite failed the end-to-end tests
 - **When** a maintainer attempts to merge
 - **Then** merging is prevented
 
@@ -422,11 +450,11 @@ new run passes.
 
 - **Given** a passing run exists for an older commit only
 - **When** a new commit is pushed
-- **Then** merging is prevented until the new commit is verified
+- **Then** merging is prevented until the new commit's subsite passes
 
 ##### Acceptance Criteria 3
 
-- **Given** an inconclusive run
+- **Given** a run that failed for an infrastructure reason
 - **When** a maintainer re-runs the pull request's CI workflow and the new run
   passes
 - **Then** merging is allowed

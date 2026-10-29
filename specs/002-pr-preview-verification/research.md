@@ -65,7 +65,8 @@ separate `pull_request_closed.yml` deletes them. Both use the same composite
 action, `.github/actions/replace-pages-artifact`:
 
 ```text
-always.yml:               Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (dispatches preview-verify)
+always.yml (PR):          Verify ──▶ Deploy pages ──▶ E2E tests (merge gate)
+always.yml (main):        Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Preview verify (post-merge review)
 pull_request_closed.yml:  Delete subsite
 ```
 
@@ -86,7 +87,7 @@ never races a deployment.
 
 **Environments**: Only `verify` selects an environment:
 `main` for `refs/heads/main`, otherwise `branch`. It reads `vars.SUBSITE_KIND`
-(`main`|`branch`) and `vars.PREVIEW_VERIFY` (`false`|`true`) and passes them as
+(`main`|`branch`) and `vars.PREVIEW_VERIFY` (`true` on `main`, `false` on branches) and passes them as
 job outputs, so later jobs need no event checks. `deploy-pages` and
 `delete-subsite` use the `github-pages` environment. The only per-run check
 left is same-repo (fork) detection.
@@ -121,8 +122,8 @@ conflicts, which `pull_request` events skip. It never checks out PR code.
   already have write access, and fork pull requests are never deployed.
 
 **Required settings**: Environments `main` (deployment branches: `main`;
-vars `SUBSITE_KIND=main`, `PREVIEW_VERIFY=false`), `branch` (no restriction;
-vars `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true`), and `github-pages`
+vars `SUBSITE_KIND=main`, `PREVIEW_VERIFY=true`), `branch` (no restriction;
+vars `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=false`), and `github-pages`
 (deployment branches: no restriction).
 
 **Alternatives considered**:
@@ -142,7 +143,9 @@ vars `SUBSITE_KIND=branch`, `PREVIEW_VERIFY=true`), and `github-pages`
 **Decision**: Use one **commit status** with the context
 `preview-verification` on the PR head SHA. A repository ruleset on `main` makes
 it required, alongside `Verify`. CI sets it to `pending` as soon as a same-repo
-PR is pushed (FR-005). The states are defined in
+PR is pushed (FR-005), and `e2e-tests` sets `success` "Subsite passed
+end-to-end tests" or `failure`. The post-merge review writes the same context
+on the `main` commit for information only. The states are defined in
 [contracts/commit-status.md](./contracts/commit-status.md).
 
 **Rationale**: The required check has a stable name and shows a "waiting"
@@ -221,13 +224,23 @@ and `COPILOT_GITHUB_TOKEN`.
 because gh-aw discourages it and it would require pinning the package
 manually.
 
-## R6. Verdict and fallback
+## R6. Post-merge review, verdict, and fallback
 
-**Decision**:
+**Decision** (revised 2026-10-29):
 
-- **Gate order.** `preview-verify` is dispatched only after `e2e-tests` pass
-  on the subsite. If the end-to-end tests fail, the status becomes `failure`
-  with "End-to-end tests failed on the subsite".
+- **When.** The scanner and the agent run **after a pull request merges**,
+  not on every push. `always.yml` dispatches `preview-verify` only when the
+  `main` environment's `PREVIEW_VERIFY` is `true` and `main/` has passed its
+  end-to-end tests. It looks up the merged pull request with
+  `GET /repos/{repo}/commits/{sha}/pulls`. Direct pushes without a pull
+  request are skipped.
+- **What it reviews.** `main/` at the merge commit. The PR's subsite is
+  already deleted by `pull_request_closed.yml`. If `main/` moves on before
+  the scan finishes, the run is superseded and posts nothing.
+- **Effect.** The report goes to the merged PR and to every issue it closes.
+  When the scanner has blocking findings or the agent has an intent mismatch,
+  the agent reopens those issues through the `update-issue` safe output
+  (FR-021). An inconclusive review only comments.
 - **Scanner verdict.** The `scan` job sets `failure` when there are blocking
   findings.
 - **Agent verdict.** The agent ends by calling `record-verdict`, a custom
@@ -242,14 +255,18 @@ manually.
   `finalize` also runs when detection or the agent fails. If the status is
   still `pending`, it sets `error` with "Inconclusive: reviewer did not record
   a verdict" (FR-015).
-- **No deletion on failure.** A failing subsite stays until the next push or
-  until the pull request closes (FR-006).
+- **Statuses.** The scanner, `record-verdict`, and `finalize` write
+  `preview-verification` on the `main` commit. It is informational, because
+  nothing gates on it after the merge.
 
 **Rationale**:
 
-- The agent never holds a write token.
-- Crashes and timeouts fail closed.
-- Keeping a failing subsite lets people inspect the failure in a browser.
+- One AI review per story instead of one per push lowers Copilot cost and
+  noise, and reviews what actually shipped.
+- "Closes #N" closes issues at merge. Reopening them is how the review says
+  "this story is not done", which matches how `issue-closed.md` treats
+  incomplete work.
+- The agent never holds a write token, and crashes and timeouts fail closed.
 
 **Implementation note**: `record_verdict` is a compiler-generated safe-output
 job, so `finalize` polls the status for up to 60 seconds instead of listing it
@@ -257,7 +274,15 @@ in `needs`. Verified with `gh aw compile preview-verify --validate`.
 
 **Alternatives considered**:
 
-- _Deleting the subsite right away on failure (previous design)_: rejected by
+- _Reviewing on every push (previous design)_: rejected by the owner because
+  of cost and noise on PRs that are still changing.
+- _Reviewing on approval_: rejected because GitHub does not let authors
+  approve their own pull requests. Ready-for-review, label, and slash-command
+  triggers were also offered.
+- _Keeping the deterministic scan on every push as a blocking check_: offered,
+  and rejected by the owner in favor of moving the scan together with the
+  agent. The end-to-end tests remain the pre-merge gate.
+- _Deleting the subsite right away on failure (earlier design)_: rejected by
   the owner because it needed a separate dispatchable publishing workflow.
 - _Parsing the PR comment_: rejected because it is fragile and open to prompt
   injection.
@@ -268,17 +293,19 @@ in `needs`. Verified with `gh aw compile preview-verify --validate`.
 
 **Decision**:
 
-- The agent posts one PR comment through `add-comment`.
+- The agent posts the same report on the merged PR and on each issue it closes
+  through `add-comment` (`max: 6`: the PR plus up to five issues).
 - Scanner screenshots are uploaded as artifact `preview-scan-<sha>`.
 - The agent's screenshots go to `preview-agent-<sha>` through the
   `upload-artifact` safe output.
-- The report says that the subsite is kept until the next push or until the
-  pull request closes. When the result is inconclusive, it explains how to
-  rerun: re-run the CI workflow, or push a new commit.
+- The report heading says ✅ Done, ❌ Not done, or ⚠️ Inconclusive. When not
+  done, it lists what is missing and says that the linked issues were
+  reopened. When inconclusive, it explains how to rerun: re-run the `main` CI
+  run for that commit.
 
-**Rationale**: Artifacts and comments outlive the subsite, which is deleted
-when the pull request closes. gh-aw recommends `upload-artifact` over
-`upload-asset`.
+**Rationale**: Artifacts and comments outlive the subsite. Posting on the
+issues keeps the story's own history accurate. gh-aw recommends
+`upload-artifact` over `upload-asset`.
 
 **Alternatives considered**: `upload-asset` was rejected because it grows git
 history.
