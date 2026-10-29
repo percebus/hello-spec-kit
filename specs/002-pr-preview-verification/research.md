@@ -241,6 +241,19 @@ manually.
 - **What it reviews.** `main/` at the merge commit. The PR's subsite is
   already deleted by `pull_request_closed.yml`. If `main/` moves on before
   the scan finishes, the run is superseded and posts nothing.
+- **Context.** The `resolve` job, which runs outside the sandbox with
+  `GITHUB_TOKEN`, collects the PR title, body, changed files, and
+  `closingIssuesReferences` into `context.json`. The agent reads that file.
+  The sandbox has no GitHub token, so `gh` cannot be used there, and gh-aw's
+  integrity filter (`min-integrity: approved`, the default on public
+  repositories) hides content from untrusted authors. To keep that guarantee,
+  linked-issue bodies are kept only for `OWNER`, `MEMBER`, or `COLLABORATOR`
+  authors; other issues get their title only. A PR that closes no issues is
+  reviewed against its own title, body, and files, and is not inconclusive
+  (#105).
+- **Trigger name.** `workflow_run.workflows` entries are filter patterns, so
+  `[C]ontinuous [I]ntegration` matched "Continuous Integration" and never
+  fired. The brackets are escaped: `\[C\]ontinuous \[I\]ntegration`.
 - **Effect.** The report goes to the merged PR and to every issue it closes.
   When the scanner has blocking findings or the agent has an intent mismatch,
   the agent reopens those issues through the `update-issue` safe output

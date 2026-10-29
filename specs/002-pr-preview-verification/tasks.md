@@ -478,6 +478,12 @@ behavior now lives in the tasks below.
   - `resolve` finds the merged PR for `head_sha` and passes `pr` to `scan`; the agent reads it from `findings.json`. Concurrency is keyed by `head_sha`.
   - `.github/workflows/always.yml` drops its `preview-verify` job, the `preview_verify` output, and `PREVIEW_VERIFY`.
   - Recompiled with `gh aw compile preview-verify --validate`, and updated the docs.
+- [X] T059 Fix the first post-merge runs:
+  - `.github/workflows/preview-verify.md` never fired, because `workflow_run.workflows` uses filter patterns where `[C]` is a character class. Escape it as `\[C\]ontinuous \[I\]ntegration`.
+  - #105: `resolve` now collects `context.json` (PR title, body, files, and `closingIssuesReferences`; linked-issue bodies only from `OWNER`/`MEMBER`/`COLLABORATOR` authors) as artifact `preview-context-<sha>`, which the agent downloads.
+  - Drop `gh api` (no token in the sandbox) and `issue_read` from the agent's tools.
+  - A PR with no linked issues is reviewed against its own title, body, and files instead of being inconclusive.
+  - #106: the Google domains are Chromium's own background traffic, and blocking them is correct. No change.
 
 ---
 

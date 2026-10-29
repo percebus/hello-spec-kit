@@ -85,10 +85,10 @@ prune step removes subsites of closed pull requests.
 
 | Trigger             | Inputs                                                                  |
 | ------------------- | ----------------------------------------------------------------------- |
-| `workflow_run` of `[C]ontinuous [I]ntegration`, `types: [completed]`, `branches: [main]` | None. Uses `github.event.workflow_run.head_sha`. Runs only when `conclusion == 'success'` and `event == 'push'`. gh-aw adds same-repository and no-fork checks. |
+| `workflow_run` of `\[C\]ontinuous \[I\]ntegration` (brackets escaped: workflow names are filter patterns), `types: [completed]`, `branches: [main]` | None. Uses `github.event.workflow_run.head_sha`. Runs only when `conclusion == 'success'` and `event == 'push'`. gh-aw adds same-repository and no-fork checks. |
 
 It runs **after a merge**, against `main/`. Re-running `main`'s CI run re-runs
-it. The `workflows:` name must match `always.yml`'s `name:`.
+it. The `workflows:` entry must match `always.yml`'s `name:` literally. Workflow name filters treat `[...]` as a character class, so the brackets are escaped.
 
 **Concurrency**: `group: preview-verify-${{ github.event.workflow_run.head_sha }}`,
 `cancel-in-progress: true`, and `job-discriminator: ${{ github.event.workflow_run.head_sha }}`.
@@ -96,15 +96,18 @@ Reviews of different merged PRs can run in parallel.
 
 | Job              | Purpose                                                                                                         | Permissions / secrets                     |
 | ---------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `resolve`        | Finds the merged PR for `head_sha` (`GET /commits/{sha}/pulls`) and stops if there is none (a direct push). Otherwise it outputs `pr` and sets `pending` "Scanning…" on the `main` commit. | `pull-requests: read`, `statuses: write`  |
+| `resolve`        | Finds the merged PR for `head_sha` (`GET /commits/{sha}/pulls`) and stops if there is none (a direct push). Otherwise it outputs `pr` and sets `pending` "Scanning…" on the `main` commit. It then collects `context.json` (PR title, body, files, and `closingIssuesReferences`, keeping linked-issue bodies only from `OWNER`/`MEMBER`/`COLLABORATOR` authors) into artifact `preview-context-<sha>`. | `pull-requests: read`, `statuses: write`  |
 | `scan`           | Runs `npx playwright test --project=preview-scan` with `PREVIEW_SCAN=1`, `BASE_URL=https://percebus.github.io`, and `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`. Leaves `PREVIEW_REF` unset, so the banner check skips on `main/`. Checks `preview.json.sha` before and after the scan; a mismatch means `superseded` ("main moved on"). Uploads `preview-scan-<sha>`. Sets `failure` on blocking findings, otherwise `pending` "Reviewing…". | `contents: read`, `statuses: write`       |
 | `agent`          | Runs the Copilot agent with `playwright-cli` against `/hello-spec-kit/<slug>/` only. It decides done / not done / inconclusive (FR-021). | gh-aw managed; `COPILOT_GITHUB_TOKEN`     |
 | `safe_outputs`   | Processes `add-comment` (`max: 6`: the report on the PR and each closing issue), `update-issue` (`status`, `max: 5`: reopen closing issues when not done), and `upload-artifact` (`/tmp/gh-aw/preview/*.png`). | gh-aw managed                             |
 | `record_verdict` | Custom safe-output job that receives `{ outcome: complete \| inconclusive, reason, advisory_count }`. Changes the status only from `pending`. | `statuses: write`                         |
 | `finalize`       | Runs with `if: always()`. Changes a status still `pending` after 60 s to `error`.                               | `statuses: write`                         |
 
-**Agent tools**: `playwright-cli:*`, `jq`, `cat`, `ls`, and `gh api:*` (reads
-only); GitHub read toolsets `pull_requests` and `issues`;
+**Agent tools**: `playwright-cli:*`, `jq`, `cat`, and `ls`; GitHub tool
+`pull_request_read` only. The sandbox has no GitHub token, and gh-aw's integrity
+filter (`min-integrity: approved` on public repositories) hides content from
+untrusted authors, so the agent reads `context.json` instead of looking things
+up;
 `network.allowed: [defaults, playwright, "percebus.github.io"]`.
 
 ## Build-time environment
