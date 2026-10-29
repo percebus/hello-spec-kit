@@ -27,6 +27,9 @@ for (const { name, path } of primaryPages) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
 
+      await expect(
+        page.getByRole("main").getByRole("heading", { level: 1 }),
+      ).toBeVisible();
       expect(problems).toEqual([]);
     });
 
