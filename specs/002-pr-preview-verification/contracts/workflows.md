@@ -37,8 +37,9 @@ or size errors it sets `error` with the reason. The caller must run in the
 
 **Concurrency**: `group: ${{ github.workflow }}`, `cancel-in-progress: false`,
 and `queue: max`. One CI run executes at a time across the repository, and
-every waiting run is kept. `pull_request_closed.yml` joins the same group by
-name.
+every waiting run is kept. In addition, `deploy-pages` uses the job-level
+group `pages` (`cancel-in-progress: false`, `queue: max`), which it shares
+with `pull_request_closed.yml` › `delete-subsite`.
 
 **Environments**: `verify` runs in `main` (for `refs/heads/main`) or `branch`
 (everything else). It exports `vars.SUBSITE_KIND` and `vars.PREVIEW_VERIFY`
@@ -65,10 +66,11 @@ comes from the default branch, and `GITHUB_REF=refs/heads/main`, so it can
 deploy to `github-pages`. It also runs for pull requests with merge conflicts,
 which `pull_request` would skip.
 
-**Concurrency**: `group: "[C]ontinuous [I]ntegration"`,
-`cancel-in-progress: false`, `queue: max`. This is the same queue as
-`always.yml`, so deletes and deployments never race. The literal must match
-`always.yml`'s `name:`.
+**Concurrency**: none at the workflow level, so the workflow starts as soon as
+the pull request closes, without waiting for CI. Only `delete-subsite` is
+serialized, through the job-level group `pages` (`cancel-in-progress: false`,
+`queue: max`) shared with `always.yml` › `deploy-pages`. Both rewrite the
+`gh-pages` tree and redeploy the whole site, so they must not overlap.
 
 | Job              | Runs when                         | Does                                                                                                   | Permissions                                                                     |
 | ---------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |

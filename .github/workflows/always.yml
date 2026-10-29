@@ -20,7 +20,6 @@ on:
 
 # One CI run at a time across the repository. `queue: max` keeps every waiting
 # run; the default would cancel all but the newest, dropping other branches.
-# pull_request_closed.yml joins this same group by name ("[C]ontinuous [I]ntegration").
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -161,6 +160,13 @@ jobs:
       # Link to the subsite this run published, not the site root.
       url: ${{ steps.site.outputs.page_url }}${{ steps.site.outputs.slug }}/
       name: github-pages
+
+    # Shared with pull_request_closed.yml › delete-subsite: both read-modify-write
+    # the gh-pages tree and redeploy the whole site, so they must not overlap.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+      queue: max
 
     permissions: # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
       contents: write

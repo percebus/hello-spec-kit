@@ -471,6 +471,7 @@ behavior now lives in the tasks below.
   - `.github/workflows/preview-verify.md`: `resolve` requires a merged PR. `scan` leaves `PREVIEW_REF` unset so the banner check skips on `main/`. The agent posts the same report on the PR and each closing issue (`add-comment` `max: 6`). It reopens closed linked issues through `update-issue` (`status`, `max: 5`) when there is a blocking finding or an intent mismatch; inconclusive never reopens.
   - Recompiled with `gh aw compile preview-verify --validate`.
   - Docs: spec FR-007/013/014/016–019, new FR-021, SC-001/003–006, edge cases, US2–US4; research R3/R6/R7; data model; contracts; quickstart §2–4 and §6; plan; READMEs; ADR-002.
+- [X] T057 Run `.github/workflows/pull_request_closed.yml` as soon as the PR closes. Drop its workflow-level membership in CI's queue. Instead, serialize only the site writers through the job-level group `pages` (`queue: max`) on `delete-subsite` and on `always.yml` › `deploy-pages`. Update the docs.
 - [ ] T056 Owner: flip the environment variables. Set `main` to `PREVIEW_VERIFY=true` and `branch` to `PREVIEW_VERIFY=false`.
 
 ---

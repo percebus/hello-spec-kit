@@ -82,8 +82,12 @@ There is no scheduled cleanup.
 **Concurrency**: The whole CI workflow uses `group: ${{ github.workflow }}`,
 `cancel-in-progress: false`, and `queue: max`. Only one CI run executes at a
 time across the repository, and every waiting run is kept in order.
-`pull_request_closed.yml` joins the same group by its literal name, so a delete
-never races a deployment.
+Separately, the two jobs that rewrite the site, `always.yml` › `deploy-pages`
+and `pull_request_closed.yml` › `delete-subsite`, share the job-level group
+`pages` with `queue: max`. A delete therefore starts as soon as its pull
+request closes and waits only for an in-flight deployment, not for a whole CI
+run. The two must not overlap, because whichever force-pushes last would undo
+the other: a lost `main/` publish, or a deleted subsite that reappears.
 
 **Environments**: Only `verify` selects an environment:
 `main` for `refs/heads/main`, otherwise `branch`. It reads `vars.SUBSITE_KIND`

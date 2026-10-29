@@ -42,9 +42,9 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests ──▶ Previe
 - When a pull request closes or merges,
   [pull_request_closed.yml](pull_request_closed.yml) deletes its subsite. It
   runs on `pull_request_target`, so it uses the default branch's workflow and
-  never checks out PR code. It joins CI's queue by name
-  (`"[C]ontinuous [I]ntegration"`), so keep it in sync if `always.yml` is
-  renamed. It only takes effect once it is on `main`.
+  never checks out PR code. It starts as soon as the pull request closes and
+  waits only for an in-flight `deploy-pages`, through the shared job-level
+  group `pages`. It only takes effect once it is on `main`.
 - Both workflows share the composite action [replace-pages-artifact](../actions/replace-pages-artifact/action.yml)
   for publish/delete, prune, deploy, and the PR comment.
 - A failing subsite stays available until the next push or until the PR
