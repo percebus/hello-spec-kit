@@ -5,7 +5,9 @@ import { githubApi } from "./requirement-github-api.mjs";
 import { isCheckDue } from "./select-issue-requirements.mjs";
 
 export function publishIssueRequirements(items, repo, api = githubApi) {
-  const results = items.filter((item) => item.type === "record_requirement_check");
+  const results = items.filter(
+    (item) => item.type === "record_requirement_check",
+  );
   if (
     results.length > 10 ||
     new Set(results.map((item) => item.issue_number)).size !== results.length
@@ -52,8 +54,16 @@ export function publishIssueRequirements(items, repo, api = githubApi) {
     if (result.status === "satisfied") {
       api("POST", `${endpoint}/comments`, { body: result.comment });
     }
-    for (const name of ["ai:checked", ...(result.status === "satisfied" ? ["ai:verified"] : [])]) {
-      const existing = api("GET", `repos/${repo}/labels?per_page=100`, undefined, true)
+    for (const name of [
+      "ai:checked",
+      ...(result.status === "satisfied" ? ["ai:verified"] : []),
+    ]) {
+      const existing = api(
+        "GET",
+        `repos/${repo}/labels?per_page=100`,
+        undefined,
+        true,
+      )
         .flat()
         .some((label) => label.name === name);
       if (!existing) {

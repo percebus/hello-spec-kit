@@ -17,7 +17,9 @@ export function isCheckDue(issue, events, now = Date.now()) {
     )
     .map((event) => Date.parse(event.created_at));
   if (!additions.length || additions.some((time) => !Number.isFinite(time))) {
-    throw new Error(`Cannot establish ai:checked age for issue #${issue.number}`);
+    throw new Error(
+      `Cannot establish ai:checked age for issue #${issue.number}`,
+    );
   }
   return now - Math.max(...additions) > 7 * 24 * 60 * 60 * 1000;
 }
@@ -85,7 +87,12 @@ if (
     Number(process.argv[3]),
     (issue) =>
       issue.labels.some((label) => label.name === "ai:checked")
-        ? githubApi("GET", `repos/${repo}/issues/${issue.number}/events`, undefined, true).flat()
+        ? githubApi(
+            "GET",
+            `repos/${repo}/issues/${issue.number}/events`,
+            undefined,
+            true,
+          ).flat()
         : [],
   );
   console.log(JSON.stringify(result));

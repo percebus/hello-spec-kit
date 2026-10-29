@@ -34,6 +34,7 @@ safe-outputs:
   jobs:
     record-requirement-check:
       description: Record one conclusive check; refresh ai:checked and verify satisfied requirements.
+      if: needs.agent.result == 'success' && needs.detection.result == 'success'
       runs-on: ubuntu-latest
       permissions:
         contents: read
