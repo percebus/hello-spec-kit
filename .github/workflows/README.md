@@ -118,6 +118,37 @@ EOF
 Do not apply force-push or deletion rules to `gh-pages`; `deploy-pages`
 force-pushes it on every deployment.
 
+## Open requirement verification
+
+[issue-requirement-verify.md](issue-requirement-verify.md) runs daily and supports
+manual dispatch. It scans every page of open issues, selects literal `FR-` or
+`SC-` title prefixes, and skips issues with the exact `ai-verified` label.
+There are no dated labels, expiry rules, or separate checked markers.
+
+Each run selects at most ten issues in issue-number order, rotating the starting
+offset with the workflow run number. This bounds cost without letting repeatedly
+unsatisfied issues permanently block the rest of a stable queue. Every candidate
+gets a fresh, sequential sub-agent and an isolated named Playwright browser
+session against `https://percebus.github.io/hello-spec-kit/main/`.
+
+Only requirements fully demonstrated in the deployed UI receive `ai-verified`
+and an evidence comment identifying the actual worker model, exposed reasoning
+effort, Copilot CLI version, gh-aw harness version, UTC time, and Actions run.
+The existing `COPILOT_GITHUB_TOKEN` secret authenticates Copilot. Workers inherit
+the configured Copilot model; they must not invent attribution when runtime
+metadata is unavailable. Unsatisfied, ambiguous, or failed checks remain
+unlabeled and retryable, with diagnostics in the run summary. No issues close.
+Remove `ai-verified` to request a future recheck.
+
+GitHub reads are read-only and writes use gh-aw safe outputs. The label is
+created if missing. The coordinator rechecks issue eligibility and unchanged
+requirements before proposing writes. Safe outputs are deferred and are not an
+atomic comment/label transaction; inspect the safe-output job if either fails.
+
+After editing, run `node --test scripts/select-issue-requirements.test.mjs`,
+`npm run format`, then `gh aw compile issue-requirement-verify --validate`.
+Commit the Markdown and generated lockfile together; do not edit the lockfile.
+
 ## Closed issue auditor
 
 The [agentic Markdown workflow](issue-closed.md) audits completed
