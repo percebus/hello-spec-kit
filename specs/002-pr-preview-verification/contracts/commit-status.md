@@ -17,14 +17,17 @@ the `main` commit for information only. It is written through
 
 | State     | Description (prefix)                                  | Written by                                 | Blocks merge? |
 | --------- | ----------------------------------------------------- | ------------------------------------------ | ------------- |
-| `pending` | `Waiting for subsite`                                 | `always.yml` › `verify`                    | Yes           |
-| `pending` | `Publishing subsite…`                                 | `always.yml` › `deploy-pages`              | Yes           |
+| `pending` | `Building subsite…`                                   | `always.yml` › `deploy-pages`              | Yes           |
+| `pending` | `Publishing subsite…`                                 | `always.yml` › `deploy-pages` (action)     | Yes           |
 | `pending` | `Running end-to-end tests…`                           | `always.yml` › `e2e-tests`                 | Yes           |
 | `success` | `Subsite passed end-to-end tests`                     | `always.yml` › `e2e-tests`                 | No            |
 | `failure` | `End-to-end tests failed on the subsite`              | `always.yml` › `e2e-tests`                 | Yes           |
-| `error`   | `Verify failed; no subsite was published`             | `always.yml` › `verify`                    | Yes           |
-| `error`   | `<reason>; rename the branch` / `Address collision with <branch>; rename the branch` | `always.yml` › `verify`, `deploy-pages` | Yes |
-| `error`   | `Inconclusive: publishing the subsite failed`         | `always.yml` › `deploy-pages`              | Yes           |
+| `error`   | `<reason>; rename the branch` / `Address collision with <branch>; rename the branch` | `always.yml` › `deploy-pages` | Yes |
+| `error`   | `Inconclusive: building or publishing the subsite failed` | `always.yml` › `deploy-pages`          | Yes           |
+
+`verify` writes no status. If it fails, `deploy-pages` never runs, the status
+is never reported, and the required check stays "Expected". That blocks the
+merge, along with the failing `Verify` check itself.
 
 ## Post-merge states (`main` commit, informational)
 

@@ -46,9 +46,9 @@ being loaded, frames out of bounds, etc)
   interim, `main` is also a subsite of the R&D site. Moving production to a
   dedicated release repository is a follow-up (#100).
 - Q: Can several pull requests be verified at once? → A: ~~Yes; subsites
-  coexist and are verified in parallel.~~ Revised: subsites coexist, but CI
-  runs one at a time across the repository, queued and never dropped. The
-  agentic reviews it dispatches can still run in parallel.
+  coexist and are verified in parallel.~~ Revised again: subsites coexist, CI
+  runs in parallel across branches, and only deployments to the shared site
+  are serialized.
 - Q: What does a subsite represent? → A: A branch. Each push replaces that
   branch's subsite.
 - Q: When are subsites deleted? → A: ~~A subsite that does not pass
@@ -73,10 +73,11 @@ being loaded, frames out of bounds, etc)
   subsite's end-to-end tests. The report is posted on the merged pull request
   and on every issue it closes, and those issues are reopened when the stories
   are not done.
-- Q: How does CI distinguish `main` from branch runs? → A: Through GitHub
-  environments `main` and `branch`, whose variable (`SUBSITE_KIND`) drives
-  the jobs instead of event checks. CI concurrency is
-  a single workflow-wide group that is never cancelled.
+- Q: How does CI distinguish `main` from branch runs? → A: ~~Through `main`
+  and `branch` environments.~~ Revised: from `github.ref_name` directly. The
+  build-and-test job is isolated (no environment, no publishing). CI
+  concurrency is per ref with cancel-in-progress, so a newer push cancels the
+  older run. Only deployments are serialized.
 
 ## Requirements _(mandatory)_
 
@@ -133,7 +134,8 @@ being loaded, frames out of bounds, etc)
 - **FR-001**: For every branch with an open pull request targeting `main`, the
   system MUST publish the branch's latest commit as a subsite of the R&D site.
   Subsites for different branches MUST be able to coexist. CI runs for
-  different branches MAY be queued one at a time, but none MUST be dropped.
+  different branches MAY run in parallel. Deployments to the shared site MUST
+  be serialized, and none MUST be dropped.
 - **FR-002**: Each subsite MUST be reachable at a stable, branch-specific
   address that is distinct from `main`'s address. It MUST never be presented
   as `main` or production, and MUST visibly identify the branch and commit it
@@ -235,11 +237,12 @@ being loaded, frames out of bounds, etc)
 
 ## Edge Cases
 
-- Two pushes to the same branch arrive in quick succession: both CI runs
-  complete in order, the subsite ends up showing the latest commit, and only
-  the latest commit's result counts toward merging.
-- Several pull requests push at once: their CI runs queue and run one at a
-  time, none are dropped, and every subsite and `main` survive.
+- Two pushes to the same branch arrive in quick succession: the older CI run
+  is cancelled, the subsite ends up showing the latest commit, and only the
+  latest commit's result counts toward merging.
+- Several pull requests push at once: their CI runs proceed in parallel, their
+  deployments wait for each other, none are dropped, and every subsite and
+  `main` survive.
 - Two pull requests merge in quick succession: each gets its own post-merge
   review. If `main/` changes before a review's scan finishes, that review is
   superseded and posts nothing; the later merge's review covers the site.
@@ -322,8 +325,8 @@ the same.
 
 - **Given** pull request A's CI run is in progress
 - **When** a commit is pushed to pull request B
-- **Then** B's CI run waits in the queue and runs after A's, B's subsite is
-  then published, and A's subsite is unaffected
+- **Then** B's CI run proceeds in parallel, B's deployment waits for A's, B's
+  subsite is then published, and A's subsite is unaffected
 
 ##### Acceptance Criteria 4
 
