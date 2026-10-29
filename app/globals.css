@@ -209,6 +209,15 @@ h3 {
   border-radius: 0.5rem;
 }
 
+.episode-card-artwork {
+  display: block;
+  width: 100%;
+  height: 300px;
+  margin-bottom: 1.5rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
 .episode-player {
   display: block;
   width: 100%;
