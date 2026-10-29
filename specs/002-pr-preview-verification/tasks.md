@@ -466,6 +466,12 @@ behavior now lives in the tasks below.
   - Add `.github/workflows/pull_request_closed.yml`: `pull_request_target` `closed`, same-repo only, joins concurrency group `"[C]ontinuous [I]ntegration"` with `queue: max`, and calls the action with `op: delete`.
   - Update the docs.
 - [X] T054 Move the composite action to `.github/actions/replace-pages-artifact/action.yml`, the conventional local-action location. Its helpers stay in `.github/pages/` and are resolved from `${{ github.workspace }}`. Update `uses:` in `.github/workflows/always.yml` and `.github/workflows/pull_request_closed.yml`, and the docs.
+- [X] T055 Move the scan and agent review to after merge (owner decision, 2026-10-29):
+  - `.github/workflows/always.yml`: for PRs, `e2e-tests` sets `preview-verification` `success`/`failure` (the merge gate). The `preview-verify` job runs only when `PREVIEW_VERIFY=true` (now the `main` environment), looks up the merged PR with `GET /commits/{sha}/pulls`, and dispatches `preview-verify.lock.yml --ref main` with `slug=main`.
+  - `.github/workflows/preview-verify.md`: `resolve` requires a merged PR. `scan` leaves `PREVIEW_REF` unset so the banner check skips on `main/`. The agent posts the same report on the PR and each closing issue (`add-comment` `max: 6`). It reopens closed linked issues through `update-issue` (`status`, `max: 5`) when there is a blocking finding or an intent mismatch; inconclusive never reopens.
+  - Recompiled with `gh aw compile preview-verify --validate`.
+  - Docs: spec FR-007/013/014/016–019, new FR-021, SC-001/003–006, edge cases, US2–US4; research R3/R6/R7; data model; contracts; quickstart §2–4 and §6; plan; READMEs; ADR-002.
+- [ ] T056 Owner: flip the environment variables. Set `main` to `PREVIEW_VERIFY=true` and `branch` to `PREVIEW_VERIFY=false`.
 
 ---
 
