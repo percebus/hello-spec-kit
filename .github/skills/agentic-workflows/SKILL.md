@@ -1,4 +1,4 @@
-https://percebus.github.io/hello-spec-kit/main/https://percebus.github.io/hello-spec-kit/main/---
+---
 name: agentic-workflows
 description: Route gh-aw workflow design/create/debug/upgrade requests to the right prompts.
 ---
