@@ -31,6 +31,7 @@ Feature: Landing page
   #
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
   # SRC: https://github.com/percebus/hello-spec-kit/issues/30
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/85
   Scenario Outline: The featured episode provides complete listening context
     Given the landing page
     And the featured episode
