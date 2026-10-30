@@ -42,6 +42,11 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succ
   through the job-level group `pages` (`queue: max`).
 - `main` versus branch behavior comes from the workflow-level
   `env.KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}`.
+- `verify` uses `.env.local` to test the build served by its local web server.
+  `e2e-tests` selects `.env.branch` for PR branches and `.env.main` after merge;
+  the workflow replaces `{branch}` in the branch base path with the deployed
+  slug. `.env.development` and `.env.production` remain separate deployment
+  profiles.
 - When a pull request closes or merges,
   [pull_request_closed.yml](pull_request_closed.yml) deletes its subsite. It
   runs on `pull_request_target`, so it uses the default branch's workflow and

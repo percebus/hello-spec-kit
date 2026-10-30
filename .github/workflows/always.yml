@@ -27,10 +27,7 @@ permissions:
 
 env:
   CI: true
-  ENV: development
   KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}
-  PAGES_ORIGIN: https://percebus.github.io
-  SITE_URL: https://percebus.github.io/hello-spec-kit
   STATUS_CONTEXT: preview-verification
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
@@ -39,6 +36,8 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    env:
+      ENV: local
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
@@ -136,14 +135,27 @@ jobs:
           set_status pending "Building subsite…"
           echo "slug=$slug" >> "$GITHUB_OUTPUT"
 
+      - name: configure build environment
+        if: ${{ steps.subsite.outputs.slug != '' }}
+        env:
+          SLUG: ${{ steps.subsite.outputs.slug }}
+        run: |
+          set -euo pipefail
+          set -a
+          source ".env.$KIND"
+          set +a
+          if [ "$KIND" = "branch" ]; then
+            NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH//\{branch\}/$SLUG}"
+          fi
+          echo "NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
+
       - name: npm install
         if: ${{ steps.subsite.outputs.slug != '' }}
         run: npm install
 
-      - name: next build (subsite)
+      - name: next build
         if: ${{ steps.subsite.outputs.slug != '' }}
         env:
-          NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/${{ steps.subsite.outputs.slug }}
           NEXT_PUBLIC_PREVIEW_PR: ${{ github.event.pull_request.number }}
           NEXT_PUBLIC_PREVIEW_REF: ${{ github.head_ref }}
           NEXT_PUBLIC_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
@@ -213,34 +225,41 @@ jobs:
       - name: npm install
         run: npm install
 
-      - name: wait for subsite
+      - name: configure test environment
         run: |
           set -euo pipefail
-          url="$SITE_URL/$SLUG/preview.json"
-          for _ in $(seq 1 30); do
-            if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "$SHA" ]; then
-              echo "$SITE_URL/$SLUG/ shows $SHA"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::$SITE_URL/$SLUG/ did not show $SHA within 5 minutes"
-          exit 1
-
-      - name: target subsite
-        run: |
-          set -euo pipefail
-          printf 'BASE_URL=%s\nNEXT_PUBLIC_BASE_PATH=/hello-spec-kit/%s\n' "$PAGES_ORIGIN" "$SLUG" > .env.subsite
+          env_file=".env.$KIND"
+          if [ "$KIND" = "branch" ]; then
+            resolved_file="$RUNNER_TEMP/.env.branch"
+            sed "s|{branch}|$SLUG|g" "$env_file" > "$resolved_file"
+            cp "$resolved_file" "$env_file"
+          fi
+          set -a
+          source "$env_file"
+          set +a
+          printf 'ENV=%s\nSITE_URL=%s%s\n' "$KIND" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
           if [ "$KIND" = "branch" ]; then
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
               -f state=pending -f context="$STATUS_CONTEXT" \
               -f description="Running end-to-end tests…" -f target_url="$RUN_URL" > /dev/null
           fi
 
+      - name: wait for subsite
+        run: |
+          set -euo pipefail
+          url="$SITE_URL/preview.json"
+          for _ in $(seq 1 30); do
+            if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "$SHA" ]; then
+              echo "$SITE_URL/ shows $SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$SITE_URL/ did not show $SHA within 5 minutes"
+          exit 1
+
       - name: playwright test
         run: npm run test:e2e
-        env:
-          ENV: subsite
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         if: ${{ !cancelled() }}

@@ -185,9 +185,11 @@ tests/
 └── helpers/
     └── preview-scan.ts        # NEW crawl + image/media/overflow/error collectors + findings writer
 
-.env.production                # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main (read by next build)
-.env.development               # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main (local tests; site at 127.0.0.1:3000/hello-spec-kit/main/)
-.gitignore                     # + .env.subsite (written by CI's e2e-tests)
+.env.local                     # developer-local URL and web server settings
+.env.branch                    # branch E2E settings; {branch} is resolved to the deployed slug
+.env.main                      # main E2E settings
+.env.development               # separate SIT deployment profile
+.env.production                # separate production profile
 playwright.config.ts           # + "unit" project; + "preview-scan" project and no dotenv/gallery when PREVIEW_SCAN=1
 docs/ADR/002-rnd-site-subsites.md  # NEW record of R1, R2, R4, R8; links #100
 README.md                      # + "Pull request subsites" section; production URL now …/main/
