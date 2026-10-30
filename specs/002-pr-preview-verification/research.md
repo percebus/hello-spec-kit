@@ -441,7 +441,7 @@ has two implications:
 
 **Alternatives considered**:
 
-- _A generated `.env.subsite`_: replaced by the named `.env.branch` and
+- _One generated environment file_: replaced by the named `.env.branch` and
   `.env.main` profiles so the source of each E2E target is clear.
 - _One build with the subsite base path that is also used for local tests_:
   rejected because it changes how test environment files work.

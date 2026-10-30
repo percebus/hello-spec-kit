@@ -57,6 +57,14 @@ jobs:
       - name: npm install
         run: npm install
 
+      - name: configure local build environment
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.local
+          set +a
+          echo "NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
+
       - name: next build
         run: npm run build
 

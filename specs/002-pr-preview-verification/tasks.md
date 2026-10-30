@@ -440,8 +440,7 @@ behavior now lives in the tasks below.
   - **Triggers:** `pull_request` types `opened, synchronize, reopened, closed`, plus `push` to `main` and `workflow_dispatch`.
   - **Concurrency:** `group: ${{ github.workflow }}`, `cancel-in-progress: false`, `queue: max`.
   - **`verify`:** runs isolated build and tests without publishing; uses the local Playwright profile.
-  - **`deploy-pages`:** reads the publish base path from `.env.main` or `.env.branch`, resolving `{branch}` to the computed slug.
-  - **`deploy-pages`:** environment `github-pages`. Publishes via `scripts/pages-tree.mjs upsert`, deletes on same-repo `closed` using `main`'s scripts, prunes, deploys only when the tree changed, and updates the PR comment.
+  - **`deploy-pages`:** reads the publish base path from `.env.main` or `.env.branch`, resolving `{branch}` to the computed slug; builds the site and publishes it through the `replace-pages-artifact` action in the `github-pages` environment.
   - **`e2e-tests`:** waits for `preview.json`, selects `.env.branch` or `.env.main`, and runs tests with the matching `ENV`.
   - **`preview-verify`:** dispatches `preview-verify.lock.yml --ref <head branch>` when `preview_verify == 'true'`.
 - [X] T043 Delete `.github/workflows/pages-publish.yml` and `.github/workflows/preview-override.yml`.
@@ -449,12 +448,12 @@ behavior now lives in the tasks below.
   - remove the delete dispatch and `actions: write` from `finalize`;
   - change the report to "kept until the next push or until the PR closes" and give rerun guidance;
   - recompile with `gh aw compile preview-verify --validate`.
-- [X] T045 Use the named `.env.branch` and `.env.main` profiles instead of generating `.env.subsite`.
+- [X] T045 Use the named `.env.branch` and `.env.main` profiles, resolving the branch slug before tests.
 - [X] T046 Validate:
   - `npm run format` passes.
   - actionlint flags only the documented `queue` key.
   - `bash -n` passes on every multi-line `run:` block, and no `run:` script interpolates `${{ }}`.
-  - `npm test` passes all 228 tests against a local subsite build with `ENV=subsite`, banner present.
+  - `npm test` passes all 228 tests against a local subsite build with `ENV=branch`, banner present.
 - [X] T047 Update docs to match: `spec.md` (clarifications, FR-001/006/018/019, SC-001/002/008, edge cases, US1 AC3/AC4, US4 AC3), `research.md` (R2, R6, R7, R9–R13), `data-model.md`, `contracts/*`, `quickstart.md`, `plan.md`, `checklists/requirements.md`, `docs/ADR/002-rnd-site-subsites.md`, and `.github/workflows/README.md`.
 - [ ] T048 Owner: create the GitHub Actions `github-pages` environment and allow PR branches (see `.github/workflows/README.md` › Environments). Do this before merging.
 - [X] T049 Set the `deploy-pages` environment URL in `.github/workflows/always.yml` to `<page_url><slug>/`, so the deployment link opens the subsite instead of the root redirect to `main/`.
@@ -491,7 +490,7 @@ behavior now lives in the tasks below.
   - `env.KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}` replaces the `main`/`branch` environments and `SUBSITE_KIND`.
   - The slug, subsite build, and `site` artifact upload move into `deploy-pages`, which skips forks, sets `pending` "Building subsite…", publishes `out/` directly, and outputs `slug` for `e2e-tests`.
   - `deploy-pages`' error step now also covers build failures.
-  - Owner: the `main` and `branch` environments can be deleted.
+  - Owner: the GitHub Actions `main` and `branch` environments can be deleted.
 
 ---
 
