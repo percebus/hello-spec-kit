@@ -27,18 +27,62 @@ permissions:
 
 env:
   CI: true
-  ENV: development
-  KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}
-  PAGES_ORIGIN: https://percebus.github.io
-  SITE_URL: https://percebus.github.io/hello-spec-kit
-  STATUS_CONTEXT: preview-verification
-  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  BASE_URL: https://percebus.github.io
+  PREVIEW_SCAN: true
+  NEXT_PUBLIC_BASE_PATH: /hello-spec-kit
 
 jobs:
+  VARIABLES:
+    name: VARIABLES
+    runs-on: ubuntu-latest
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+
+      - name: resolve variables
+        id: variables
+        env:
+          KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
+          slug=main
+          if [ "$KIND" = "branch" ]; then
+            if ! slug="$(node .github/pages/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
+              message="$(tr '\r\n' ' ' < slug-error.txt)"
+              echo "::warning::No subsite for this branch: $message"
+              echo "slug_error=$message" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH%/}/$slug"
+          printf 'slug=%s\nbase_url=%s\nbase_path=%s\nsite_url=%s%s\n' \
+            "$slug" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      kind: ${{ steps.variables.outputs.kind }}
+      branch: ${{ github.head_ref || github.ref_name }}
+      sha: ${{ github.event.pull_request.head.sha || github.sha }}
+      pr: ${{ github.event.pull_request.number }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      status_context: preview-verification
+      slug: ${{ steps.variables.outputs.slug }}
+      slug_error: ${{ steps.variables.outputs.slug_error }}
+      base_url: ${{ steps.variables.outputs.base_url }}
+      base_path: ${{ steps.variables.outputs.base_path }}
+      site_url: ${{ steps.variables.outputs.site_url }}
+
+  #
   # Isolated build and tests; publishes nothing.
   verify:
     name: Verify
+    needs: VARIABLES
     runs-on: ubuntu-latest
+    env:
+      BASE_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/main # XXX should be directly
+      PLAYWRIGHT_WEB_SERVER: true
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
@@ -58,11 +102,15 @@ jobs:
       - name: npm install
         run: npm install
 
+      # TODO
+      # - name: npm run test:unit
+      #   run: npm run test:unit
+
       - name: next build
         run: npm run build
 
-      - name: npm test
-        run: npm test
+      - name: npm run test:all
+        run: npm run test:all
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         with:
@@ -76,7 +124,9 @@ jobs:
   # pull_request_closed.yml. Fork pull requests are never published.
   deploy-pages:
     name: Deploy pages
-    needs: verify
+    needs:
+      - VARIABLES
+      - verify
     if: ${{ github.ref_name == 'main' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     environment:
@@ -104,8 +154,7 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      PR: ${{ github.event.pull_request.number }}
-      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -114,45 +163,32 @@ jobs:
       - name: subsite slug
         id: subsite
         env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          SLUG_ERROR: ${{ needs.VARIABLES.outputs.slug_error }}
         run: |
           set_status() {
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state="$1" -f context="$STATUS_CONTEXT" \
+            gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
+              -f state="$1" -f context="${{ needs.VARIABLES.outputs.status_context }}" \
               -f description="$(printf '%s' "$2" | cut -c1-140)" \
-              -f target_url="$RUN_URL" > /dev/null
+              -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
           }
 
-          if [ "$KIND" = "main" ]; then
-            echo "slug=main" >> "$GITHUB_OUTPUT"
+          if [ -n "$SLUG_ERROR" ]; then
+            echo "::warning::No subsite for this branch: $SLUG_ERROR"
+            set_status error "$SLUG_ERROR; rename the branch"
             exit 0
           fi
-          if ! slug="$(node .github/pages/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
-            message="$(cat slug-error.txt)"
-            echo "::warning::No subsite for this branch: $message"
-            set_status error "$message; rename the branch"
-            exit 0
+          if [ "${{ needs.VARIABLES.outputs.kind }}" = "branch" ]; then
+            set_status pending "Building subsite…"
           fi
-          set_status pending "Building subsite…"
-          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          echo "slug=${{ needs.VARIABLES.outputs.slug }}" >> "$GITHUB_OUTPUT"
 
       - name: npm install
-        if: ${{ steps.subsite.outputs.slug != '' }}
         run: npm install
 
-      - name: next build (subsite)
-        if: ${{ steps.subsite.outputs.slug != '' }}
-        env:
-          NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/${{ steps.subsite.outputs.slug }}
-          NEXT_PUBLIC_PREVIEW_PR: ${{ github.event.pull_request.number }}
-          NEXT_PUBLIC_PREVIEW_REF: ${{ github.head_ref }}
-          NEXT_PUBLIC_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          rm -rf out
-          npm run next:build
+      - name: next build
+        run: npm run next:build
 
       - name: site.zip
-        if: ${{ steps.subsite.outputs.slug != '' }}
         uses: percebus/github-actions-common/.github/actions/artifact-upload@main
         with:
           name: site
@@ -161,36 +197,59 @@ jobs:
 
       - name: publish subsite
         id: site
-        if: ${{ steps.subsite.outputs.slug != '' }}
         uses: ./.github/actions/replace-pages-artifact
         with:
           op: publish
           slug: ${{ steps.subsite.outputs.slug }}
-          kind: ${{ env.KIND }}
-          branch: ${{ github.head_ref || github.ref_name }}
-          pr: ${{ github.event.pull_request.number }}
-          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          kind: ${{ needs.VARIABLES.outputs.kind }}
+          branch: ${{ needs.VARIABLES.outputs.branch }}
+          pr: ${{ needs.VARIABLES.outputs.pr }}
+          sha: ${{ needs.VARIABLES.outputs.sha }}
           source: ${{ github.workspace }}/out
-          run-url: ${{ env.RUN_URL }}
+          run-url: ${{ needs.VARIABLES.outputs.run_url }}
 
       # Covers build and publish failures; keeps a clearer error already set
       # (for example an address collision).
       - name: preview-verification error
-        if: ${{ failure() && env.KIND == 'branch' }}
+        if: ${{ failure() && needs.VARIABLES.outputs.kind == 'branch' }}
         run: |
-          current="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
-            --jq "[.[] | select(.context == \"$STATUS_CONTEXT\")][0].state // empty")"
+          current="$(gh api "repos/$GITHUB_REPOSITORY/commits/${{ needs.VARIABLES.outputs.sha }}/statuses" \
+            --jq '[.[] | select(.context == "${{ needs.VARIABLES.outputs.status_context }}")][0].state // empty')"
           if [ "$current" != "error" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state=error -f context="$STATUS_CONTEXT" \
+            gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
+              -f state=error -f context="${{ needs.VARIABLES.outputs.status_context }}" \
               -f description="Inconclusive: building or publishing the subsite failed" \
-              -f target_url="$RUN_URL" > /dev/null
+              -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
           fi
+
+      - name: preview-verification pending
+        if: ${{ needs.VARIABLES.outputs.kind == 'branch' }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
+            -f state=pending -f context="${{ needs.VARIABLES.outputs.status_context }}" \
+            -f description="Running end-to-end tests…" -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
+
+      - name: wait for subsite
+        run: |
+          set -euo pipefail
+          url="${{ needs.VARIABLES.outputs.site_url }}/preview.json"
+          for _ in $(seq 1 30); do
+            if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "${{ needs.VARIABLES.outputs.sha }}" ]; then
+              echo "${{ needs.VARIABLES.outputs.site_url }}/ shows ${{ needs.VARIABLES.outputs.sha }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::${{ needs.VARIABLES.outputs.site_url }}/ did not show ${{ needs.VARIABLES.outputs.sha }} within 5 minutes"
+          exit 1
 
   # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests
-    needs: deploy-pages
+    needs:
+      - VARIABLES
+      - deploy-pages
     if: ${{ needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
     runs-on: ubuntu-latest
 
@@ -203,8 +262,9 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      SLUG: ${{ needs.deploy-pages.outputs.slug }}
-      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_URL: ${{ needs.VARIABLES.outputs.base_url }}
+      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
+      PLAYWRIGHT_WEB_SERVER: ""
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -213,34 +273,8 @@ jobs:
       - name: npm install
         run: npm install
 
-      - name: wait for subsite
-        run: |
-          set -euo pipefail
-          url="$SITE_URL/$SLUG/preview.json"
-          for _ in $(seq 1 30); do
-            if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "$SHA" ]; then
-              echo "$SITE_URL/$SLUG/ shows $SHA"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::$SITE_URL/$SLUG/ did not show $SHA within 5 minutes"
-          exit 1
-
-      - name: target subsite
-        run: |
-          set -euo pipefail
-          printf 'BASE_URL=%s\nNEXT_PUBLIC_BASE_PATH=/hello-spec-kit/%s\n' "$PAGES_ORIGIN" "$SLUG" > .env.subsite
-          if [ "$KIND" = "branch" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state=pending -f context="$STATUS_CONTEXT" \
-              -f description="Running end-to-end tests…" -f target_url="$RUN_URL" > /dev/null
-          fi
-
       - name: playwright test
-        run: npm run playwright:test
-        env:
-          ENV: subsite
+        run: npm run test:e2e
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         if: ${{ !cancelled() }}
@@ -250,7 +284,7 @@ jobs:
 
       # Pre-merge gate: a branch subsite that passes its end-to-end tests may merge.
       - name: preview-verification result
-        if: ${{ !cancelled() && env.KIND == 'branch' }}
+        if: ${{ !cancelled() && needs.VARIABLES.outputs.kind == 'branch' }}
         env:
           OUTCOME: ${{ job.status }}
         run: |
@@ -259,6 +293,6 @@ jobs:
           else
             state=failure description="End-to-end tests failed on the subsite"
           fi
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-            -f state="$state" -f context="$STATUS_CONTEXT" \
-            -f description="$description" -f target_url="$RUN_URL" > /dev/null
+          gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
+            -f state="$state" -f context="${{ needs.VARIABLES.outputs.status_context }}" \
+            -f description="$description" -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null

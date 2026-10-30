@@ -12,8 +12,8 @@ const previewScan = process.env.PREVIEW_SCAN === "1";
 
 if (!previewScan) {
   dotenv.config({
-    path: `.env.${process.env.ENV ?? "development"}`,
-    override: true,
+    path: `.env.${process.env.ENV ?? "local"}`,
+    override: false,
   });
 }
 
@@ -92,7 +92,7 @@ function defaultConfig(): PlaywrightTestConfig {
       },
     ],
     webServer: [
-      ...(process.env.WEB_SERVER
+      ...(process.env.PLAYWRIGHT_WEB_SERVER
         ? [
             {
               command: "npm run start:test",

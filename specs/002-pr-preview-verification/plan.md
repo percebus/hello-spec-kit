@@ -15,11 +15,11 @@ same-repo PR branch gets its own subsite at
 release repository is tracked in #100.
 
 **Publishing**: The CI workflow, `always.yml`, runs
-`Verify → Deploy pages → E2E tests` for every branch. When it succeeds on
+`VARIABLES → Verify → Deploy pages → E2E tests` for every branch. When it succeeds on
 `main`, `preview-verify.md` starts the post-merge review on `workflow_run`.
 
 - `verify` is an isolated build and test job; it publishes nothing.
-- `main` versus branch behavior comes from the workflow-level `env.KIND`
+- `main` versus branch behavior comes from the `VARIABLES` job's `kind` output
   (`github.ref_name == 'main' && 'main' || 'branch'`).
 - `deploy-pages` (skips forks) builds the subsite with its base path. It
   stores the site tree as one orphan commit on a `gh-pages`
@@ -185,9 +185,10 @@ tests/
 └── helpers/
     └── preview-scan.ts        # NEW crawl + image/media/overflow/error collectors + findings writer
 
-.env.production                # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main (read by next build)
-.env.development               # NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main (local tests; site at 127.0.0.1:3000/hello-spec-kit/main/)
-.gitignore                     # + .env.subsite (written by CI's e2e-tests)
+.env.local                     # developer-local URL and web server settings
+.env.main                      # main E2E settings
+.env.development               # separate SIT deployment profile
+.env.production                # separate production profile
 playwright.config.ts           # + "unit" project; + "preview-scan" project and no dotenv/gallery when PREVIEW_SCAN=1
 docs/ADR/002-rnd-site-subsites.md  # NEW record of R1, R2, R4, R8; links #100
 README.md                      # + "Pull request subsites" section; production URL now …/main/

@@ -16,7 +16,10 @@
     "bddgen": "bddgen",
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
-    "playwright:test": "playwright test --fully-parallel --workers=4",
+    "playwright:test": "playwright test",
+    "playwright:test:unit": "npm run playwright:test -- --config=playwright.unit.config.ts",
+    "playwright:test:all": "npm run playwright:test -- --fully-parallel --workers=4",
+    "playwright:test:e2e": "npm run playwright:test -- --fully-parallel --workers=4 --project=chromium --project=chromium-bdd",
     "_node:test": "node --test",
     "node:test:aw": "npm run _node:test -- ./.github/aw/scripts/*.test.mjs",
     "postinstall": "npm run playwright:install",
@@ -30,7 +33,10 @@
     "start:test": "node scripts/serve-static-export.mjs",
     "prebuild": "npm run lint",
     "build": "npm run next:build",
-    "test": "npm run node:test:aw && npm run playwright:test"
+    "test:unit": "npm run node:test:aw && npm run playwright:test:unit",
+    "test:all": "npm run node:test:aw && npm run playwright:test:all",
+    "test:e2e": "npm run playwright:test:e2e",
+    "test": "npm run test:unit"
   },
   "dependencies": {
     "next": "^16.4.0-canary.51",

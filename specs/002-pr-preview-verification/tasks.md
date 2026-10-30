@@ -439,23 +439,24 @@ behavior now lives in the tasks below.
 - [X] T042 Rewrite `.github/workflows/always.yml`:
   - **Triggers:** `pull_request` types `opened, synchronize, reopened, closed`, plus `push` to `main` and `workflow_dispatch`.
   - **Concurrency:** `group: ${{ github.workflow }}`, `cancel-in-progress: false`, `queue: max`.
-  - **`verify`:** uses `environment: main|branch` and exports `vars.SUBSITE_KIND` and `vars.PREVIEW_VERIFY`. It fails if `SUBSITE_KIND` is not `main` or `branch`.
-  - **`deploy-pages`:** environment `github-pages`. Publishes via `scripts/pages-tree.mjs upsert`, deletes on same-repo `closed` using `main`'s scripts, prunes, deploys only when the tree changed, and updates the PR comment.
-  - **`e2e-tests`:** waits for `preview.json`, writes `.env.subsite`, and runs `npm test` with `ENV=subsite`.
+  - **`verify`:** runs isolated build and tests without publishing; uses the local Playwright profile.
+  - **`VARIABLES`:** reads local and main settings and computes branch deployment URLs as job outputs before `verify`.
+  - **`deploy-pages`:** reads the publish base path from `VARIABLES`; builds the site and publishes it through the `replace-pages-artifact` action in the `github-pages` environment.
+  - **`e2e-tests`:** waits for `preview.json` and runs tests with the deployed URL outputs from `VARIABLES`.
   - **`preview-verify`:** dispatches `preview-verify.lock.yml --ref <head branch>` when `preview_verify == 'true'`.
 - [X] T043 Delete `.github/workflows/pages-publish.yml` and `.github/workflows/preview-override.yml`.
 - [X] T044 In `.github/workflows/preview-verify.md`:
   - remove the delete dispatch and `actions: write` from `finalize`;
   - change the report to "kept until the next push or until the PR closes" and give rerun guidance;
   - recompile with `gh aw compile preview-verify --validate`.
-- [X] T045 Add `.env.subsite` to `.gitignore`.
+- [X] T045 Use `.env.main` and computed branch URL outputs; no branch environment file is required.
 - [X] T046 Validate:
   - `npm run format` passes.
   - actionlint flags only the documented `queue` key.
   - `bash -n` passes on every multi-line `run:` block, and no `run:` script interpolates `${{ }}`.
-  - `npm test` passes all 228 tests against a local subsite build with `ENV=subsite`, banner present.
+  - Tests against a subsite use explicit `BASE_URL` and `NEXT_PUBLIC_BASE_PATH`, with the local web server disabled for deployed targets.
 - [X] T047 Update docs to match: `spec.md` (clarifications, FR-001/006/018/019, SC-001/002/008, edge cases, US1 AC3/AC4, US4 AC3), `research.md` (R2, R6, R7, R9–R13), `data-model.md`, `contracts/*`, `quickstart.md`, `plan.md`, `checklists/requirements.md`, `docs/ADR/002-rnd-site-subsites.md`, and `.github/workflows/README.md`.
-- [ ] T048 Owner: create the `main` and `branch` environments with their variables, and allow PR branches on `github-pages` (see `.github/workflows/README.md` › Environments). Do this before merging.
+- [ ] T048 Owner: create the GitHub Actions `github-pages` environment and allow PR branches (see `.github/workflows/README.md` › Environments). Do this before merging.
 - [X] T049 Set the `deploy-pages` environment URL in `.github/workflows/always.yml` to `<page_url><slug>/`, so the deployment link opens the subsite instead of the root redirect to `main/`.
 - [ ] T050 Merge #101 so a push to `main` publishes `main/`. Accepted gap: until then, the root `https://percebus.github.io/hello-spec-kit/` redirects to a missing `main/` (404), because the first branch deployment replaced the whole Pages site.
 - [X] T051 In the `preview-verify` job of `.github/workflows/always.yml`, set `error` "Inconclusive: could not start preview-verify" when `gh workflow run` fails, instead of leaving the status `pending`. Dispatch only works once `preview-verify.lock.yml` is on the default branch, so #101 itself cannot be agentically verified before it merges.
@@ -490,7 +491,7 @@ behavior now lives in the tasks below.
   - `env.KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}` replaces the `main`/`branch` environments and `SUBSITE_KIND`.
   - The slug, subsite build, and `site` artifact upload move into `deploy-pages`, which skips forks, sets `pending` "Building subsite…", publishes `out/` directly, and outputs `slug` for `e2e-tests`.
   - `deploy-pages`' error step now also covers build failures.
-  - Owner: the `main` and `branch` environments can be deleted.
+  - Owner: the GitHub Actions `main` and `branch` environments can be deleted.
 
 ---
 
