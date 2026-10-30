@@ -52,12 +52,17 @@ for (const { name, path } of primaryPages) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
 
-      const broken = await page.$$eval("img", (images) =>
-        images
-          .filter((image) => !image.complete || image.naturalWidth === 0)
-          .map((image) => image.currentSrc || image.src),
-      );
-      expect(broken).toEqual([]);
+      for (const image of await page.locator("img").all()) {
+        await image.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            image.evaluate(
+              (element: HTMLImageElement) =>
+                element.complete && element.naturalWidth > 0,
+            ),
+          )
+          .toBe(true);
+      }
 
       const sources = await page.$$eval("img", (images) =>
         images.map((image) => image.currentSrc),
