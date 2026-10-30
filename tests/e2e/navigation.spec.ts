@@ -195,9 +195,10 @@ for (const width of [320, 1440]) {
   });
 }
 
+// FR-017: Episode titles use the same site-branding format as other page titles.
 // FR-018: Each episode page provides a title and context when opened directly.
 // Source: https://github.com/percebus/hello-spec-kit/issues/48
-test.describe("FR-018: directly opened episode pages", () => {
+test.describe("FR-017 and FR-018: directly opened episode pages", () => {
   for (const episode of episodes) {
     test(`episode ${episode.number}: ${episode.title} shows its title and context`, async ({
       page,
