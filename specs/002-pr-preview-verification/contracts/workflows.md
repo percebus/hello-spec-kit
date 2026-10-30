@@ -42,12 +42,12 @@ through the job-level group `pages` (`cancel-in-progress: false`,
 `queue: max`), which it shares with `pull_request_closed.yml` ›
 `delete-subsite`.
 
-**Kind**: the workflow-level `env.KIND` is
+**Kind**: the `VARIABLES` job resolves `kind` using
 `${{ github.ref_name == 'main' && 'main' || 'branch' }}`. No `main` or
 `branch` environment is used. `deploy-pages` runs in `github-pages`.
 
 ```text
-Verify ──▶ Deploy pages ──▶ E2E tests
+VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests
 ```
 
 When this workflow succeeds on a push to `main`, `preview-verify` starts on
@@ -56,8 +56,9 @@ When this workflow succeeds on a push to `main`, `preview-verify` starts on
 | Job              | Runs when                                                                                     | Does                                                                                                                                                                                                                                                                                         | Permissions                                                                     |
 | ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `verify`         | Always                                                                                         | Isolated build using `.env.local`'s base path and `test:all` against the local server. It publishes nothing and writes no status; a failing `Verify` check blocks the merge by itself. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write` |
-| `deploy-pages`   | `verify` succeeded, and the ref is `main` or a same-repo PR (forks are skipped)                | `kind=main`: slug `main`. `kind=branch`: computes the slug (an invalid branch name sets `error`; rename the branch) and sets `pending` "Building subsite…". With a slug, it loads the base path from `.env.main` or `.env.branch` (resolving `{branch}` to the slug), runs `npm install` and `npm run next:build`, uploads artifact `site`, and runs the `replace-pages-artifact` action with `op: publish` and `source: out`. On failure, any status other than `error` becomes `error` "Inconclusive: building or publishing the subsite failed". Outputs `slug`; the environment URL is `<page_url><slug>/`. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
-| `e2e-tests`      | `deploy-pages` succeeded with a `slug` output                                                  | Polls `<slug>/preview.json` until `sha` matches (≤ 5 min). Selects `.env.branch` for PRs and `.env.main` after merge, resolves the branch slug, and runs `npm run test:e2e` with the corresponding `ENV`. For `kind=branch`, it sets `pending` "Running end-to-end tests…", then `success` "Subsite passed end-to-end tests" or `failure` "End-to-end tests failed on the subsite", which is the merge gate. Publishes JUnit results. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
+| `VARIABLES`      | Always | Loads `.env.local` and `.env.main`, validates the slug, and exposes local and deployed URL settings as job outputs before `verify`. Invalid slugs are reported to `deploy-pages` so it can set the existing error status. | `contents: read` |
+| `deploy-pages`   | `verify` succeeded, and the ref is `main` or a same-repo PR (forks are skipped) | Uses the slug and base-path outputs from `VARIABLES`, sets the branch build status, builds and uploads artifact `site`, and publishes `out` through `replace-pages-artifact`. Invalid slugs set `error`; build or publish failures preserve existing error handling. Outputs the published slug. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`, `statuses: write`; environment `github-pages` |
+| `e2e-tests`      | `deploy-pages` succeeded with a `slug` output | Consumes deployed URL outputs from `VARIABLES`, disables the local server, polls `preview.json` until the SHA matches (≤ 5 min), and runs `npm run test:e2e`. Branch statuses remain the merge gate; JUnit results are published. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write`, `statuses: write` |
 
 Reruns use GitHub's "Re-run all jobs" on the PR's CI run (FR-019).
 
@@ -123,7 +124,8 @@ up;
 The environment profiles have distinct responsibilities:
 
 - `.env.local` configures local development and the local test server.
-- `.env.branch` and `.env.main` configure E2E tests against their deployed sites.
+- `.env.main` supplies the main origin and base path; `VARIABLES` derives branch
+  URLs from these settings and the validated slug.
 - `.env.development` and `.env.production` are separate deployment profiles.
 - The scanner runs with `PREVIEW_SCAN=1`, skips dotenv, and reads `BASE_URL`
   and `NEXT_PUBLIC_BASE_PATH` from the process environment.

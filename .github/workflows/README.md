@@ -25,13 +25,14 @@ branches that flatten to the same slug (for example `feat/a-b/c` and
 [always.yml](always.yml) runs:
 
 ```text
-pull request: Verify ──▶ Deploy pages ──▶ E2E tests   (merge gate)
-main:         Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succeeded)──▶ preview-verify.md (post-merge review)
+pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests   (merge gate)
+main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succeeded)──▶ preview-verify.md (post-merge review)
 ```
 
 | Job            | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `verify`       | Isolated build using `.env.local`'s base path and `test:all` against the local server. No GitHub deployment environment, no status, and nothing published.                                                                                                                                                                                                                                                                                                                                 |
+| `VARIABLES`    | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs. No deployment environment is created for a branch. |
+| `verify`       | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. No GitHub deployment environment, no status, and nothing published. |
 | `deploy-pages` | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                           |
 | `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included). For pull requests, sets `preview-verification` to `success` or `failure`, which is the merge gate.                                                                                                                                                                                                                                                                                                                 |
 | (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI succeeds on a push to `main`, so `main/` is published and has passed its end-to-end tests. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
@@ -40,14 +41,18 @@ main:         Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succ
   `cancel-in-progress: true`): a newer push cancels the older run, and
   different branches run in parallel. Only `deploy-pages` is serialized,
   through the job-level group `pages` (`queue: max`).
-- `main` versus branch behavior comes from the workflow-level
-  `env.KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}`.
-- `verify` builds with `.env.local`'s base path and runs `test:all` against the
-  local server.
-  `e2e-tests` selects `.env.branch` for PR branches and `.env.main` after merge;
-  the workflow replaces `{branch}` in the branch base path with the deployed
-  slug. `.env.development` and `.env.production` remain separate deployment
-  profiles.
+- `VARIABLES` resolves `kind` using
+  `${{ github.ref_name == 'main' && 'main' || 'branch' }}`. `branch` describes
+  a deployment kind, not a formal environment.
+- `VARIABLES` reads `.env.local` for local verification and `.env.main` for the
+  deployed origin and main base path. For PRs, it replaces the final `main`
+  path segment with the validated branch slug. Builds and deployed E2E tests
+  consume the same outputs through `needs.VARIABLES.outputs`; `GITHUB_ENV`
+  is not shared across jobs.
+- Playwright keeps explicit process variables ahead of dotenv values, so
+  branch E2E tests cannot be redirected to the local or main site by an env
+  file. `WEB_SERVER` is empty for deployed tests.
+- `.env.development` and `.env.production` remain separate deployment profiles.
 - When a pull request closes or merges,
   [pull_request_closed.yml](pull_request_closed.yml) deletes its subsite. It
   runs on `pull_request_target`, so it uses the default branch's workflow and
@@ -79,8 +84,8 @@ Create these under Settings → Environments:
 | `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") |
 
 The GitHub Actions `main` and `branch` environments from earlier versions are
-no longer used and can be deleted. These are separate from the repository's
-`.env.main` and `.env.branch` files.
+no longer used and can be deleted. The repository keeps `.env.main` for main
+settings; branch URLs are computed, without a branch environment file.
 
 **Bootstrap:** each deployment publishes the whole stored tree, and the root
 redirects to `main/`. Until the first push to `main` runs this workflow, `main/`

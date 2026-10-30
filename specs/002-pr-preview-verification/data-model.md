@@ -68,8 +68,8 @@ parallel. Only `deploy-pages` is serialized, through the job-level group
 
 | Field     | Source                                             | Rules                                                              |
 | --------- | -------------------------------------------------- | ------------------------------------------------------------------ |
-| `kind`    | Workflow `env.KIND`: `github.ref_name == 'main' && 'main' \|\| 'branch'` | No GitHub environment is involved                      |
-| `slug`    | `deploy-pages` output: `main`, or the branch slug (research R8) | Empty for reserved names, so nothing is deployed. `deploy-pages` skips forks and non-PR branch runs. |
+| `kind`    | `VARIABLES` output: `github.ref_name == 'main' && 'main' \|\| 'branch'` | No GitHub environment is involved                      |
+| `slug`    | `VARIABLES` output: `main`, or the branch slug (research R8); forwarded by `deploy-pages` | Empty for reserved names, so nothing is deployed. `deploy-pages` skips forks and non-PR branch runs. |
 | `op`      | `publish` in `always.yml`; `delete` in `pull_request_closed.yml` | Both run the `replace-pages-artifact` action from the default branch's checkout (closed) or the run's checkout (publish) |
 
 ### Verification Run

@@ -96,7 +96,7 @@ request closes and waits only for an in-flight deployment, not for a whole CI
 run. The two must not overlap, because whichever force-pushes last would undo
 the other: a lost `main/` publish, or a deleted subsite that reappears.
 
-**Kind**: The workflow-level `env.KIND` is
+**Kind**: The `VARIABLES` job resolves `kind` using
 `${{ github.ref_name == 'main' && 'main' || 'branch' }}`; there are no `main`
 or `branch` environments. `deploy-pages` and `delete-subsite` use the
 `github-pages` environment. The only per-run check left is same-repo (fork)
@@ -415,10 +415,11 @@ has two implications:
 - `deploy-pages` writes `<slug>/preview.json`
   ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json)).
   `e2e-tests` polls it until it reports the expected SHA.
-- `deploy-pages` reads the base path from `.env.branch` or `.env.main`. The
-  branch profile's `{branch}` token is replaced with the computed slug.
-- `e2e-tests` selects `.env.branch` for PR branches and `.env.main` after
-  merge; the same branch token is resolved before Playwright loads the file.
+- `VARIABLES` loads `.env.local` and `.env.main` before verification and
+  exposes settings as job outputs. Branch URLs use the main origin and
+  replace the final base-path segment with the validated slug.
+- `deploy-pages` and `e2e-tests` consume the same deployed base-path output.
+  Branches are deployment kinds, not formal environments.
 - `verify` uses `.env.local`'s base path for its build and runs `test:all`
   against the local server.
   `.env.development` and `.env.production` remain separate deployment profiles.
@@ -435,15 +436,15 @@ has two implications:
   the build and E2E workflow steps.
 - No code or test hard-codes the base path, because all of them read
   `NEXT_PUBLIC_BASE_PATH`.
-- `playwright.config.ts` loads `.env.${ENV}` with `override: true`, so the
-  workflow resolves the branch token in `.env.branch` before the test run.
+- `playwright.config.ts` loads `.env.${ENV}` with `override: false`, so explicit
+  workflow variables take precedence over dotenv values.
 - A separate publish build for branches avoids changing the local test setup.
 - The extra build takes about 1 minute, which fits SC-002.
 
 **Alternatives considered**:
 
-- _One generated environment file_: replaced by the named `.env.branch` and
-  `.env.main` profiles so the source of each E2E target is clear.
+- _Generated branch environment files_: replaced by shared job outputs so
+  branch URLs do not imply a formal deployment environment.
 - _One build with the subsite base path that is also used for local tests_:
   rejected because it changes how test environment files work.
 - _Rewriting HTML after the build_: rejected because it is brittle.

@@ -27,19 +27,65 @@ permissions:
 
 env:
   CI: true
-  KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}
-  STATUS_CONTEXT: preview-verification
-  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
+  VARIABLES:
+    name: VARIABLES
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.variables.outputs.kind }}
+      branch: ${{ github.head_ref || github.ref_name }}
+      sha: ${{ github.event.pull_request.head.sha || github.sha }}
+      pr: ${{ github.event.pull_request.number }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      status_context: preview-verification
+      slug: ${{ steps.variables.outputs.slug }}
+      slug_error: ${{ steps.variables.outputs.slug_error }}
+      base_url: ${{ steps.variables.outputs.base_url }}
+      base_path: ${{ steps.variables.outputs.base_path }}
+      site_url: ${{ steps.variables.outputs.site_url }}
+      local_base_url: ${{ steps.variables.outputs.local_base_url }}
+      local_base_path: ${{ steps.variables.outputs.local_base_path }}
+      local_web_server: ${{ steps.variables.outputs.local_web_server }}
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+
+      - name: resolve variables
+        id: variables
+        env:
+          KIND: ${{ github.ref_name == 'main' && 'main' || 'branch' }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          source .env.local
+          printf 'local_base_url=%s\nlocal_base_path=%s\nlocal_web_server=%s\n' \
+            "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" "$WEB_SERVER" >> "$GITHUB_OUTPUT"
+
+          source .env.main
+          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
+          slug=main
+          if [ "$KIND" = "branch" ]; then
+            if ! slug="$(node .github/pages/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
+              message="$(tr '\r\n' ' ' < slug-error.txt)"
+              echo "::warning::No subsite for this branch: $message"
+              echo "slug_error=$message" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH%/*}/$slug"
+          fi
+          printf 'slug=%s\nbase_url=%s\nbase_path=%s\nsite_url=%s%s\n' \
+            "$slug" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_OUTPUT"
+
   # Isolated build and tests; publishes nothing.
   verify:
     name: Verify
+    needs: VARIABLES
     runs-on: ubuntu-latest
     env:
-      BASE_URL: http://127.0.0.1:3000
-      NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/main
-      WEB_SERVER: true
+      BASE_URL: ${{ needs.VARIABLES.outputs.local_base_url }}
+      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.local_base_path }}
+      WEB_SERVER: ${{ needs.VARIABLES.outputs.local_web_server }}
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
@@ -81,7 +127,9 @@ jobs:
   # pull_request_closed.yml. Fork pull requests are never published.
   deploy-pages:
     name: Deploy pages
-    needs: verify
+    needs:
+      - VARIABLES
+      - verify
     if: ${{ github.ref_name == 'main' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     environment:
@@ -109,8 +157,12 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      PR: ${{ github.event.pull_request.number }}
-      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PR: ${{ needs.VARIABLES.outputs.pr }}
+      SHA: ${{ needs.VARIABLES.outputs.sha }}
+      KIND: ${{ needs.VARIABLES.outputs.kind }}
+      STATUS_CONTEXT: ${{ needs.VARIABLES.outputs.status_context }}
+      RUN_URL: ${{ needs.VARIABLES.outputs.run_url }}
+      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -119,7 +171,8 @@ jobs:
       - name: subsite slug
         id: subsite
         env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          SLUG: ${{ needs.VARIABLES.outputs.slug }}
+          SLUG_ERROR: ${{ needs.VARIABLES.outputs.slug_error }}
         run: |
           set_status() {
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
@@ -128,32 +181,15 @@ jobs:
               -f target_url="$RUN_URL" > /dev/null
           }
 
-          if [ "$KIND" = "main" ]; then
-            echo "slug=main" >> "$GITHUB_OUTPUT"
+          if [ -n "$SLUG_ERROR" ]; then
+            echo "::warning::No subsite for this branch: $SLUG_ERROR"
+            set_status error "$SLUG_ERROR; rename the branch"
             exit 0
           fi
-          if ! slug="$(node .github/pages/branch-slug.mjs "$BRANCH" 2> slug-error.txt)"; then
-            message="$(cat slug-error.txt)"
-            echo "::warning::No subsite for this branch: $message"
-            set_status error "$message; rename the branch"
-            exit 0
-          fi
-          set_status pending "Building subsite…"
-          echo "slug=$slug" >> "$GITHUB_OUTPUT"
-
-      - name: configure build environment
-        if: ${{ steps.subsite.outputs.slug != '' }}
-        env:
-          SLUG: ${{ steps.subsite.outputs.slug }}
-        run: |
-          set -euo pipefail
-          set -a
-          source ".env.$KIND"
-          set +a
           if [ "$KIND" = "branch" ]; then
-            NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH//$SLUG}"
+            set_status pending "Building subsite…"
           fi
-          echo "NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
       - name: npm install
         if: ${{ steps.subsite.outputs.slug != '' }}
@@ -162,9 +198,9 @@ jobs:
       - name: next build
         if: ${{ steps.subsite.outputs.slug != '' }}
         env:
-          NEXT_PUBLIC_PREVIEW_PR: ${{ github.event.pull_request.number }}
-          NEXT_PUBLIC_PREVIEW_REF: ${{ github.head_ref }}
-          NEXT_PUBLIC_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
+          NEXT_PUBLIC_PREVIEW_PR: ${{ needs.VARIABLES.outputs.pr }}
+          NEXT_PUBLIC_PREVIEW_REF: ${{ needs.VARIABLES.outputs.pr != '' && needs.VARIABLES.outputs.branch || '' }}
+          NEXT_PUBLIC_PREVIEW_SHA: ${{ needs.VARIABLES.outputs.pr != '' && needs.VARIABLES.outputs.sha || '' }}
         run: |
           rm -rf out
           npm run next:build
@@ -185,9 +221,9 @@ jobs:
           op: publish
           slug: ${{ steps.subsite.outputs.slug }}
           kind: ${{ env.KIND }}
-          branch: ${{ github.head_ref || github.ref_name }}
-          pr: ${{ github.event.pull_request.number }}
-          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          branch: ${{ needs.VARIABLES.outputs.branch }}
+          pr: ${{ needs.VARIABLES.outputs.pr }}
+          sha: ${{ needs.VARIABLES.outputs.sha }}
           source: ${{ github.workspace }}/out
           run-url: ${{ env.RUN_URL }}
 
@@ -208,7 +244,9 @@ jobs:
   # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests
-    needs: deploy-pages
+    needs:
+      - VARIABLES
+      - deploy-pages
     if: ${{ needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
     runs-on: ubuntu-latest
 
@@ -221,9 +259,14 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      SLUG: ${{ needs.deploy-pages.outputs.slug }}
-      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      BASE_URL: https://percebus.github.io
+      SHA: ${{ needs.VARIABLES.outputs.sha }}
+      KIND: ${{ needs.VARIABLES.outputs.kind }}
+      STATUS_CONTEXT: ${{ needs.VARIABLES.outputs.status_context }}
+      RUN_URL: ${{ needs.VARIABLES.outputs.run_url }}
+      BASE_URL: ${{ needs.VARIABLES.outputs.base_url }}
+      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
+      SITE_URL: ${{ needs.VARIABLES.outputs.site_url }}
+      WEB_SERVER: ""
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -232,19 +275,9 @@ jobs:
       - name: npm install
         run: npm install
 
-      - name: configure test environment
+      - name: preview-verification pending
         run: |
           set -euo pipefail
-          env_file=".env.$KIND"
-          if [ "$KIND" = "branch" ]; then
-            resolved_file="$RUNNER_TEMP/.env.branch"
-            sed "s|{branch}|$SLUG|g" "$env_file" > "$resolved_file"
-            cp "$resolved_file" "$env_file"
-          fi
-          set -a
-          source "$env_file"
-          set +a
-          printf 'ENV=%s\nSITE_URL=%s%s\n' "$KIND" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
           if [ "$KIND" = "branch" ]; then
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
               -f state=pending -f context="$STATUS_CONTEXT" \

@@ -31,7 +31,7 @@ no implementation code.
 | Slug rule                 | Run the slug helper's unit cases                                                                                       | `feat/see-website` → `feat-see-website`; `feat/a/b/c` → `feat-a-b-c`; `main` and `Main` are rejected for non-`main` branches; `_x` → `x` (flattening can never produce `_`/`.` prefixes or root file names); `///` is rejected; two names over 63 characters that share their first 54 produce different 63-character slugs ending in `-<8 hex>`, stable across calls |
 | Scanner, local            | Serve the subsite build with `npm run start:test` and the same base path; run `npx playwright test --project=preview-scan` | `findings.json` validates against [findings.schema.json](./contracts/findings.schema.json); 0 blocking findings |
 | Existing tests            | `npm test`                                                                                                             | Unchanged; `preview-scan` is not part of the default run                                     |
-| E2E against a subsite     | `e2e-tests` selects `.env.branch` for PR branches and `.env.main` after merge; the workflow resolves `{branch}` to the deployed slug before running tests | All tests pass against the deployed branch or main site |
+| E2E against a subsite     | `VARIABLES` computes the deployed URL from `.env.main` and the validated branch slug; `e2e-tests` consumes its job outputs | All tests pass against the deployed branch or main site |
 
 ## 2. Publishing and cleanup (User Story 1, FR-001 to FR-006, FR-020)
 
