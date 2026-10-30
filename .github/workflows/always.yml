@@ -61,8 +61,8 @@ jobs:
       - name: next build
         run: npm run build
 
-      - name: npm test
-        run: npm test
+      - name: npm run test:all
+        run: npm run test:all
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         with:
@@ -238,7 +238,7 @@ jobs:
           fi
 
       - name: playwright test
-        run: npm run playwright:test
+        run: npm run test:e2e
         env:
           ENV: subsite
 
