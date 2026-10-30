@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE_URL: http://127.0.0.1:3000
-      WEB_SERVER: true
+      PLAYWRIGHT_WEB_SERVER: true
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
@@ -220,6 +220,28 @@ jobs:
               -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
           fi
 
+      - name: preview-verification pending
+        if: ${{ needs.VARIABLES.outputs.kind == 'branch' }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
+            -f state=pending -f context="${{ needs.VARIABLES.outputs.status_context }}" \
+            -f description="Running end-to-end tests…" -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
+
+      - name: wait for subsite
+        run: |
+          set -euo pipefail
+          url="${{ needs.VARIABLES.outputs.site_url }}/preview.json"
+          for _ in $(seq 1 30); do
+            if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "${{ needs.VARIABLES.outputs.sha }}" ]; then
+              echo "${{ needs.VARIABLES.outputs.site_url }}/ shows ${{ needs.VARIABLES.outputs.sha }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::${{ needs.VARIABLES.outputs.site_url }}/ did not show ${{ needs.VARIABLES.outputs.sha }} within 5 minutes"
+          exit 1
+
   # The existing end-to-end tests, run against the deployed subsite (main included).
   e2e-tests:
     name: E2E tests
@@ -248,28 +270,6 @@ jobs:
 
       - name: npm install
         run: npm install
-
-      - name: preview-verification pending
-        if: ${{ needs.VARIABLES.outputs.kind == 'branch' }}
-        run: |
-          set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
-            -f state=pending -f context="${{ needs.VARIABLES.outputs.status_context }}" \
-            -f description="Running end-to-end tests…" -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
-
-      - name: wait for subsite
-        run: |
-          set -euo pipefail
-          url="${{ needs.VARIABLES.outputs.site_url }}/preview.json"
-          for _ in $(seq 1 30); do
-            if [ "$(curl -fsS "$url?t=$(date +%s%N)" 2> /dev/null | jq -r '.sha // empty')" = "${{ needs.VARIABLES.outputs.sha }}" ]; then
-              echo "${{ needs.VARIABLES.outputs.site_url }}/ shows ${{ needs.VARIABLES.outputs.sha }}"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::${{ needs.VARIABLES.outputs.site_url }}/ did not show ${{ needs.VARIABLES.outputs.sha }} within 5 minutes"
-          exit 1
 
       - name: playwright test
         run: npm run test:e2e
