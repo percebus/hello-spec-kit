@@ -77,8 +77,9 @@ Create these under Settings → Environments:
 | -------------- | ------------------------------------------------------------------------------------ |
 | `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") |
 
-The `main` and `branch` environments from earlier versions are no longer used
-and can be deleted.
+The GitHub Actions `main` and `branch` environments from earlier versions are
+no longer used and can be deleted. These are separate from the repository's
+`.env.main` and `.env.branch` files.
 
 **Bootstrap:** each deployment publishes the whole stored tree, and the root
 redirects to `main/`. Until the first push to `main` runs this workflow, `main/`

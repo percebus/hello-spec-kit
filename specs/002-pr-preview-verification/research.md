@@ -415,19 +415,12 @@ has two implications:
 - `deploy-pages` writes `<slug>/preview.json`
   ([contracts/subsite-manifest.schema.json](./contracts/subsite-manifest.schema.json)).
   `e2e-tests` polls it until it reports the expected SHA.
-- `e2e-tests` always writes a temporary `.env.subsite` (git-ignored) with
-  `BASE_URL=https://percebus.github.io` and
-  `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/<slug>`, then runs `npm test` with
-  `ENV=subsite`. For `main`, the slug is `main`, which is equivalent to
-  `.env.production`. One path covers both, with no environment switch.
-- `.env.production` and `.env.development` both change to
-  `NEXT_PUBLIC_BASE_PATH=/hello-spec-kit/main`. Each file is read by two
-  consumers, and keeping both files on the same value keeps them consistent:
-  - `next build` loads `.env.production`. CI's local test build and `main`'s
-    build therefore both use `/main`.
-  - Playwright loads `.env.${ENV}`. Local tests use `.env.development`, and
-    `ENV=production` still targets the live `main` site manually. Locally, the
-    site is served at `http://127.0.0.1:3000/hello-spec-kit/main/`.
+- `deploy-pages` reads the base path from `.env.branch` or `.env.main`. The
+  branch profile's `{branch}` token is replaced with the computed slug.
+- `e2e-tests` selects `.env.branch` for PR branches and `.env.main` after
+  merge; the same branch token is resolved before Playwright loads the file.
+- `verify` uses `ENV=local` so Playwright tests the built export served locally.
+  `.env.development` and `.env.production` remain separate deployment profiles.
 - When `PREVIEW_SCAN=1`, `playwright.config.ts` skips loading dotenv and the
   gallery web server. The scanner then takes `BASE_URL` and
   `NEXT_PUBLIC_BASE_PATH` from the process environment, which is set per
@@ -437,20 +430,19 @@ has two implications:
 
 - In Next.js, explicit process environment variables override `.env` files,
   so branch subsite builds pass their own base path.
-- If only `.env.production` changed, CI's local build would use `/main` while
-  local tests still expected `/hello-spec-kit`.
+- Keeping the base path in the environment profiles avoids duplicating it in
+  the build and E2E workflow steps.
 - No code or test hard-codes the base path, because all of them read
   `NEXT_PUBLIC_BASE_PATH`.
-- `playwright.config.ts` loads `.env.${ENV}` with `override: true`, which would
-  overwrite a per-subsite base path. That is why the scanner skips dotenv.
+- `playwright.config.ts` loads `.env.${ENV}` with `override: true`, so the
+  workflow resolves the branch token in `.env.branch` before the test run.
 - A separate publish build for branches avoids changing the local test setup.
 - The extra build takes about 1 minute, which fits SC-002.
 
 **Alternatives considered**:
 
-- _A separate `.env.main` for post-publish tests_: rejected because a third
-  environment file duplicates `.env.production`. Keeping `.env.production` and
-  `.env.development` on the same base path is simpler.
+- _A generated `.env.subsite`_: replaced by the named `.env.branch` and
+  `.env.main` profiles so the source of each E2E target is clear.
 - _One build with the subsite base path that is also used for local tests_:
   rejected because it changes how test environment files work.
 - _Rewriting HTML after the build_: rejected because it is brittle.
@@ -495,8 +487,7 @@ FR-019 without a custom workflow.
 **Decision**:
 
 - On pushes to `main`, `deploy-pages` publishes `main/`. `e2e-tests` then runs
-  against `https://percebus.github.io/hello-spec-kit/main/` with the same
-  `.env.subsite` mechanism as branches.
+  against `https://percebus.github.io/hello-spec-kit/main/` using `.env.main`.
 - The root `index.html` uses a meta refresh with a visible link to `./main/`,
   so the old URL keeps working.
 - The move to a release repository is tracked in #100. When that happens, the
