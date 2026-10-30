@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 // Source: https://github.com/percebus/hello-spec-kit/issues/34
-test("FR-007: episodes page displays 20 distinct mocked episodes without external content", async ({
+test("FR-007: episodes page displays 20 distinct episodes without external content", async ({
   page,
   baseURL,
 }) => {
