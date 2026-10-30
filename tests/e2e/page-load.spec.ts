@@ -45,8 +45,7 @@ for (const { name, path, title, heading, context } of primaryPages) {
     }) => {
       await page.goto(path);
 
-      const expectedTitle =
-        path === "./" ? title : `${title} | ${siteName}`;
+      const expectedTitle = path === "./" ? title : `${title} | ${siteName}`;
       await expect(page).toHaveTitle(expectedTitle);
       await expect(
         page.getByRole("heading", { level: 1, name: heading, exact: true }),
