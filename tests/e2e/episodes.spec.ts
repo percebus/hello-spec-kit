@@ -101,3 +101,24 @@ test.describe("FR-008: every episode detail page exposes complete details", () =
     }
   });
 });
+
+// FR-010: https://github.com/percebus/hello-spec-kit/issues/37
+test("FR-010: clearly identifies the playing episode", async ({ page }) => {
+  await page.goto("./episodes/");
+  const cards = page.locator(".episode-card");
+  const first = cards.nth(0);
+  const second = cards.nth(1);
+
+  await first.locator("audio").evaluate((a: HTMLAudioElement) => a.play());
+  await expect(first.locator(".episode-player-status")).toContainText(
+    "Now playing",
+  );
+  await expect(first.locator("audio")).toHaveAttribute("data-playing", "true");
+
+  await second.locator("audio").evaluate((a: HTMLAudioElement) => a.play());
+  await expect(second.locator(".episode-player-status")).toContainText(
+    "Now playing",
+  );
+  await expect(first.locator(".episode-player-status")).toBeEmpty();
+  await expect(first.locator("audio")).toHaveAttribute("data-playing", "false");
+});

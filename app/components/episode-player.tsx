@@ -43,6 +43,7 @@ function createPreviewUrl() {
 export function EpisodePlayer({ title }: { title: string }) {
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [playbackFailed, setPlaybackFailed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -65,7 +66,11 @@ export function EpisodePlayer({ title }: { title: string }) {
         controls
         preload="metadata"
         src={previewUrl}
+        data-playing={isPlaying}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
         onPlay={(event) => {
+          setIsPlaying(true);
           for (const audio of document.querySelectorAll("audio")) {
             if (audio !== event.currentTarget) {
               audio.pause();
@@ -76,6 +81,13 @@ export function EpisodePlayer({ title }: { title: string }) {
       >
         Your browser does not support audio playback.
       </audio>
+      <p className="episode-player-status" aria-live="polite">
+        {isPlaying ? (
+          <>
+            <span aria-hidden="true">▶ </span>Now playing: {title}
+          </>
+        ) : null}
+      </p>
       {playbackFailed && (
         <p role="alert">
           The audio preview for {title} is unavailable. Please try another
