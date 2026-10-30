@@ -19,7 +19,7 @@
     "playwright:test": "playwright test",
     "playwright:test:unit": "npm run playwright:test -- tests/unit",
     "playwright:test:all": "npm run playwright:test -- --fully-parallel --workers=4",
-    "playwright:test:e2e": "npm run playwright:test -- --fully-parallel --workers=4 tests/e2e",
+    "playwright:test:e2e": "npm run playwright:test -- --fully-parallel --workers=4 --project=chromium --project=chromium-bdd",
     "_node:test": "node --test",
     "node:test:aw": "npm run _node:test -- ./.github/aw/scripts/*.test.mjs",
     "postinstall": "npm run playwright:install",
