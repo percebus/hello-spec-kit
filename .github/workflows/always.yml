@@ -28,7 +28,7 @@ permissions:
 env:
   CI: true
   BASE_URL: https://percebus.github.io
-  NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/
+  NEXT_PUBLIC_BASE_PATH: /hello-spec-kit
 
 jobs:
   VARIABLES:
