@@ -17,6 +17,10 @@ test-results/
 .npmrc
 package-lock.json
 
+# GitHub Actions
+slug-error.txt
+
+
 ##################################
 ### VisualStudioCode.gitignore ### SRC: https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 ##################################
