@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EpisodePlayer } from "../../components/episode-player";
@@ -7,6 +8,8 @@ import { episodes, findEpisode } from "../../lib/episodes";
 type EpisodePageProps = {
   params: Promise<{ slug: string }>;
 };
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const dynamicParams = false;
 
@@ -40,7 +43,15 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 
   return (
     <main className="page-shell">
-      <article className="episode-detail">
+      <article className="episode-detail" data-episode-id={episode.id}>
+        <Image
+          className="episode-card-artwork"
+          src={`${basePath}/episodes/${episode.id}.svg`}
+          width={800}
+          height={300}
+          alt={`Artwork for ${episode.title}`}
+          priority
+        />
         <p className="eyebrow">Signal & Story</p>
         <p className="episode-number">Episode {episode.episodeNumber}</p>
         <h1>{episode.title}</h1>
