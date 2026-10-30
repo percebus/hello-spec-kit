@@ -28,7 +28,7 @@ permissions:
 env:
   CI: true
   BASE_URL: https://percebus.github.io
-  NEXT_PUBLIC_BASE_PATH: /hello-spec-kit
+  NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/main
 
 jobs:
   VARIABLES:
@@ -54,8 +54,8 @@ jobs:
               echo "slug_error=$message" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+            NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH%/}/$slug"
           fi
-          NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH%/}/$slug"
           printf 'slug=%s\nbase_url=%s\nbase_path=%s\nsite_url=%s%s\n' \
             "$slug" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" "$BASE_URL" "$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_OUTPUT"
 
