@@ -92,7 +92,7 @@ function defaultConfig(): PlaywrightTestConfig {
       },
     ],
     webServer: [
-      ...(process.env.WEB_SERVER
+      ...(process.env.PLAYWRIGHT_WEB_SERVER
         ? [
             {
               command: "npm run start:test",

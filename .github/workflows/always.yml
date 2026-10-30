@@ -83,9 +83,9 @@ jobs:
     needs: VARIABLES
     runs-on: ubuntu-latest
     env:
-      BASE_URL: ${{ needs.VARIABLES.outputs.local_base_url }}
-      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.local_base_path }}
-      WEB_SERVER: ${{ needs.VARIABLES.outputs.local_web_server }}
+      BASE_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/main
+      PLAYWRIGHT_WEB_SERVER: true
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories

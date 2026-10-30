@@ -17,7 +17,7 @@
     "playwright:install": "npx playwright install --with-deps chromium",
     "preplaywright:test": "npm run bddgen",
     "playwright:test": "playwright test",
-    "playwright:test:unit": "npm run playwright:test -- tests/unit",
+    "playwright:test:unit": "npm run playwright:test -- --config=playwright.unit.config.ts",
     "playwright:test:all": "npm run playwright:test -- --fully-parallel --workers=4",
     "playwright:test:e2e": "npm run playwright:test -- --fully-parallel --workers=4 --project=chromium --project=chromium-bdd",
     "_node:test": "node --test",
