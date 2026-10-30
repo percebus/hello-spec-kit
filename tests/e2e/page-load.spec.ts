@@ -1,31 +1,33 @@
 import { expect, test } from "@playwright/test";
 
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Signal & Story";
+
 const primaryPages = [
   {
     name: "landing",
     path: "./",
-    title: "Signal & Story",
+    title: siteName,
     heading: "Find the human signal inside the technology story.",
     context: "Signal & Story explores how thoughtful people make creative",
   },
   {
     name: "episodes",
     path: "./episodes/",
-    title: "Episodes | Signal & Story",
+    title: "Episodes",
     heading: "Episodes",
     context: "Twenty conversations with people making technology more",
   },
   {
     name: "about",
     path: "./about/",
-    title: "About | Signal & Story",
+    title: "About",
     heading: "About the show",
     context: "Signal & Story is a podcast about the choices behind creative",
   },
   {
     name: "FAQ",
     path: "./faq/",
-    title: "FAQ | Signal & Story",
+    title: "FAQ",
     heading: "Frequently asked questions",
     context: "Find quick details about the show, publishing schedule",
   },
@@ -35,12 +37,17 @@ const primaryPages = [
 // SRC: https://github.com/percebus/hello-spec-kit/issues/59
 for (const { name, path, title, heading, context } of primaryPages) {
   test.describe(`SC-007: ${name} page`, () => {
+    // FR-017: Page titles use consistent site branding.
     // FR-018: A visitor arriving directly can identify the page and its context.
     // Source: https://github.com/percebus/hello-spec-kit/issues/48
-    test("shows a clear page title and context", async ({ page }) => {
+    test("FR-017 and FR-018: shows a clear page title and context", async ({
+      page,
+    }) => {
       await page.goto(path);
 
-      await expect(page).toHaveTitle(title);
+      const expectedTitle =
+        path === "./" ? title : `${title} | ${siteName}`;
+      await expect(page).toHaveTitle(expectedTitle);
       await expect(
         page.getByRole("heading", { level: 1, name: heading, exact: true }),
       ).toBeVisible();

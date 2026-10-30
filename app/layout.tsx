@@ -4,10 +4,12 @@ import { PreviewBanner } from "./components/preview-banner";
 import { SiteHeader } from "./components/site-header";
 import "./globals.css";
 
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Signal & Story";
+
 export const metadata: Metadata = {
   title: {
-    default: "Signal & Story",
-    template: "%s | Signal & Story",
+    default: siteName,
+    template: `%s | ${siteName}`,
   },
   description:
     "A podcast about the people, choices, and ideas shaping creative technology.",

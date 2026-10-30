@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Signal & Story";
+
 const primaryPages = [
   { name: "landing", linkName: "Home", path: "/" },
   { name: "episodes", linkName: "Episodes", path: "/episodes/" },
@@ -205,7 +207,7 @@ test.describe("FR-017 and FR-018: directly opened episode pages", () => {
     }) => {
       await page.goto(`./episodes/${episode.slug}/`);
 
-      await expect(page).toHaveTitle(`${episode.title} | Signal & Story`);
+      await expect(page).toHaveTitle(`${episode.title} | ${siteName}`);
       await expect(
         page.getByRole("heading", {
           level: 1,
