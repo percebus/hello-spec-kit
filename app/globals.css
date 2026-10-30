@@ -224,6 +224,21 @@ h3 {
   margin: 0 0 1.25rem;
 }
 
+.episode-player-status:empty {
+  display: none;
+}
+
+.episode-player-status {
+  margin: -0.75rem 0 1.25rem;
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.episode-card:has(.episode-player[data-playing="true"]) {
+  border-color: var(--accent-dark);
+  outline: 0.125rem solid var(--accent-dark);
+}
+
 .featured-details {
   display: inline-block;
   color: var(--surface);
