@@ -37,7 +37,9 @@ jobs:
     name: Verify
     runs-on: ubuntu-latest
     env:
-      ENV: local
+      BASE_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_BASE_PATH: /hello-spec-kit/main
+      WEB_SERVER: true
 
     # SRC: https://github.com/EnricoMi/publish-unit-test-result-action?tab=readme-ov-file#permissions
     # SRC: https://github.com/dorny/test-reporter?tab=readme-ov-file#recommended-setup-for-public-repositories
