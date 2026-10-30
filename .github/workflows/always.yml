@@ -186,6 +186,10 @@ jobs:
         run: npm install
 
       - name: next build
+        env:
+          NEXT_PUBLIC_PREVIEW_PR: ${{ needs.VARIABLES.outputs.kind == 'branch' && needs.VARIABLES.outputs.pr || '' }}
+          NEXT_PUBLIC_PREVIEW_REF: ${{ needs.VARIABLES.outputs.kind == 'branch' && needs.VARIABLES.outputs.branch || '' }}
+          NEXT_PUBLIC_PREVIEW_SHA: ${{ needs.VARIABLES.outputs.kind == 'branch' && needs.VARIABLES.outputs.sha || '' }}
         run: npm run next:build
 
       - name: site.zip
