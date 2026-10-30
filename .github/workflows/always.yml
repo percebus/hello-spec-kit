@@ -57,19 +57,14 @@ jobs:
       - name: npm install
         run: npm install
 
-      - name: configure local build environment
-        run: |
-          set -euo pipefail
-          set -a
-          source .env.local
-          set +a
-          echo "NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
+      - name: npm run test:unit
+        run: npm run test:unit
 
       - name: next build
         run: npm run build
 
-      - name: npm run test:all
-        run: npm run test:all
+      - name: npm run test:e2e
+        run: npm run test:e2e
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
         with:
@@ -153,7 +148,7 @@ jobs:
           source ".env.$KIND"
           set +a
           if [ "$KIND" = "branch" ]; then
-            NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH//\{branch\}/$SLUG}"
+            NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH//$SLUG}"
           fi
           echo "NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH" >> "$GITHUB_ENV"
 
@@ -225,6 +220,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       SLUG: ${{ needs.deploy-pages.outputs.slug }}
       SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_URL: https://percebus.github.io
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
