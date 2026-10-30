@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Signal & Story";
+
 const primaryPages = [
   { name: "landing", linkName: "Home", path: "/" },
   { name: "episodes", linkName: "Episodes", path: "/episodes/" },
@@ -194,3 +196,29 @@ for (const width of [320, 1440]) {
     });
   });
 }
+
+// FR-017: Episode titles use the same site-branding format as other page titles.
+// FR-018: Each episode page provides a title and context when opened directly.
+// Source: https://github.com/percebus/hello-spec-kit/issues/48
+test.describe("FR-017 and FR-018: directly opened episode pages", () => {
+  for (const episode of episodes) {
+    test(`episode ${episode.number}: ${episode.title} shows its title and context`, async ({
+      page,
+    }) => {
+      await page.goto(`./episodes/${episode.slug}/`);
+
+      await expect(page).toHaveTitle(`${episode.title} | ${siteName}`);
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: episode.title,
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(`Episode ${episode.number}`, { exact: true }),
+      ).toBeVisible();
+      await expect(page.locator(".episode-summary")).toHaveText(/\S/);
+    });
+  }
+});

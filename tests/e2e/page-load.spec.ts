@@ -1,16 +1,58 @@
 import { expect, test } from "@playwright/test";
 
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Signal & Story";
+
 const primaryPages = [
-  { name: "landing", path: "./" },
-  { name: "episodes", path: "./episodes/" },
-  { name: "about", path: "./about/" },
-  { name: "FAQ", path: "./faq/" },
+  {
+    name: "landing",
+    path: "./",
+    title: siteName,
+    heading: "Find the human signal inside the technology story.",
+    context: "Signal & Story explores how thoughtful people make creative",
+  },
+  {
+    name: "episodes",
+    path: "./episodes/",
+    title: "Episodes",
+    heading: "Episodes",
+    context: "Twenty conversations with people making technology more",
+  },
+  {
+    name: "about",
+    path: "./about/",
+    title: "About",
+    heading: "About the show",
+    context: "Signal & Story is a podcast about the choices behind creative",
+  },
+  {
+    name: "FAQ",
+    path: "./faq/",
+    title: "FAQ",
+    heading: "Frequently asked questions",
+    context: "Find quick details about the show, publishing schedule",
+  },
 ] as const;
 
 // SC-007: The landing page, episodes page, about page, and FAQ page load without visible broken content or browser errors during acceptance testing.
 // SRC: https://github.com/percebus/hello-spec-kit/issues/59
-for (const { name, path } of primaryPages) {
+for (const { name, path, title, heading, context } of primaryPages) {
   test.describe(`SC-007: ${name} page`, () => {
+    // FR-017: Page titles use consistent site branding.
+    // FR-018: A visitor arriving directly can identify the page and its context.
+    // Source: https://github.com/percebus/hello-spec-kit/issues/48
+    test("FR-017 and FR-018: shows a clear page title and context", async ({
+      page,
+    }) => {
+      await page.goto(path);
+
+      const expectedTitle = path === "./" ? title : `${title} | ${siteName}`;
+      await expect(page).toHaveTitle(expectedTitle);
+      await expect(
+        page.getByRole("heading", { level: 1, name: heading, exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText(context)).toBeVisible();
+    });
+
     test("loads without browser errors or failed requests", async ({
       page,
     }) => {
