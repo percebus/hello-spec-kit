@@ -419,7 +419,7 @@ has two implications:
   branch profile's `{branch}` token is replaced with the computed slug.
 - `e2e-tests` selects `.env.branch` for PR branches and `.env.main` after
   merge; the same branch token is resolved before Playwright loads the file.
-- `verify` uses `ENV=local` so Playwright tests the built export served locally.
+- `verify` uses `.env.local`'s base path for its build and runs the unit suite.
   `.env.development` and `.env.production` remain separate deployment profiles.
 - When `PREVIEW_SCAN=1`, `playwright.config.ts` skips loading dotenv and the
   gallery web server. The scanner then takes `BASE_URL` and

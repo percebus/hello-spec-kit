@@ -12,7 +12,7 @@ const previewScan = process.env.PREVIEW_SCAN === "1";
 
 if (!previewScan) {
   dotenv.config({
-    path: `.env.${process.env.ENV ?? "development"}`,
+    path: `.env.${process.env.ENV ?? "local"}`,
     override: true,
   });
 }
