@@ -1,5 +1,42 @@
 import { expect, test } from "@playwright/test";
 
+// Source: https://github.com/percebus/hello-spec-kit/issues/34
+test("FR-007: episodes page displays 20 distinct mocked episodes without external content", async ({
+  page,
+  baseURL,
+}) => {
+  const siteOrigin = new URL(baseURL ?? "http://localhost").origin;
+  const externalRequests: string[] = [];
+
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      url.protocol !== "blob:" &&
+      url.protocol !== "data:" &&
+      url.origin !== siteOrigin
+    ) {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto("./episodes/");
+
+  const cards = page.locator("article.episode-card");
+  await expect(cards).toHaveCount(20);
+
+  const episodeIds = await cards.evaluateAll((elements) =>
+    elements.map((card) => card.getAttribute("data-episode-id")),
+  );
+  const episodeTitles = await cards
+    .getByRole("heading", { level: 2 })
+    .allTextContents();
+
+  expect(episodeIds.every(Boolean)).toBe(true);
+  expect(new Set(episodeIds).size).toBe(20);
+  expect(new Set(episodeTitles).size).toBe(20);
+  expect(externalRequests).toEqual([]);
+});
+
 test.describe("SC-008: every rendered episode card exposes complete details", () => {
   // Source: https://github.com/percebus/hello-spec-kit/issues/60
   test("all rendered cards show required content and playback controls", async ({
