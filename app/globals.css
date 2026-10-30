@@ -325,20 +325,16 @@ h3 {
   border-top: 0.25rem solid var(--accent);
 }
 
-.host-panel {
-  display: grid;
-  grid-template-columns: 6rem minmax(0, 1fr);
-  column-gap: 1.25rem;
-}
-
-.host-panel h2,
-.host-panel p {
-  grid-column: 2;
+.host-panel::after {
+  content: "";
+  display: block;
+  clear: both;
 }
 
 .host-portrait {
-  grid-row: span 3;
-  margin: 0;
+  float: right;
+  width: 6rem;
+  margin: 0 0 0.75rem 1.25rem;
 }
 
 .host-portrait img {
@@ -433,8 +429,8 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .host-panel {
-    grid-template-columns: 5rem minmax(0, 1fr);
+  .host-portrait {
+    width: 5rem;
   }
 
   .featured-card {
