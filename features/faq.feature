@@ -12,4 +12,11 @@ Feature: Frequently asked questions
     Examples:
       | input    |
       | keyboard |
-      | pointer  |
+
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/19
+  Scenario: A visitor opens each answer and closes the last one
+    Given the FAQ page
+    When the visitor clicks each FAQ question in turn
+    Then the last answer is visible and all other answers are collapsed
+    When the visitor clicks the last question again
+    Then every FAQ answer is collapsed
