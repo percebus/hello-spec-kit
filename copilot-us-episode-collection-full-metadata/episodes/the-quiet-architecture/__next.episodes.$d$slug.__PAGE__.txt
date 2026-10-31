@@ -1,0 +1,32 @@
+1:"$Sreact.fragment"
+2:"/hello-spec-kit/copilot-us-episode-collection-full-metadata/_next/static/chunks/27gjg8e11zukd.js"
+3:"/hello-spec-kit/copilot-us-episode-collection-full-metadata/_next/static/chunks/2lq57s14i0uom.js"
+4:I[22016,["$2","$3"],""]
+5:I[39756,["$2"],"default"]
+6:I[37457,["$2"],"default"]
+f:I[5500,["$2","$3"],"Image"]
+10:I[56764,["$2","$3"],"EpisodePlayer"]
+11:I[97367,["$2"],"OutletBoundary"]
+12:"$Sreact.suspense"
+15:"ViewportBoundary"
+16:I[97367,["$2"],"$15"]
+17:"MetadataBoundary"
+18:I[97367,["$2"],"$17"]
+:HL["/hello-spec-kit/copilot-us-episode-collection-full-metadata/_next/static/chunks/3z3i3dgizwh3u.css","style"]
+8:X
+b:X
+b:C
+e:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$1","c",{"children":[["$","main",null,{"className":"page-shell","children":["$","article",null,{"className":"episode-detail","data-episode-id":"the-quiet-architecture","children":[["$","$Lf",null,{"className":"episode-card-artwork","src":"/hello-spec-kit/copilot-us-episode-collection-full-metadata/episodes/the-quiet-architecture.svg","width":800,"height":300,"alt":"Artwork for The Quiet Architecture","priority":true}],["$","p",null,{"className":"eyebrow","children":"Signal & Story"}],["$","p",null,{"className":"episode-number","children":["Episode ",19]}],["$","h1",null,{"children":"The Quiet Architecture"}],["$","dl",null,{"className":"episode-meta","children":[["$","div",null,{"children":[["$","dt",null,{"children":"Published"}],["$","dd",null,{"children":"September 27, 2026"}]]}],["$","div",null,{"children":[["$","dt",null,{"children":"Duration"}],["$","dd",null,{"children":"39 min"}]]}]]}],["$","p",null,{"className":"episode-summary","children":"Why the strongest technical foundations often disappear into the experience they support."}],["$","$L10",null,{"title":"The Quiet Architecture"}],["$","$L4",null,{"className":"button button-secondary","href":"/episodes","children":"Back to all episodes"}]]}]}],[["$","script","script-0",{"src":"/hello-spec-kit/copilot-us-episode-collection-full-metadata/_next/static/chunks/2lq57s14i0uom.js","async":true}]],["$","$L11",null,{"children":["$","$12",null,{"name":"Next.MetadataOutlet","children":"$@13"}]}]]}],"p":"$@14","v":null,"s":"$8"}}]]
+c:[["children",{"s":{"n":"slug","t":"d","k":"the-quiet-architecture","s":[]},"h":65632,"d":{"r":["$","$1","c",{"children":[null,["$","$L5",null,{"parallelRouterKey":"children","template":["$","$L6",null,{}]}]]}],"p":"$@d","v":"$b","s":"$8"},"c":"$Qe"}]]
+9:[["children",{"s":"episodes","h":131168,"d":{"r":["$","$1","c",{"children":[null,["$","$L5",null,{"parallelRouterKey":"children","template":["$","$L6",null,{}]}]]}],"p":"$@a","v":"$b","s":"$8"},"c":"$Qc"}]]
+0:{"t":{"t":{"s":"","h":131152,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/hello-spec-kit/copilot-us-episode-collection-full-metadata/_next/static/chunks/3z3i3dgizwh3u.css","precedence":"next"}],["$","script","script-0",{"src":"/hello-spec-kit/copilot-us-episode-collection-full-metadata/_next/static/chunks/27gjg8e11zukd.js","async":true}]],["$","html",null,{"lang":"en","children":["$","body",null,{"children":[["$","aside",null,{"className":"preview-banner","aria-label":"Preview build","children":["Preview build — not production · PR #","132"," · ","copilot/us-episode-collection-full-metadata"," @ ","12c49f8"]}],["$","header",null,{"className":"site-header","children":[["$","$L4",null,{"className":"brand","href":"/","children":"Signal & Story"}],["$","nav",null,{"className":"primary-nav","aria-label":"Primary navigation","children":["$","ul",null,{"children":[["$","li","/",{"children":["$","$L4",null,{"href":"/","children":"Home"}]}],["$","li","/episodes",{"children":["$","$L4",null,{"href":"/episodes","children":"Episodes"}]}],["$","li","/about",{"children":["$","$L4",null,{"href":"/about","children":"About"}]}],["$","li","/faq",{"children":["$","$L4",null,{"href":"/faq","children":"FAQ"}]}]]}]}]]}],["$","$L5",null,{"parallelRouterKey":"children","template":["$","$L6",null,{}],"notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]]}],["$","footer",null,{"className":"site-footer","children":[["$","p",null,{"children":"Signal & Story"}],["$","p",null,{"children":"New conversations for curious builders."}]]}]]}]}]]}],"p":"$@7","v":null,"s":"$8"},"c":"$Q9"},"h":{"r":["$","$1","h",{"children":[null,["$","$L16",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","$L18",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$12",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"The Quiet Architecture | Signal & Story"}],["$","meta","1",{"name":"description","content":"Why the strongest technical foundations often disappear into the experience they support."}],["$","meta","2",{"name":"robots","content":"noindex, nofollow"}]]}]}],null]}],null]}],"p":"$@19","v":null,"s":"$8"}},"a":"$@1a","u":"$@1b","b":"Ld7Gs4KeBAhctV3xZM_dj"}
+13:null
+8:300
+1b:true
+8:C
+1a:0
+d:"$undefined"
+a:"$undefined"
+7:"$undefined"
+19:"$undefined"
+14:"$undefined"

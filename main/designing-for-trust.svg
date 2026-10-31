@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title description">
+  <title id="title">Designing for Trust episode artwork</title>
+  <desc id="description">Interlocking coral and cream shapes form a balanced signal on a deep green background.</desc>
+  <rect width="800" height="800" fill="#14201d"/>
+  <circle cx="400" cy="400" r="290" fill="#f5f1e8"/>
+  <path d="M180 430c105-190 215-190 330 0s215 190 290 0v190c-75 190-175 190-290 0s-225-190-330 0z" fill="#d94f30"/>
+  <circle cx="400" cy="400" r="92" fill="#14201d"/>
+  <path d="M400 230v340M230 400h340" stroke="#f5f1e8" stroke-width="28" stroke-linecap="round"/>
+</svg>

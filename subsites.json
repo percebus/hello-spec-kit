@@ -1,0 +1,32 @@
+{
+  "updatedAt": "2026-10-31T13:30:10.894Z",
+  "subsites": {
+    "main": {
+      "slug": "main",
+      "kind": "main",
+      "branch": "main",
+      "pr": null,
+      "sha": "2f69f5b45617797162109eb054bff8bb3746628b",
+      "ciRunUrl": "https://github.com/percebus/hello-spec-kit/actions/runs/41164122857",
+      "publishedAt": "2026-10-31T03:28:21.418Z"
+    },
+    "copilot-add-play-only-one-episode": {
+      "slug": "copilot-add-play-only-one-episode",
+      "kind": "branch",
+      "branch": "copilot/add-play-only-one-episode",
+      "pr": 131,
+      "sha": "b3f19ab0b21397ee160fd5e72e42a749571a4779",
+      "ciRunUrl": "https://github.com/percebus/hello-spec-kit/actions/runs/41204980948",
+      "publishedAt": "2026-10-31T13:24:13.086Z"
+    },
+    "copilot-us-episode-collection-full-metadata": {
+      "slug": "copilot-us-episode-collection-full-metadata",
+      "kind": "branch",
+      "branch": "copilot/us-episode-collection-full-metadata",
+      "pr": 132,
+      "sha": "12c49f88c4bd5b5418e2a8ed6b32bbc84c1c98e5",
+      "ciRunUrl": "https://github.com/percebus/hello-spec-kit/actions/runs/41205451164",
+      "publishedAt": "2026-10-31T13:30:10.878Z"
+    }
+  }
+}
