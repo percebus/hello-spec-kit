@@ -153,6 +153,7 @@ for (const width of [320, 1440]) {
       });
     }
 
+    // Source: https://github.com/percebus/hello-spec-kit/issues/45
     test("starting another episode stops the previous player", async ({
       page,
     }) => {
@@ -167,12 +168,24 @@ for (const width of [320, 1440]) {
         )
         .toBe(false);
       await focusWithKeyboard(page, players.nth(1));
+      const previousPausedWhenSelectedStarts = page.evaluate(
+        () =>
+          new Promise<boolean>((resolve) => {
+            const audioPlayers = document.querySelectorAll("audio");
+            audioPlayers[1].addEventListener(
+              "playing",
+              () => resolve(audioPlayers[0].paused),
+              { once: true },
+            );
+          }),
+      );
       await page.keyboard.press("Space");
       await expect
         .poll(() =>
           players.nth(1).evaluate((audio: HTMLAudioElement) => audio.paused),
         )
         .toBe(false);
+      expect(await previousPausedWhenSelectedStarts).toBe(true);
       await expect
         .poll(() =>
           players.nth(0).evaluate((audio: HTMLAudioElement) => audio.paused),
