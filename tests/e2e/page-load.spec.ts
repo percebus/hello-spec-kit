@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { episodes } from "../../app/lib/episodes";
 
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Signal & Story";
 
@@ -32,6 +33,41 @@ const primaryPages = [
     context: "Find quick details about the show, publishing schedule",
   },
 ] as const;
+
+const responsivePages = [
+  ...primaryPages.map(({ name, path }) => ({ name, path })),
+  ...episodes.map(({ slug }) => ({
+    name: `episode ${slug}`,
+    path: `./episodes/${slug}/`,
+  })),
+];
+
+// FR-016: All pages remain usable without horizontal scrolling from 320px to 1440px.
+// Source: https://github.com/percebus/hello-spec-kit/issues/41
+for (const width of [320, 375, 768, 1024, 1440]) {
+  test.describe(`FR-016: responsive pages at ${width}px`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+    });
+
+    for (const { name, path } of responsivePages) {
+      test(`${name} page has no horizontal overflow`, async ({ page }) => {
+        await page.goto(path);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+        const { clientWidth, scrollWidth } = await page.evaluate(() => ({
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+        }));
+
+        expect(
+          scrollWidth,
+          `${name} page at ${width}px has horizontal overflow`,
+        ).toBeLessThanOrEqual(clientWidth);
+      });
+    }
+  });
+}
 
 // SC-007: The landing page, episodes page, about page, and FAQ page load without visible broken content or browser errors during acceptance testing.
 // SRC: https://github.com/percebus/hello-spec-kit/issues/59
