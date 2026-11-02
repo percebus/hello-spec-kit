@@ -14,3 +14,9 @@ Feature: Episodes page
     When the visitor starts the second episode
     Then the first episode is paused
     And only the newly selected episode is playing
+
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/18
+  Scenario: A visitor scans each episode's complete details
+    Given a visitor opens the episodes page
+    When the visitor scans the episode collection
+    Then each episode shows its complete details and playback action
