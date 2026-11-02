@@ -249,30 +249,45 @@ jobs:
 
   # The existing end-to-end tests, run against the deployed subsite (main included),
   # once per browser on the OS that ships it.
+  # SC-009: https://github.com/percebus/hello-spec-kit/issues/149
   e2e-tests:
-    name: E2E tests (${{ matrix.browser }})
+    name: E2E tests @ ${{ matrix.browser }}@${{ matrix.os }}
     needs:
       - VARIABLES
       - deploy-pages
     if: ${{ needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
-    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
+        browser:
+          - firefox
+          - chrome
+          - edge
+          - safari
+
         include:
           - browser: firefox
             os: ubuntu-latest
             install: firefox
+
           - browser: chrome
             os: ubuntu-latest
             install: chrome
+
           - browser: edge
             os: windows-latest
             install: msedge
+
           - browser: safari
             os: macos-latest
             install: webkit
+
+        # edge and safari are slow; run them only on main.
+        exclude:
+          - browser: ${{ github.ref != 'refs/heads/main' && 'edge' || '' }}
+
+          - browser: ${{ github.ref != 'refs/heads/main' && 'safari' || '' }}
 
     defaults:
       run:
@@ -288,7 +303,13 @@ jobs:
       BASE_URL: ${{ needs.VARIABLES.outputs.base_url }}
       NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
       PLAYWRIGHT_WEB_SERVER: ""
-      E2E_BROWSER: ${{ matrix.browser }}
+      PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
+      # Stop Git Bash on Windows from rewriting "/..." paths (e.g. the base path) into "C:/Program Files/Git/...".
+      MSYS_NO_PATHCONV: "1"
+      MSYS2_ARG_CONV_EXCL: "*"
+      MSYS2_ENV_CONV_EXCL: "*"
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
@@ -309,6 +330,7 @@ jobs:
         with:
           files_pattern: test-results/junit.xml
           list-tests: all
+          publish-test-deltas: ${{ runner.os == 'Linux' }}
 
   # Pre-merge gate: a branch subsite that passes its end-to-end tests in every
   # browser may merge.
