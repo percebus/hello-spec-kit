@@ -6,6 +6,7 @@
   --accent: #d94f30;
   --accent-dark: #9e301b;
   --line: #c9c5b9;
+  --control-line: #7d776a;
   --focus: #185b9d;
 }
 
@@ -193,7 +194,8 @@ h3 {
 }
 
 .featured-card .eyebrow,
-.featured-card .episode-number {
+.featured-card .episode-number,
+.featured-card .episode-player-status {
   color: #f7b6a7;
 }
 
@@ -368,7 +370,7 @@ h3 {
 .faq-list details {
   padding: 1rem 1.25rem;
   background: var(--surface);
-  border: 0.0625rem solid var(--line);
+  border: 0.0625rem solid var(--control-line);
   border-radius: 0.75rem;
 }
 
