@@ -115,10 +115,18 @@ for (const width of [320, 1440]) {
 
     // SRC: https://github.com/percebus/hello-spec-kit/issues/13
     for (const episode of episodes) {
-      test(`play, inspect and return from episode ${episode.episodeNumber}`, async ({
+      test(`landing > episodes > episode ${episode.episodeNumber}: play, inspect and return`, async ({
         page,
       }) => {
-        await page.goto("episodes/");
+        await page.goto("./");
+        await focusWithKeyboard(
+          page,
+          page
+            .getByRole("navigation", { name: "Primary navigation" })
+            .getByRole("link", { name: "Episodes", exact: true }),
+        );
+        await page.keyboard.press("Enter");
+        await expect(page).toHaveURL(/\/episodes\/$/);
         expect(
           await page.evaluate(
             () =>
