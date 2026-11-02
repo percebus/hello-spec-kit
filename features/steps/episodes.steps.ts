@@ -49,9 +49,7 @@ Given("the first episode is playing", async ({ page }) => {
     .toBeGreaterThanOrEqual(2);
   await firstPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect
-    .poll(() =>
-      firstPlayer.evaluate((audio: HTMLAudioElement) => audio.paused),
-    )
+    .poll(() => firstPlayer.evaluate((audio: HTMLAudioElement) => audio.paused))
     .toBe(false);
 });
 
