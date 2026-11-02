@@ -10,10 +10,9 @@ function getPlayer(page: Page) {
 }
 
 async function expectPlaying(page: Page, isPlaying: boolean) {
+  const player = getPlayer(page);
   await expect
-    .poll(() =>
-      getPlayer(page).evaluate((audio: HTMLAudioElement) => audio.paused),
-    )
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.paused))
     .toBe(!isPlaying);
 }
 
@@ -100,10 +99,9 @@ Given("the episode player is ready", async ({ page }) => {
 });
 
 Then("native playback controls are available", async ({ page }) => {
+  const player = getPlayer(page);
   await expect
-    .poll(() =>
-      getPlayer(page).evaluate((audio: HTMLAudioElement) => audio.controls),
-    )
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.controls))
     .toBe(true);
 });
 
@@ -161,10 +159,9 @@ When(
 Then(
   "the volume is {int} percent",
   async ({ page }, percentage: number) => {
+    const player = getPlayer(page);
     await expect
-      .poll(() =>
-        getPlayer(page).evaluate((audio: HTMLAudioElement) => audio.volume),
-      )
+      .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.volume))
       .toBe(percentage / 100);
   },
 );
