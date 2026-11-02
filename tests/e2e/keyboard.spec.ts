@@ -29,22 +29,21 @@ const pagesWithControls = [
 // SRC: https://github.com/percebus/hello-spec-kit/issues/63
 for (const width of [320, 1440]) {
   for (const { name, path } of pagesWithControls) {
-    test(
-      `FR-013: every visible control on ${name} has keyboard-visible focus at ${width}px`,
-      async ({ page }) => {
-        await page.setViewportSize({ width, height: 900 });
-        await page.goto(`.${path}`);
-        const controls = page.locator(
-          "a[href], button, audio[controls], summary, input, select, textarea, [tabindex]:not([tabindex='-1'])",
-        );
+    test(`FR-013: every visible control on ${name} has keyboard-visible focus at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`.${path}`);
+      const controls = page.locator(
+        "a[href], button, audio[controls], summary, input, select, textarea, [tabindex]:not([tabindex='-1'])",
+      );
 
-        for (const control of await controls.all()) {
-          if (await control.isVisible()) {
-            await focusWithKeyboard(page, control);
-          }
+      for (const control of await controls.all()) {
+        if (await control.isVisible()) {
+          await focusWithKeyboard(page, control);
         }
-      },
-    );
+      }
+    });
   }
 }
 
