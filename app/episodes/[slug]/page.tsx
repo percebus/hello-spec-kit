@@ -49,7 +49,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
           src={`${basePath}/episodes/${episode.id}.svg`}
           width={800}
           height={300}
-          alt={episode.artworkDescription}
+          alt=""
           priority
         />
         <p className="eyebrow">Signal & Story</p>

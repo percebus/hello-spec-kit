@@ -148,8 +148,8 @@ can be found, read, and operated by mouse, touch, or keyboard.
 
 ### Edge Cases
 
-* If episode artwork does not load, meaningful alternative text preserves the
-  episode's identity without breaking the surrounding layout.
+* Episode artwork is decorative when the episode's title and details are
+  provided alongside it, so it has empty alternative text.
 * If episode playback is unavailable, the visitor receives a clear message and
   can continue browsing other content.
 * Long episode titles, summaries, and FAQ answers remain readable without

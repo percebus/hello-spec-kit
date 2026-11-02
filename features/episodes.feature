@@ -21,14 +21,14 @@ Feature: Episodes page
     When the visitor scans the episode collection
     Then each episode shows its complete details and playback action
 
-  # FR-014: Meaningful imagery has text alternatives.
-  # Edge case: If episode artwork does not load, meaningful alternative text
-  # preserves the episode's identity.
+  # FR-014: Decorative artwork has empty alternative text when the episode
+  # details are provided alongside it.
   # SRC: https://github.com/percebus/hello-spec-kit/issues/39
-  Scenario: Episode artwork has meaningful alternative text
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/153
+  Scenario: Episode artwork is decorative
     Given a visitor opens the episodes page
     When the visitor scans the episode collection
-    Then each episode artwork has meaningful alternative text
+    Then each episode artwork has empty alternative text
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/152
   Scenario: Episode artwork does not embed episode numbers

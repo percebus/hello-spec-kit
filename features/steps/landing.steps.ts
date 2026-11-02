@@ -79,8 +79,8 @@ Then(
         ).toBeVisible();
         break;
       case "artwork":
-        const artwork = featuredEpisode.getByRole("img");
-        await expect(artwork).toHaveAttribute("alt", /trust/i);
+        const artwork = featuredEpisode.locator("img");
+        await expect(artwork).toHaveAttribute("alt", "");
         await expect
           .poll(() =>
             artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),

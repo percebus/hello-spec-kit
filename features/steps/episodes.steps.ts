@@ -174,8 +174,8 @@ Then(
 
       const artwork = card.locator("img");
       await expect(artwork).toBeVisible();
-      await expect(artwork).toHaveAttribute("alt", /\S/);
-      await expect(card.getByRole("img")).toHaveCount(1);
+      await expect(artwork).toHaveAttribute("alt", "");
+      await expect(card.locator("img")).toHaveCount(1);
       await expect
         .poll(() =>
           artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -196,20 +196,17 @@ Then(
   },
 );
 
-Then(
-  "each episode artwork has meaningful alternative text",
-  async ({ page }) => {
-    const cards = page
-      .getByRole("list", { name: "All episodes", exact: true })
-      .getByRole("article");
+Then("each episode artwork has empty alternative text", async ({ page }) => {
+  const cards = page
+    .getByRole("list", { name: "All episodes", exact: true })
+    .getByRole("article");
 
-    for (const card of await cards.all()) {
-      const artwork = card.locator("img");
-      await expect(artwork).toHaveAttribute("alt", /\S/);
-      await expect(card.getByRole("img")).toHaveCount(1);
-    }
-  },
-);
+  for (const card of await cards.all()) {
+    const artwork = card.locator("img");
+    await expect(artwork).toHaveAttribute("alt", "");
+    await expect(card.locator("img")).toHaveCount(1);
+  }
+});
 
 Then(
   "episode artwork contains no embedded episode numbers",
@@ -217,7 +214,7 @@ Then(
     const artwork = page
       .getByRole("list", { name: "All episodes", exact: true })
       .getByRole("article")
-      .getByRole("img");
+      .locator("img");
     const artworkSources = await artwork.evaluateAll((images) =>
       images.map((image) => image.getAttribute("src")),
     );
