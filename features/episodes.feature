@@ -21,12 +21,14 @@ Feature: Episodes page
     When the visitor scans the episode collection
     Then each episode shows its complete details and playback action
 
-  # FR-014: Decorative imagery does not add noise for assistive technology.
+  # FR-014: Meaningful imagery has text alternatives.
+  # Edge case: If episode artwork does not load, meaningful alternative text
+  # preserves the episode's identity.
   # SRC: https://github.com/percebus/hello-spec-kit/issues/39
-  Scenario: Episode artwork is hidden from assistive technology
+  Scenario: Episode artwork has meaningful alternative text
     Given a visitor opens the episodes page
     When the visitor scans the episode collection
-    Then each episode artwork is decorative
+    Then each episode artwork has meaningful alternative text
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/15
   Scenario: A visitor identifies the selected episode during playback

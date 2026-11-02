@@ -32,7 +32,7 @@ export default function EpisodesPage() {
                 src={`${basePath}/episodes/${episode.id}.svg`}
                 width={800}
                 height={300}
-                alt=""
+                alt={episode.artworkDescription}
               />
               <p className="episode-number">Episode {episode.episodeNumber}</p>
               <h2>{episode.title}</h2>

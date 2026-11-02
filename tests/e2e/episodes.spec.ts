@@ -60,8 +60,8 @@ test.describe("SC-008: every rendered episode card exposes complete details", ()
       const artwork = card.locator("img");
       const episodeId = await card.getAttribute("data-episode-id");
       await expect(artwork).toBeVisible();
-      await expect(artwork).toHaveAttribute("alt", "");
-      await expect(card.getByRole("img")).toHaveCount(0);
+      await expect(artwork).toHaveAttribute("alt", /\S/);
+      await expect(card.getByRole("img")).toHaveCount(1);
       await expect(artwork).toHaveCSS("height", "300px");
       expect(episodeId).toBeTruthy();
       const artworkSource = await artwork.getAttribute("src");
@@ -115,8 +115,8 @@ test.describe("FR-008: every episode detail page exposes complete details", () =
 
       const artwork = detail.locator("img");
       await expect(artwork).toBeVisible();
-      await expect(artwork).toHaveAttribute("alt", "");
-      await expect(detail.getByRole("img")).toHaveCount(0);
+      await expect(artwork).toHaveAttribute("alt", /\S/);
+      await expect(detail.getByRole("img")).toHaveCount(1);
       expect(await artwork.getAttribute("src")).toContain(
         `/episodes/${slug}.svg`,
       );
