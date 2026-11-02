@@ -116,6 +116,12 @@ for (const width of [320, 1440]) {
       test(`${path} playback status meets AA contrast`, async ({ page }) => {
         await page.goto(`.${path}`);
         const player = page.locator("audio").first();
+        await expect(player).toHaveAttribute("src", /^blob:/);
+        await expect
+          .poll(() =>
+            player.evaluate((audio) => (audio as HTMLAudioElement).readyState),
+          )
+          .toBeGreaterThanOrEqual(1);
         await player.evaluate((audio: HTMLAudioElement) => audio.play());
         const status = page.locator(".episode-player-status").first();
         await expect(status).toContainText("Now playing");
