@@ -1,7 +1,15 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
+import { focusWithKeyboard } from "../../tests/helpers/keyboard";
 
 const { Given, When, Then } = createBdd();
+
+function getSelectedEpisode(page: Page) {
+  return page
+    .getByRole("list", { name: "All episodes", exact: true })
+    .getByRole("article")
+    .nth(1);
+}
 
 Given("a visitor opens the episodes page", async ({ page }) => {
   await page.goto("episodes/");
@@ -37,6 +45,51 @@ Then(
     for (const card of await cards.all()) {
       await expect(card).toBeVisible();
     }
+  },
+);
+
+Given("the visitor selects an episode's playback action", async ({ page }) => {
+  const player = getSelectedEpisode(page).locator("audio[controls]");
+  await expect(player).toBeVisible();
+  await expect
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.readyState))
+    .toBeGreaterThanOrEqual(2);
+  await focusWithKeyboard(page, player);
+  await page.keyboard.press("Space");
+});
+
+When("playback starts", async ({ page }) => {
+  const player = getSelectedEpisode(page).locator("audio[controls]");
+  await expect
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.paused))
+    .toBe(false);
+  await expect
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.currentTime))
+    .toBeGreaterThan(0);
+});
+
+Then("the selected episode is clearly identified", async ({ page }) => {
+  const episode = getSelectedEpisode(page);
+  const title = await episode.getByRole("heading", { level: 2 }).textContent();
+  expect(title).toBeTruthy();
+  await expect(episode.locator(".episode-player-status")).toContainText(
+    `Now playing: ${title}`,
+  );
+  await expect(episode.locator("audio")).toHaveAttribute(
+    "data-playing",
+    "true",
+  );
+});
+
+Then(
+  "standard playback controls are available for the selected episode",
+  async ({ page }) => {
+    const player = getSelectedEpisode(page).locator("audio[controls]");
+    await expect(player).toBeVisible();
+    expect(
+      await player.evaluate((audio: HTMLAudioElement) => audio.controls),
+    ).toBe(true);
+    await expect(player).toHaveAttribute("aria-label", /^Play .+/);
   },
 );
 
