@@ -125,12 +125,9 @@ Then("the episode is paused", async ({ page }) => {
 When(
   "the visitor seeks to {int} seconds",
   async ({ page }, seconds: number) => {
-    await getPlayer(page).evaluate(
-      (audio: HTMLAudioElement, time) => {
-        audio.currentTime = time;
-      },
-      seconds,
-    );
+    await getPlayer(page).evaluate((audio: HTMLAudioElement, time) => {
+      audio.currentTime = time;
+    }, seconds);
   },
 );
 
@@ -149,12 +146,9 @@ Then(
 When(
   "the visitor sets the volume to {int} percent",
   async ({ page }, percentage: number) => {
-    await getPlayer(page).evaluate(
-      (audio: HTMLAudioElement, volume) => {
-        audio.volume = volume / 100;
-      },
-      percentage,
-    );
+    await getPlayer(page).evaluate((audio: HTMLAudioElement, volume) => {
+      audio.volume = volume / 100;
+    }, percentage);
   },
 );
 
