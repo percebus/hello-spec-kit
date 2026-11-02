@@ -48,7 +48,6 @@ Feature: Landing page
     | duration         |
     | summary          |
 
-
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
   Scenario: A visitor can interact with the featured episode player
     Given the landing page
