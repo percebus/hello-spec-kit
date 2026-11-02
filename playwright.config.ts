@@ -25,6 +25,19 @@ const reporter: PlaywrightTestConfig["reporter"] = [
   ["junit", { outputFile: "test-results/junit.xml" }],
 ];
 
+// E2E_BROWSER picks the browser for the end-to-end projects (one per CI matrix leg).
+const e2eBrowsers = {
+  chrome: { ...devices["Desktop Chrome"], channel: "chrome" },
+  chromium: devices["Desktop Chrome"],
+  edge: { ...devices["Desktop Edge"], channel: "msedge" },
+  firefox: devices["Desktop Firefox"],
+  safari: devices["Desktop Safari"],
+} as const;
+const e2eDevice =
+  e2eBrowsers[
+    (process.env.E2E_BROWSER ?? "chromium") as keyof typeof e2eBrowsers
+  ] ?? e2eBrowsers.chromium;
+
 function previewScanConfig(): PlaywrightTestConfig {
   return {
     fullyParallel: false,
@@ -73,12 +86,12 @@ function defaultConfig(): PlaywrightTestConfig {
       {
         name: "chromium",
         testDir: "./tests/e2e",
-        use: { ...devices["Desktop Chrome"] },
+        use: { ...e2eDevice },
       },
       {
         name: "chromium-bdd",
         testDir: bddTestDir,
-        use: { ...devices["Desktop Chrome"] },
+        use: { ...e2eDevice },
       },
       {
         // Component tests: Playwright's built-in `mount` against playwright/gallery.

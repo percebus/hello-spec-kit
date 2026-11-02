@@ -247,34 +247,59 @@ jobs:
           echo "::error::${{ needs.VARIABLES.outputs.site_url }}/ did not show ${{ needs.VARIABLES.outputs.sha }} within 5 minutes"
           exit 1
 
-  # The existing end-to-end tests, run against the deployed subsite (main included).
+  # The existing end-to-end tests, run against the deployed subsite (main included),
+  # once per browser on the OS that ships it.
   e2e-tests:
-    name: E2E tests
+    name: E2E tests (${{ matrix.browser }})
     needs:
       - VARIABLES
       - deploy-pages
     if: ${{ needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: firefox
+            os: ubuntu-latest
+            install: firefox
+          - browser: chrome
+            os: ubuntu-latest
+            install: chrome
+          - browser: edge
+            os: windows-latest
+            install: msedge
+          - browser: safari
+            os: macos-latest
+            install: webkit
+
+    defaults:
+      run:
+        shell: bash
 
     permissions:
       contents: read
       actions: read
       checks: write
       pull-requests: write
-      statuses: write
 
     env:
-      GH_TOKEN: ${{ github.token }}
       BASE_URL: ${{ needs.VARIABLES.outputs.base_url }}
       NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
       PLAYWRIGHT_WEB_SERVER: ""
+      E2E_BROWSER: ${{ matrix.browser }}
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
       - uses: percebus/github-actions-node/.github/actions/setup@main
 
+      # --ignore-scripts skips postinstall, which would install chromium.
       - name: npm install
-        run: npm install
+        run: npm install --ignore-scripts
+
+      - name: playwright install ${{ matrix.install }}
+        run: npx playwright install --with-deps ${{ matrix.install }}
 
       - name: playwright test
         run: npm run test:e2e
@@ -285,11 +310,25 @@ jobs:
           files_pattern: test-results/junit.xml
           list-tests: all
 
-      # Pre-merge gate: a branch subsite that passes its end-to-end tests may merge.
+  # Pre-merge gate: a branch subsite that passes its end-to-end tests in every
+  # browser may merge.
+  e2e-result:
+    name: E2E result
+    needs:
+      - VARIABLES
+      - deploy-pages
+      - e2e-tests
+    if: ${{ !cancelled() && needs.VARIABLES.outputs.kind == 'branch' && needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      statuses: write
+
+    steps:
       - name: preview-verification result
-        if: ${{ !cancelled() && needs.VARIABLES.outputs.kind == 'branch' }}
         env:
-          OUTCOME: ${{ job.status }}
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ needs.e2e-tests.result }}
         run: |
           if [ "$OUTCOME" = "success" ]; then
             state=success description="Subsite passed end-to-end tests"
