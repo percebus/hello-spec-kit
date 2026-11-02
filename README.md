@@ -45,7 +45,7 @@ sub-issues (#13, #38, #57) lives in
 [the shared player feature](features/components/episode-player.feature) and
 [the keyboard journey tests](tests/e2e/peripherals.spec.ts). Tests use real
 keyboard input and check visible focus, actual audio playback and seeking,
-navigation, and FAQ operation at 320px and 1440px widths in Chromium.
+navigation, and FAQ operation at 320px and 1440px widths in Chromium and Firefox.
 
 The player feature is a component test. It uses Playwright's built-in `mount`
 fixture, which renders

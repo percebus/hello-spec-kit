@@ -20,6 +20,15 @@ export async function expectVisibleFocus(target: Locator) {
 }
 
 export async function focusWithKeyboard(page: Page, target: Locator) {
+  const direction = await target.evaluate((element) => {
+    const activeElement = document.activeElement;
+    return activeElement &&
+      activeElement.compareDocumentPosition(element) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+      ? "Tab"
+      : "Shift+Tab";
+  });
+
   for (let attempt = 0; attempt < 250; attempt += 1) {
     if (
       await target.evaluate((element) => element === document.activeElement)
@@ -27,10 +36,10 @@ export async function focusWithKeyboard(page: Page, target: Locator) {
       await expectVisibleFocus(target);
       return;
     }
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(direction);
   }
   throw new Error(
-    `Control is not reachable by Tab: ${await target.evaluate((element) => element.outerHTML)}`,
+    `Control is not reachable by keyboard: ${await target.evaluate((element) => element.outerHTML)}`,
   );
 }
 

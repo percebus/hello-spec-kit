@@ -153,7 +153,7 @@ test("FR-010: clearly identifies the playing episode", async ({ page }) => {
     .poll(() =>
       firstPlayer.evaluate((audio: HTMLAudioElement) => audio.readyState),
     )
-    .toBeGreaterThanOrEqual(1);
+    .toBeGreaterThanOrEqual(2);
   await firstPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect(first.locator(".episode-player-status")).toContainText(
     "Now playing",
@@ -165,7 +165,7 @@ test("FR-010: clearly identifies the playing episode", async ({ page }) => {
     .poll(() =>
       secondPlayer.evaluate((audio: HTMLAudioElement) => audio.readyState),
     )
-    .toBeGreaterThanOrEqual(1);
+    .toBeGreaterThanOrEqual(2);
   await secondPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect(second.locator(".episode-player-status")).toContainText(
     "Now playing",
