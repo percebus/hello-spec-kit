@@ -48,6 +48,13 @@ Feature: Landing page
     | duration         |
     | summary          |
 
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/152
+  Scenario: The featured artwork number matches the featured episode
+    Given the landing page
+    And the featured episode
+    When the feature episode loads
+    Then the featured artwork number matches the episode number
+
 
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
   Scenario: A visitor can interact with the featured episode player
