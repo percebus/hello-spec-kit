@@ -105,12 +105,9 @@ Then("native playback controls are available", async ({ page }) => {
     .toBe(true);
 });
 
-When(
-  /^the visitor (?:starts|pauses|resumes) playback$/,
-  async ({ page }) => {
-    await page.keyboard.press("Space");
-  },
-);
+When(/^the visitor (?:starts|pauses|resumes) playback$/, async ({ page }) => {
+  await page.keyboard.press("Space");
+});
 
 Then("the episode is playing", async ({ page }) => {
   await expectPlaying(page, true);
@@ -123,45 +120,31 @@ Then("the episode is paused", async ({ page }) => {
 When(
   "the visitor seeks to {int} seconds",
   async ({ page }, seconds: number) => {
-    await getPlayer(page).evaluate(
-      (audio: HTMLAudioElement, time) => {
-        audio.currentTime = time;
-      },
-      seconds,
-    );
+    await getPlayer(page).evaluate((audio: HTMLAudioElement, time) => {
+      audio.currentTime = time;
+    }, seconds);
   },
 );
 
-Then(
-  "playback is at {int} seconds",
-  async ({ page }, seconds: number) => {
-    const player = getPlayer(page);
-    await expect
-      .poll(() =>
-        player.evaluate((audio: HTMLAudioElement) => audio.currentTime),
-      )
-      .toBeCloseTo(seconds, 1);
-  },
-);
+Then("playback is at {int} seconds", async ({ page }, seconds: number) => {
+  const player = getPlayer(page);
+  await expect
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.currentTime))
+    .toBeCloseTo(seconds, 1);
+});
 
 When(
   "the visitor sets the volume to {int} percent",
   async ({ page }, percentage: number) => {
-    await getPlayer(page).evaluate(
-      (audio: HTMLAudioElement, volume) => {
-        audio.volume = volume / 100;
-      },
-      percentage,
-    );
+    await getPlayer(page).evaluate((audio: HTMLAudioElement, volume) => {
+      audio.volume = volume / 100;
+    }, percentage);
   },
 );
 
-Then(
-  "the volume is {int} percent",
-  async ({ page }, percentage: number) => {
-    const player = getPlayer(page);
-    await expect
-      .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.volume))
-      .toBe(percentage / 100);
-  },
-);
+Then("the volume is {int} percent", async ({ page }, percentage: number) => {
+  const player = getPlayer(page);
+  await expect
+    .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.volume))
+    .toBe(percentage / 100);
+});
