@@ -29,10 +29,10 @@ export default function Home() {
         <article className="featured-card">
           <Image
             className="featured-artwork"
-            src={`${basePath}/designing-for-trust.svg`}
+            src={`${basePath}/episodes/${featuredEpisode.id}.svg`}
             width={800}
             height={800}
-            alt="Interlocking shapes representing balance and trust."
+            alt={featuredEpisode.artworkDescription}
             priority
           />
           <p className="eyebrow">Featured episode</p>

@@ -174,8 +174,8 @@ Then(
 
       const artwork = card.locator("img");
       await expect(artwork).toBeVisible();
-      await expect(artwork).toHaveAttribute("alt", "");
-      await expect(card.getByRole("img")).toHaveCount(0);
+      await expect(artwork).toHaveAttribute("alt", /\S/);
+      await expect(card.getByRole("img")).toHaveCount(1);
       await expect
         .poll(() =>
           artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -203,7 +203,7 @@ Then("each episode artwork is decorative", async ({ page }) => {
 
   for (const card of await cards.all()) {
     const artwork = card.locator("img");
-    await expect(artwork).toHaveAttribute("alt", "");
-    await expect(card.getByRole("img")).toHaveCount(0);
+    await expect(artwork).toHaveAttribute("alt", /\S/);
+    await expect(card.getByRole("img")).toHaveCount(1);
   }
 });
