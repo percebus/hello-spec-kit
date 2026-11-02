@@ -227,9 +227,9 @@ Then(
     for (const artworkSource of artworkSources) {
       expect(artworkSource).not.toBeNull();
 
-      const response = await page.context().request.get(
-        new URL(artworkSource!, page.url()).toString(),
-      );
+      const response = await page
+        .context()
+        .request.get(new URL(artworkSource!, page.url()).toString());
       expect(response.ok()).toBe(true);
       expect(await response.text()).not.toMatch(
         /<text\b[^>]*>\s*\d+\s*<\/text>/,
