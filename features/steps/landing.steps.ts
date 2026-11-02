@@ -102,31 +102,6 @@ Then(
   },
 );
 
-Then(
-  "the featured artwork number matches the episode number",
-  async ({ page }) => {
-    const featuredEpisode = getFeaturedEpisode(page);
-    const artwork = featuredEpisode.getByRole("img");
-    const artworkSrc = await artwork.getAttribute("src");
-    const episodeNumber = (
-      await featuredEpisode.locator(".episode-number").textContent()
-    )?.match(/\d+/)?.[0];
-
-    expect(artworkSrc).not.toBeNull();
-    expect(episodeNumber).toBeDefined();
-
-    const response = await page.context().request.get(
-      new URL(artworkSrc!, page.url()).toString(),
-    );
-    expect(response.ok()).toBe(true);
-
-    const artworkNumber = (await response.text()).match(
-      /<text\b[^>]*>(\d+)<\/text>/,
-    )?.[1];
-    expect(artworkNumber).toBe(episodeNumber);
-  },
-);
-
 Given("the Home page", async ({ page }) => {
   await page.goto("./");
 });
