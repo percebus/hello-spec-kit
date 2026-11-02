@@ -262,7 +262,7 @@ h3 {
 }
 
 .episode-meta div {
-  min-width: 7rem;
+  min-width: min(7rem, 100%);
 }
 
 .episode-meta dt {
