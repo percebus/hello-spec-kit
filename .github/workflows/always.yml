@@ -279,10 +279,10 @@ jobs:
           #   os: windows-latest
           #   run: ${{ github.ref_name == 'main' }}
 
-          # - browser: safari
-          #   install: webkit
-          #   os: macos-latest
-          #   run: ${{ github.ref_name == 'main' }}
+          - browser: safari
+            install: webkit
+            os: macos-latest
+            run: true
 
     defaults:
       run:
