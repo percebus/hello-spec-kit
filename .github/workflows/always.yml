@@ -274,10 +274,10 @@ jobs:
           #   os: ubuntu-latest
           #   run: true
 
-          # - browser: edge
-          #   install: msedge
-          #   os: windows-latest
-          #   run: ${{ github.ref_name == 'main' }}
+          - browser: edge
+            install: msedge
+            os: windows-latest
+            run: true
 
           # - browser: safari
           #   install: webkit
