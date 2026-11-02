@@ -196,17 +196,14 @@ Then(
   },
 );
 
-Then(
-  "each episode artwork has empty alternative text",
-  async ({ page }) => {
-    const cards = page
-      .getByRole("list", { name: "All episodes", exact: true })
-      .getByRole("article");
+Then("each episode artwork has empty alternative text", async ({ page }) => {
+  const cards = page
+    .getByRole("list", { name: "All episodes", exact: true })
+    .getByRole("article");
 
-    for (const card of await cards.all()) {
-      const artwork = card.locator("img");
-      await expect(artwork).toHaveAttribute("alt", "");
-      await expect(card.locator("img")).toHaveCount(1);
-    }
-  },
-);
+  for (const card of await cards.all()) {
+    const artwork = card.locator("img");
+    await expect(artwork).toHaveAttribute("alt", "");
+    await expect(card.locator("img")).toHaveCount(1);
+  }
+});
