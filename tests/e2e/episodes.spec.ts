@@ -148,13 +148,25 @@ test("FR-010: clearly identifies the playing episode", async ({ page }) => {
   const first = cards.nth(0);
   const second = cards.nth(1);
 
-  await first.locator("audio").evaluate((a: HTMLAudioElement) => a.play());
+  const firstPlayer = first.locator("audio");
+  await expect
+    .poll(() =>
+      firstPlayer.evaluate((audio: HTMLAudioElement) => audio.readyState),
+    )
+    .toBeGreaterThanOrEqual(1);
+  await firstPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect(first.locator(".episode-player-status")).toContainText(
     "Now playing",
   );
   await expect(first.locator("audio")).toHaveAttribute("data-playing", "true");
 
-  await second.locator("audio").evaluate((a: HTMLAudioElement) => a.play());
+  const secondPlayer = second.locator("audio");
+  await expect
+    .poll(() =>
+      secondPlayer.evaluate((audio: HTMLAudioElement) => audio.readyState),
+    )
+    .toBeGreaterThanOrEqual(1);
+  await secondPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect(second.locator(".episode-player-status")).toContainText(
     "Now playing",
   );

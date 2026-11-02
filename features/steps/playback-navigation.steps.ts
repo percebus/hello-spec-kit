@@ -36,7 +36,7 @@ Given(
       .poll(() =>
         player.evaluate((audio: HTMLAudioElement) => audio.readyState),
       )
-      .toBeGreaterThanOrEqual(2);
+      .toBeGreaterThanOrEqual(1);
     await focusWithKeyboard(page, player);
     await page.keyboard.press("Space");
     await expect

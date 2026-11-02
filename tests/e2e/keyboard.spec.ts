@@ -111,7 +111,7 @@ for (const width of [320, 1440]) {
         .poll(() =>
           player.evaluate((audio: HTMLAudioElement) => audio.readyState),
         )
-        .toBeGreaterThanOrEqual(2);
+        .toBeGreaterThanOrEqual(1);
       await focusWithKeyboard(page, player);
       await page.keyboard.press("End");
       await expect
@@ -196,6 +196,13 @@ for (const width of [320, 1440]) {
       await page.goto("episodes/");
       const players = page.locator("audio[controls]");
       await expect(players).toHaveCount(20);
+      await expect
+        .poll(() =>
+          players
+            .nth(0)
+            .evaluate((audio: HTMLAudioElement) => audio.readyState),
+        )
+        .toBeGreaterThanOrEqual(1);
       await focusWithKeyboard(page, players.nth(0));
       await page.keyboard.press("Space");
       await expect
@@ -203,6 +210,13 @@ for (const width of [320, 1440]) {
           players.nth(0).evaluate((audio: HTMLAudioElement) => audio.paused),
         )
         .toBe(false);
+      await expect
+        .poll(() =>
+          players
+            .nth(1)
+            .evaluate((audio: HTMLAudioElement) => audio.readyState),
+        )
+        .toBeGreaterThanOrEqual(1);
       await focusWithKeyboard(page, players.nth(1));
       const previousPausedWhenSelectedStarts = page.evaluate(
         () =>

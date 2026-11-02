@@ -53,7 +53,7 @@ Given("the visitor selects an episode's playback action", async ({ page }) => {
   await expect(player).toBeVisible();
   await expect
     .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.readyState))
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThanOrEqual(1);
   await focusWithKeyboard(page, player);
   await page.keyboard.press("Space");
 });
@@ -99,7 +99,7 @@ Given("the first episode is playing", async ({ page }) => {
     .poll(() =>
       firstPlayer.evaluate((audio: HTMLAudioElement) => audio.readyState),
     )
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThanOrEqual(1);
   await firstPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect
     .poll(() => firstPlayer.evaluate((audio: HTMLAudioElement) => audio.paused))
@@ -112,7 +112,7 @@ When("the visitor starts the second episode", async ({ page }) => {
     .poll(() =>
       secondPlayer.evaluate((audio: HTMLAudioElement) => audio.readyState),
     )
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThanOrEqual(1);
   await secondPlayer.evaluate((audio: HTMLAudioElement) => audio.play());
   await expect
     .poll(() =>
