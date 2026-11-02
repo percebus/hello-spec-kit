@@ -6,6 +6,15 @@ Feature: Episodes page
     When the episodes page loads
     Then exactly 20 distinct episodes are available
 
+  # FR-021: Only one episode plays at a time.
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/16
+  Scenario: Starting another episode stops the current episode
+    Given a visitor opens the episodes page
+    And the first episode is playing
+    When the visitor starts the second episode
+    Then the first episode is paused
+    And only the newly selected episode is playing
+
   # SRC: https://github.com/percebus/hello-spec-kit/issues/18
   Scenario: A visitor scans each episode's complete details
     Given a visitor opens the episodes page
