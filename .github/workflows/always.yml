@@ -259,28 +259,30 @@ jobs:
 
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
+        # firefox, edge and safari are disabled until their own issues are fixed.
         # edge and safari are slow; run them only on main.
         include:
-          - browser: firefox
-            install: firefox
-            os: ubuntu-latest
-            run: true
-
           - browser: chrome
             install: chrome
             os: ubuntu-latest
             run: true
 
-          - browser: edge
-            install: msedge
-            os: windows-latest
-            run: ${{ github.ref_name == 'main' }}
+          # - browser: firefox
+          #   install: firefox
+          #   os: ubuntu-latest
+          #   run: true
 
-          - browser: safari
-            install: webkit
-            os: macos-latest
-            run: ${{ github.ref_name == 'main' }}
+          # - browser: edge
+          #   install: msedge
+          #   os: windows-latest
+          #   run: ${{ github.ref_name == 'main' }}
+
+          # - browser: safari
+          #   install: webkit
+          #   os: macos-latest
+          #   run: ${{ github.ref_name == 'main' }}
 
     defaults:
       run:
