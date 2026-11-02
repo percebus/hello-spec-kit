@@ -24,6 +24,8 @@ Feature: About page
       | Your host |   #25 |
 
 
+  # FR-014: Meaningful imagery has text alternatives.
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/39
   # SRC: https://github.com/percebus/hello-spec-kit/issues/20
   Scenario: About page imagery has equivalent text
     Given the about page

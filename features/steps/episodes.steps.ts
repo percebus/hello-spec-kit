@@ -172,9 +172,10 @@ Then(
     for (const card of await cards.all()) {
       await expect(card.getByRole("heading", { level: 2 })).toHaveText(/\S/);
 
-      const artwork = card.getByRole("img");
+      const artwork = card.locator("img");
       await expect(artwork).toBeVisible();
-      await expect(artwork).toHaveAttribute("alt", /\S/);
+      await expect(artwork).toHaveAttribute("alt", "");
+      await expect(card.getByRole("img")).toHaveCount(0);
       await expect
         .poll(() =>
           artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -194,3 +195,15 @@ Then(
     }
   },
 );
+
+Then("each episode artwork is decorative", async ({ page }) => {
+  const cards = page
+    .getByRole("list", { name: "All episodes", exact: true })
+    .getByRole("article");
+
+  for (const card of await cards.all()) {
+    const artwork = card.locator("img");
+    await expect(artwork).toHaveAttribute("alt", "");
+    await expect(card.getByRole("img")).toHaveCount(0);
+  }
+});

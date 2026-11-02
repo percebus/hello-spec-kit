@@ -29,6 +29,8 @@ Feature: Landing page
   #  - summary
   #  - playback action
   #
+  # FR-014: Meaningful imagery has text alternatives.
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/39
   # SRC: https://github.com/percebus/hello-spec-kit/issues/17
   # SRC: https://github.com/percebus/hello-spec-kit/issues/30
   # SRC: https://github.com/percebus/hello-spec-kit/issues/85
