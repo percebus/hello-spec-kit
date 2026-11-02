@@ -21,6 +21,13 @@ Feature: Episodes page
     When the visitor scans the episode collection
     Then each episode shows its complete details and playback action
 
+  # FR-014: Decorative imagery does not add noise for assistive technology.
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/39
+  Scenario: Episode artwork is hidden from assistive technology
+    Given a visitor opens the episodes page
+    When the visitor scans the episode collection
+    Then each episode artwork is decorative
+
   # SRC: https://github.com/percebus/hello-spec-kit/issues/15
   Scenario: A visitor identifies the selected episode during playback
     Given a visitor opens the episodes page
