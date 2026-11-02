@@ -32,7 +32,7 @@ export default function Home() {
             src={`${basePath}/episodes/${featuredEpisode.id}.svg`}
             width={800}
             height={800}
-            alt={featuredEpisode.artworkDescription}
+            alt=""
             priority
           />
           <p className="eyebrow">Featured episode</p>

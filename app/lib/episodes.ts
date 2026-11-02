@@ -4,7 +4,6 @@ export type Episode = {
   episodeNumber: number;
   title: string;
   summary: string;
-  artworkDescription: string;
   publishedAt: string;
   duration: string;
   featured: boolean;
@@ -141,7 +140,6 @@ export const episodes: readonly Episode[] = episodeTopics.map(
       ...episode,
       id: episode.slug,
       episodeNumber,
-      artworkDescription: `Episode ${episodeNumber}, ${episode.title}: Abstract circles and a curved shape.`,
       publishedAt: `September ${28 - index}, 2026`,
       duration: `${32 + ((index * 7) % 24)} min`,
       featured: index === 0,

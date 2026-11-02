@@ -174,8 +174,8 @@ Then(
 
       const artwork = card.locator("img");
       await expect(artwork).toBeVisible();
-      await expect(artwork).toHaveAttribute("alt", /\S/);
-      await expect(card.getByRole("img")).toHaveCount(1);
+      await expect(artwork).toHaveAttribute("alt", "");
+      await expect(card.locator("img")).toHaveCount(1);
       await expect
         .poll(() =>
           artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -197,7 +197,7 @@ Then(
 );
 
 Then(
-  "each episode artwork has meaningful alternative text",
+  "each episode artwork has empty alternative text",
   async ({ page }) => {
     const cards = page
       .getByRole("list", { name: "All episodes", exact: true })
@@ -205,20 +205,8 @@ Then(
 
     for (const card of await cards.all()) {
       const artwork = card.locator("img");
-      const episodeNumber = (
-        await card.locator(".episode-number").textContent()
-      )?.trim();
-      const episodeTitle = (
-        await card.getByRole("heading", { level: 2 }).textContent()
-      )?.trim();
-
-      expect(episodeNumber).toMatch(/^Episode \d+$/);
-      expect(episodeTitle).toBeTruthy();
-      await expect(artwork).toHaveAttribute(
-        "alt",
-        `${episodeNumber}, ${episodeTitle}: Abstract circles and a curved shape.`,
-      );
-      await expect(card.getByRole("img")).toHaveCount(1);
+      await expect(artwork).toHaveAttribute("alt", "");
+      await expect(card.locator("img")).toHaveCount(1);
     }
   },
 );
