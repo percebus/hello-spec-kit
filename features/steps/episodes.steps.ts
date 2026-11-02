@@ -205,7 +205,19 @@ Then(
 
     for (const card of await cards.all()) {
       const artwork = card.locator("img");
-      await expect(artwork).toHaveAttribute("alt", /\S/);
+      const episodeNumber = (
+        await card.locator(".episode-number").textContent()
+      )?.trim();
+      const episodeTitle = (
+        await card.getByRole("heading", { level: 2 }).textContent()
+      )?.trim();
+
+      expect(episodeNumber).toMatch(/^Episode \d+$/);
+      expect(episodeTitle).toBeTruthy();
+      await expect(artwork).toHaveAttribute(
+        "alt",
+        `${episodeNumber}, ${episodeTitle}: Abstract circles and a curved shape.`,
+      );
       await expect(card.getByRole("img")).toHaveCount(1);
     }
   },

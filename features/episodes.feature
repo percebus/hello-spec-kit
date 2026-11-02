@@ -25,7 +25,8 @@ Feature: Episodes page
   # Edge case: If episode artwork does not load, meaningful alternative text
   # preserves the episode's identity.
   # SRC: https://github.com/percebus/hello-spec-kit/issues/39
-  Scenario: Episode artwork has meaningful alternative text
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/153
+  Scenario: Episode artwork alternatives describe the shapes and identify the episode
     Given a visitor opens the episodes page
     When the visitor scans the episode collection
     Then each episode artwork has meaningful alternative text
