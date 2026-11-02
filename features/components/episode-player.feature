@@ -28,3 +28,21 @@ Feature: Episode player
       | initial-state   | action         |
       | is not playing  | starts playing |
       | is playing      | stops playing  |
+
+  # FR-009: Visitors can control playback of the selected episode.
+  # https://github.com/percebus/hello-spec-kit/issues/36
+  Scenario: Control episode playback
+    Given the Episode Player
+    And the episode player is ready
+    Then native playback controls are available
+    When the visitor starts playback
+    Then the episode is playing
+    When the visitor pauses playback
+    Then the episode is paused
+    When the visitor resumes playback
+    Then the episode is playing
+    When the visitor pauses playback
+    And the visitor seeks to 4 seconds
+    Then playback is at 4 seconds
+    When the visitor sets the volume to 25 percent
+    Then the volume is 25 percent
