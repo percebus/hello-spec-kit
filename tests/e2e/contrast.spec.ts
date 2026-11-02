@@ -112,6 +112,24 @@ for (const width of [320, 1440]) {
       });
     }
 
+    for (const path of ["/", "/episodes/"]) {
+      test(`${path} playback status meets AA contrast`, async ({ page }) => {
+        await page.goto(`.${path}`);
+        const player = page.locator("audio").first();
+        await player.evaluate((audio: HTMLAudioElement) => audio.play());
+        const status = page.locator(".episode-player-status").first();
+        await expect(status).toContainText("Now playing");
+        const color = await status.evaluate(
+          (element) => getComputedStyle(element).color,
+        );
+        const background = await backgroundOf(status);
+        expect(
+          contrast(color, background),
+          `status ${color} on ${background}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+
     test("FAQ disclosure controls have a 3:1 boundary", async ({ page }) => {
       await page.goto("./faq/");
       const details = page.locator(".faq-list details");

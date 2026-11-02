@@ -194,7 +194,8 @@ h3 {
 }
 
 .featured-card .eyebrow,
-.featured-card .episode-number {
+.featured-card .episode-number,
+.featured-card .episode-player-status {
   color: #f7b6a7;
 }
 
