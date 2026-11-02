@@ -139,7 +139,9 @@ Then(
   async ({ page }, seconds: number) => {
     await expect
       .poll(() =>
-        getPlayer(page).evaluate((audio: HTMLAudioElement) => audio.currentTime),
+        getPlayer(page).evaluate(
+          (audio: HTMLAudioElement) => audio.currentTime,
+        ),
       )
       .toBeCloseTo(seconds, 1);
   },
