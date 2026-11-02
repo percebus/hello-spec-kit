@@ -260,34 +260,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser:
-          - firefox
-          - chrome
-          - edge
-          - safari
-
+        # edge and safari are slow; run them only on main.
         include:
           - browser: firefox
-            os: ubuntu-latest
             install: firefox
+            os: ubuntu-latest
+            run: true
 
           - browser: chrome
-            os: ubuntu-latest
             install: chrome
+            os: ubuntu-latest
+            run: true
 
           - browser: edge
-            os: windows-latest
             install: msedge
+            os: windows-latest
+            run: ${{ github.ref_name == 'main' }}
 
           - browser: safari
-            os: macos-latest
             install: webkit
-
-        # edge and safari are slow; run them only on main.
-        exclude:
-          - browser: ${{ github.ref != 'refs/heads/main' && 'edge' || '' }}
-
-          - browser: ${{ github.ref != 'refs/heads/main' && 'safari' || '' }}
+            os: macos-latest
+            run: ${{ github.ref_name == 'main' }}
 
     defaults:
       run:
@@ -313,20 +306,26 @@ jobs:
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
+        if: ${{ matrix.run }}
+
       - uses: percebus/github-actions-node/.github/actions/setup@main
+        if: ${{ matrix.run }}
 
       # --ignore-scripts skips postinstall, which would install chromium.
       - name: npm install
+        if: ${{ matrix.run }}
         run: npm install --ignore-scripts
 
       - name: playwright install ${{ matrix.install }}
+        if: ${{ matrix.run }}
         run: npx playwright install --with-deps ${{ matrix.install }}
 
       - name: playwright test
+        if: ${{ matrix.run }}
         run: npm run test:e2e
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
-        if: ${{ !cancelled() }}
+        if: ${{ matrix.run && !cancelled() }}
         with:
           files_pattern: test-results/junit.xml
           list-tests: all
