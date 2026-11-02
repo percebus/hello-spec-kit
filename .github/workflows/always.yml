@@ -247,49 +247,111 @@ jobs:
           echo "::error::${{ needs.VARIABLES.outputs.site_url }}/ did not show ${{ needs.VARIABLES.outputs.sha }} within 5 minutes"
           exit 1
 
-  # The existing end-to-end tests, run against the deployed subsite (main included).
+  # The existing end-to-end tests, run against the deployed subsite (main included),
+  # once per browser on the OS that ships it.
+  # SC-009: https://github.com/percebus/hello-spec-kit/issues/149
   e2e-tests:
-    name: E2E tests
+    name: E2E tests @ ${{ matrix.browser }}@${{ matrix.os }}
     needs:
       - VARIABLES
       - deploy-pages
     if: ${{ needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
-    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        # firefox, edge and safari are disabled until their own issues are fixed.
+        # edge and safari are slow; run them only on main.
+        include:
+          - browser: chrome
+            install: chrome
+            os: ubuntu-latest
+            run: true
+
+          # - browser: firefox
+          #   install: firefox
+          #   os: ubuntu-latest
+          #   run: true
+
+          # - browser: edge
+          #   install: msedge
+          #   os: windows-latest
+          #   run: ${{ github.ref_name == 'main' }}
+
+          # - browser: safari
+          #   install: webkit
+          #   os: macos-latest
+          #   run: ${{ github.ref_name == 'main' }}
+
+    defaults:
+      run:
+        shell: bash
 
     permissions:
       contents: read
       actions: read
       checks: write
       pull-requests: write
-      statuses: write
 
     env:
-      GH_TOKEN: ${{ github.token }}
       BASE_URL: ${{ needs.VARIABLES.outputs.base_url }}
       NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
       PLAYWRIGHT_WEB_SERVER: ""
+      PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
+      # Stop Git Bash on Windows from rewriting "/..." paths (e.g. the base path) into "C:/Program Files/Git/...".
+      MSYS_NO_PATHCONV: "1"
+      MSYS2_ARG_CONV_EXCL: "*"
+      MSYS2_ENV_CONV_EXCL: "*"
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
-      - uses: percebus/github-actions-node/.github/actions/setup@main
+        if: ${{ matrix.run }}
 
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+        if: ${{ matrix.run }}
+
+      # --ignore-scripts skips postinstall, which would install chromium.
       - name: npm install
-        run: npm install
+        if: ${{ matrix.run }}
+        run: npm install --ignore-scripts
+
+      - name: playwright install ${{ matrix.install }}
+        if: ${{ matrix.run }}
+        run: npx playwright install --with-deps ${{ matrix.install }}
 
       - name: playwright test
+        if: ${{ matrix.run }}
         run: npm run test:e2e
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
-        if: ${{ !cancelled() }}
+        if: ${{ matrix.run && !cancelled() }}
         with:
           files_pattern: test-results/junit.xml
           list-tests: all
+          publish-test-deltas: ${{ runner.os == 'Linux' }}
 
-      # Pre-merge gate: a branch subsite that passes its end-to-end tests may merge.
+  # Pre-merge gate: a branch subsite that passes its end-to-end tests in every
+  # browser may merge.
+  e2e-result:
+    name: E2E result
+    needs:
+      - VARIABLES
+      - deploy-pages
+      - e2e-tests
+    if: ${{ !cancelled() && needs.VARIABLES.outputs.kind == 'branch' && needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      statuses: write
+
+    steps:
       - name: preview-verification result
-        if: ${{ !cancelled() && needs.VARIABLES.outputs.kind == 'branch' }}
         env:
-          OUTCOME: ${{ job.status }}
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ needs.e2e-tests.result }}
         run: |
           if [ "$OUTCOME" = "success" ]; then
             state=success description="Subsite passed end-to-end tests"
