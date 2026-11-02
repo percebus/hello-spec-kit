@@ -172,3 +172,62 @@ for (const { name, path, title, heading, context } of primaryPages) {
     });
   });
 }
+
+// FR-023: Content and controls remain readable and operable when text is enlarged up to 200%.
+// Source: https://github.com/percebus/hello-spec-kit/issues/43
+for (const width of [320, 1280]) {
+  test.describe(`FR-023: text enlarged to 200% at ${width}px`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+    });
+
+    for (const { name, path } of responsivePages) {
+      test(`${name} page keeps content and controls usable`, async ({
+        page,
+      }) => {
+        await page.goto(path);
+        await page.addStyleTag({ content: "html { font-size: 200%; }" });
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+        const problems = await page.evaluate(() => {
+          const found: string[] = [];
+          const root = document.documentElement;
+          if (root.scrollWidth > root.clientWidth) {
+            found.push(
+              `page overflows: ${root.scrollWidth} > ${root.clientWidth}`,
+            );
+          }
+          for (const element of document.body.querySelectorAll<HTMLElement>(
+            "*",
+          )) {
+            const style = getComputedStyle(element);
+            if (style.display === "none" || style.visibility === "hidden") {
+              continue;
+            }
+            const clipsX = ["hidden", "clip"].includes(style.overflowX);
+            const clipsY = ["hidden", "clip"].includes(style.overflowY);
+            if (
+              (clipsX && element.scrollWidth > element.clientWidth + 1) ||
+              (clipsY && element.scrollHeight > element.clientHeight + 1)
+            ) {
+              found.push(`clipped: ${element.tagName}.${element.className}`);
+            }
+          }
+          return found;
+        });
+
+        expect(problems).toEqual([]);
+
+        for (const control of await page
+          .locator("a[href], button, audio[controls]")
+          .all()) {
+          if (!(await control.isVisible())) continue;
+          const box = await control.boundingBox();
+          expect(box, "control has a rendered box").not.toBeNull();
+          expect(box!.x).toBeGreaterThanOrEqual(0);
+          expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+        }
+      });
+    }
+  });
+}
