@@ -207,3 +207,30 @@ Then("each episode artwork has empty alternative text", async ({ page }) => {
     await expect(card.locator("img")).toHaveCount(1);
   }
 });
+
+Then(
+  "episode artwork contains no embedded episode numbers",
+  async ({ page }) => {
+    const artwork = page
+      .getByRole("list", { name: "All episodes", exact: true })
+      .getByRole("article")
+      .locator("img");
+    const artworkSources = await artwork.evaluateAll((images) =>
+      images.map((image) => image.getAttribute("src")),
+    );
+
+    expect(artworkSources).toHaveLength(20);
+
+    for (const artworkSource of artworkSources) {
+      expect(artworkSource).not.toBeNull();
+
+      const response = await page
+        .context()
+        .request.get(new URL(artworkSource!, page.url()).toString());
+      expect(response.ok()).toBe(true);
+      expect(await response.text()).not.toMatch(
+        /<text\b[^>]*>\s*\d+\s*<\/text>/,
+      );
+    }
+  },
+);

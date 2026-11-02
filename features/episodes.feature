@@ -30,6 +30,12 @@ Feature: Episodes page
     When the visitor scans the episode collection
     Then each episode artwork has empty alternative text
 
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/152
+  Scenario: Episode artwork does not embed episode numbers
+    Given a visitor opens the episodes page
+    When the episodes page loads
+    Then episode artwork contains no embedded episode numbers
+
   # SRC: https://github.com/percebus/hello-spec-kit/issues/15
   Scenario: A visitor identifies the selected episode during playback
     Given a visitor opens the episodes page
