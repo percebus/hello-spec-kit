@@ -69,9 +69,7 @@ async function expectNoOverlappingControls(page: Page) {
             Math.max(first.top, second.top) >
             1;
 
-        return overlaps
-          ? [`${control.tagName} overlaps ${other.tagName}`]
-          : [];
+        return overlaps ? [`${control.tagName} overlaps ${other.tagName}`] : [];
       });
     });
   });
