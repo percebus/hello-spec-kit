@@ -17,9 +17,9 @@ no implementation code.
   - Environment `github-pages`: deployment branches and tags allow `main` and
     `refs/pull/*/merge`, because `pull_request` runs deploy from the merge ref.
   - The `gh-pages` branch is excluded from force-push protection.
-  - A ruleset on `main` requires `Verify` and `E2E result`, applied
-    last. Update the existing ruleset rather than adding a second one; see
-    `.github/workflows/README.md`.
+  - A ruleset on `main` requires `Verify`, `E2E tests @ chrome@ubuntu-latest`
+    and `E2E tests @ firefox@ubuntu-latest`, applied last. Update the existing
+    ruleset rather than adding a second one; see `.github/workflows/README.md`.
 
 ## 1. Local checks before pushing
 
@@ -43,8 +43,8 @@ no implementation code.
    - Once CI succeeds, `preview-verify` starts on `workflow_run` and reviews
      the merged PR.
 2. **Publish a branch.** Open PR A from branch `feat/a`. `Deploy pages`
-   publishes the subsite, `E2E tests` run against it, and the `E2E result`
-   check passes. No agent runs on the PR. Then:
+   publishes the subsite, and the Chrome and Firefox `E2E tests` checks run
+   against it and pass. No agent runs on the PR. Then:
    - A PR comment links `…/hello-spec-kit/feat-a/`.
    - The banner shows PR A and its SHA.
    - `subsites.json` lists `feat-a`.
@@ -54,7 +54,7 @@ no implementation code.
    `feat-b/` exist afterwards. `main/` is unchanged.
 4. **Two quick pushes.** Push twice quickly to `feat/a`. The older CI run is
    cancelled, `feat-a/preview.json` ends on the newest SHA, and only the
-   newest SHA gets an `E2E result` check.
+   newest SHA gets `E2E tests` checks.
 5. **Close a PR.** Close PR B. `pull_request_closed.yml` deletes `feat-b/`, which then returns
    404, and `subsites.json` no longer lists it.
 6. **Merge a PR.** Merge PR A after it passes. Then:
@@ -63,7 +63,7 @@ no implementation code.
      pass, and `preview-verify` posts a "Post-merge verification" report on
      PR A and on each issue it closes.
 7. **Reject a collision.** Open a PR from `feat/a-b/c`, then another from
-   `feat/a/b-c`. Both become `feat-a-b-c`. The second PR's `E2E result`
+   `feat/a/b-c`. Both become `feat-a-b-c`. The second PR's `Deploy pages`
    check fails with "Address collision with `feat/a-b/c`", and no folder is
    overwritten.
 8. **Fork PR.** A fork's `Verify` runs, but `Deploy pages` is skipped.

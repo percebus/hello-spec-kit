@@ -49,8 +49,8 @@ https://percebus.github.io/hello-spec-kit/
   run of characters outside `[a-z0-9]` becomes `-`. Names longer than 63
   characters keep 54 characters plus an 8-hex SHA-256 suffix of the original
   name. `main` is reserved, and collisions are rejected explicitly.
-- **Merge gate**: The `Verify` and `E2E result` checks are required on
-  `main`. `E2E result` passes when the subsite passes the end-to-end tests.
+- **Merge gate**: `Verify` and the `E2E tests` matrix checks for Chrome and
+  Firefox are required on `main`; the ruleset selects which browsers gate.
   There is no override. The post-merge review cannot gate merges; its
   `preview-verification` commit status on `main` is informational.
 

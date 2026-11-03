@@ -166,8 +166,8 @@ jobs:
           SLUG_ERROR: ${{ needs.VARIABLES.outputs.slug_error }}
         run: |
           if [ -n "$SLUG_ERROR" ]; then
-            echo "::warning::No subsite for this branch: $SLUG_ERROR"
-            exit 0
+            echo "::error::No subsite for this branch: $SLUG_ERROR; rename the branch"
+            exit 1
           fi
           echo "slug=${{ needs.VARIABLES.outputs.slug }}" >> "$GITHUB_OUTPUT"
 
@@ -213,6 +213,9 @@ jobs:
 
   # The existing end-to-end tests, run against the deployed subsite (main included),
   # once per browser on the OS that ships it.
+  # The merge gate requires selected matrix checks by name (e.g.
+  # "E2E tests @ chrome@ubuntu-latest"); renaming this job or a matrix entry
+  # requires updating the ruleset (see README.md › Merge gate).
   # SC-009: https://github.com/percebus/hello-spec-kit/issues/149
   e2e-tests:
     name: E2E tests @ ${{ matrix.browser }}@${{ matrix.os }}
@@ -301,4 +304,3 @@ jobs:
           files_pattern: test-results/junit.xml
           list-tests: all
           publish-test-deltas: ${{ runner.os == 'Linux' }}
-

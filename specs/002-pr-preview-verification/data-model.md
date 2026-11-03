@@ -118,12 +118,13 @@ all with the same body, using the format in
 
 ## Commit status lifecycle (`preview-verification`)
 
-Pre-merge, there is no commit status. The PR is gated by the `Verify` and
-`E2E result` checks:
+Pre-merge, there is no commit status. The PR is gated by `Verify` and the
+selected `E2E tests` matrix checks (Chrome and Firefox):
 
 ```text
-(push to same-repo PR) ── Verify ▶ Deploy pages ▶ E2E tests ▶ E2E result
-  E2E result fails on: invalid slug/collision, subsite not published, any browser failing
+(push to same-repo PR) ── Verify ▶ Deploy pages ▶ E2E tests (chrome, firefox, …)
+  Deploy pages fails on: invalid slug/collision; E2E tests are then skipped
+  and the required checks never report, so the PR stays blocked
 ```
 
 Post-merge, on the `main` commit (informational; effects go to the PR and

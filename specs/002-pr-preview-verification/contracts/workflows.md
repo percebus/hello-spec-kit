@@ -47,8 +47,13 @@ through the job-level group `pages` (`cancel-in-progress: false`,
 `branch` environment is used. `deploy-pages` runs in `github-pages`.
 
 ```text
-VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ E2E result
+VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (matrix)
 ```
+
+The ruleset on `main` requires `Verify` and selected `E2E tests` matrix checks
+(`E2E tests @ chrome@ubuntu-latest`, `E2E tests @ firefox@ubuntu-latest`).
+When `Deploy pages` fails or is skipped, the matrix checks never report and the
+pull request stays blocked.
 
 When this workflow succeeds on a push to `main`, `preview-verify` starts on
 `workflow_run`.
@@ -56,10 +61,9 @@ When this workflow succeeds on a push to `main`, `preview-verify` starts on
 | Job              | Runs when                                                                                     | Does                                                                                                                                                                                                                                                                                         | Permissions                                                                     |
 | ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `verify`         | Always                                                                                         | Isolated build using `.env.local`'s base path and `test:all` against the local server. It publishes nothing and writes no status; a failing `Verify` check blocks the merge by itself. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write` |
-| `VARIABLES`      | Always | Loads `.env.local` and `.env.main`, validates the slug, and exposes local and deployed URL settings as job outputs before `verify`. Invalid slugs are reported through `slug_error`, which makes `E2E result` fail. | `contents: read` |
-| `deploy-pages`   | `verify` succeeded, and the ref is `main` or a same-repo PR (forks are skipped) | Uses the slug and base-path outputs from `VARIABLES`, builds and uploads artifact `site`, and publishes `out` through `replace-pages-artifact`. Skips publishing for invalid slugs. Outputs the published slug. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`; environment `github-pages` |
-| `e2e-tests`      | `deploy-pages` succeeded with a `slug` output | Consumes deployed URL outputs from `VARIABLES`, disables the local server, polls `preview.json` until the SHA matches (≤ 5 min), and runs `npm run test:e2e`. JUnit results are published. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write` |
-| `e2e-result`     | Always (unless cancelled) | The merge gate (`E2E result` check). Fails on an invalid slug, an unpublished subsite, or any failed browser run. | `contents: read` |
+| `VARIABLES`      | Always | Loads `.env.local` and `.env.main`, validates the slug, and exposes local and deployed URL settings as job outputs before `verify`. Invalid slugs are reported through `slug_error`, which makes `Deploy pages` fail. | `contents: read` |
+| `deploy-pages`   | `verify` succeeded, and the ref is `main` or a same-repo PR (forks are skipped) | Uses the slug and base-path outputs from `VARIABLES`, builds and uploads artifact `site`, and publishes `out` through `replace-pages-artifact`. Fails on an invalid slug. Outputs the published slug. | `contents: write`, `pages: write`, `id-token: write`, `pull-requests: write`; environment `github-pages` |
+| `e2e-tests`      | `deploy-pages` succeeded with a `slug` output | Consumes deployed URL outputs from `VARIABLES`, disables the local server, polls `preview.json` until the SHA matches (≤ 5 min), and runs `npm run test:e2e`, once per browser. JUnit results are published. Selected matrix checks gate the merge. | `contents: read`, `actions: read`, `checks: write`, `pull-requests: write` |
 
 Reruns use GitHub's "Re-run all jobs" on the PR's CI run (FR-019).
 
@@ -140,5 +144,5 @@ The environment profiles have distinct responsibilities:
 | Environment `github-pages`    | Selected branches and tags: `main` and `refs/pull/*/merge`, because `pull_request` runs deploy as `GITHUB_REF=refs/pull/<n>/merge`. "No restriction" also works. |
 | `gh-pages` branch             | Created by the first deployment. Exclude it from rules that block force-pushes.         |
 | Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                            |
-| Ruleset on `main`             | Require status checks `Verify` and `E2E result`; require a PR                           |
+| Ruleset on `main`             | Require status checks `Verify`, `E2E tests @ chrome@ubuntu-latest`, and `E2E tests @ firefox@ubuntu-latest`; require a PR |
 | Follow-up                     | #100: move production to `hello-spec-kit-release`                                       |
