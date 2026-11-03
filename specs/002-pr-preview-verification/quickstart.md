@@ -18,7 +18,8 @@ no implementation code.
     `refs/pull/*/merge`, because `pull_request` runs deploy from the merge ref.
   - The `gh-pages` branch is excluded from force-push protection.
   - A ruleset on `main` requires `Verify` and `E2E result`, applied
-    last.
+    last. Update the existing ruleset rather than adding a second one; see
+    `.github/workflows/README.md`.
 
 ## 1. Local checks before pushing
 

@@ -106,10 +106,25 @@ post-merge review (`preview-verify`) cannot gate a merge: merging is what starts
 it. It writes the `preview-verification` commit status on the `main` commit for
 information only.
 
+Update the existing ruleset in place. Creating a second ruleset is not enough:
+rules from every active ruleset apply together, so an old ruleset that still
+requires `preview-verification` would keep blocking every pull request. The
+script below updates the ruleset created as `main: preview verification` (or
+already renamed to `main: merge gate`) and creates one only if neither exists.
+If the ruleset has another name, list them with
+`gh api repos/percebus/hello-spec-kit/rulesets` and set `RULESET_ID` by hand.
+
 ```text
-gh api -X POST repos/percebus/hello-spec-kit/rulesets --input - <<'EOF'
+RULESET_ID=$(gh api --paginate repos/percebus/hello-spec-kit/rulesets \
+  --jq '.[] | select(.name == "main: preview verification" or .name == "main: merge gate") | .id')
+if [ -n "$RULESET_ID" ]; then
+  METHOD=PUT; ENDPOINT="repos/percebus/hello-spec-kit/rulesets/$RULESET_ID"
+else
+  METHOD=POST; ENDPOINT="repos/percebus/hello-spec-kit/rulesets"
+fi
+gh api -X "$METHOD" "$ENDPOINT" --input - <<'EOF'
 {
-  "name": "main: end-to-end tests",
+  "name": "main: merge gate",
   "target": "branch",
   "enforcement": "active",
   "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },

@@ -302,36 +302,3 @@ jobs:
           list-tests: all
           publish-test-deltas: ${{ runner.os == 'Linux' }}
 
-  # Pre-merge gate (the required "E2E result" check): passes only when the
-  # subsite was published and passed its end-to-end tests in every browser.
-  # It always runs, so a skipped upstream job fails the gate instead of passing it.
-  e2e-result:
-    name: E2E result
-    needs:
-      - VARIABLES
-      - deploy-pages
-      - e2e-tests
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: e2e result
-        env:
-          SLUG_ERROR: ${{ needs.VARIABLES.outputs.slug_error }}
-          DEPLOY: ${{ needs.deploy-pages.result }}
-          SLUG: ${{ needs.deploy-pages.outputs.slug }}
-          OUTCOME: ${{ needs.e2e-tests.result }}
-        run: |
-          if [ -n "$SLUG_ERROR" ]; then
-            echo "::error::No subsite for this branch: $SLUG_ERROR; rename the branch"
-            exit 1
-          fi
-          if [ "$DEPLOY" != "success" ] || [ -z "$SLUG" ]; then
-            echo "::error::The subsite was not published (Deploy pages: $DEPLOY)"
-            exit 1
-          fi
-          if [ "$OUTCOME" != "success" ]; then
-            echo "::error::End-to-end tests failed on the subsite (E2E tests: $OUTCOME)"
-            exit 1
-          fi
-          echo "Subsite passed end-to-end tests"
