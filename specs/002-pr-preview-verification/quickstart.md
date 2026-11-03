@@ -40,8 +40,8 @@ no implementation code.
    `Deploy pages` (publishes `main/`), then `E2E tests` against `main/`. Then:
    - `https://percebus.github.io/hello-spec-kit/` redirects to `…/main/`.
    - `…/main/preview.json` reports `kind: main` and the merge SHA.
-   - Once CI succeeds, `preview-verify` starts on `workflow_run` and reviews
-     the merged PR.
+   - Once CI finishes (even if `E2E tests` fail), `preview-verify` starts on
+     `workflow_run` and, if `Deploy pages` succeeded, reviews the merged PR.
 2. **Publish a branch.** Open PR A from branch `feat/a`. `Deploy pages`
    publishes the subsite, and the Chrome and Firefox `E2E tests` checks run
    against it and pass. No agent runs on the PR. Then:

@@ -76,8 +76,9 @@ parallel. Only `deploy-pages` is serialized, through the job-level group
 
 This is one post-merge `preview-verify` run for the `main` commit `sha`
 (`workflow_run.head_sha`) and the merged `pr` behind it. It starts on
-`workflow_run` when CI succeeds on a push to `main`, after `main/` passes
-`e2e-tests`. Its concurrency group is `preview-verify-<sha>`.
+`workflow_run` when CI finishes on a push to `main`, whatever its conclusion,
+and proceeds only if that run's `Deploy pages` job succeeded. Its concurrency
+group is `preview-verify-<sha>`.
 
 | Field            | Type                                         | Rules                                                                                     |
 | ---------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
