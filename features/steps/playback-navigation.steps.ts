@@ -1,7 +1,7 @@
 import { expect, type JSHandle } from "@playwright/test";
 import { createBdd, test as base } from "playwright-bdd";
 import { featuredEpisode } from "../../app/lib/episodes";
-import { focusWithKeyboard } from "../../tests/helpers/keyboard";
+import { startPlaybackWithKeyboard } from "../../tests/helpers/keyboard";
 
 type Playback = { audio?: JSHandle<HTMLAudioElement> };
 
@@ -37,8 +37,7 @@ Given(
         player.evaluate((audio: HTMLAudioElement) => audio.readyState),
       )
       .toBeGreaterThanOrEqual(1);
-    await focusWithKeyboard(page, player);
-    await page.keyboard.press("Space");
+    await startPlaybackWithKeyboard(page, player);
     await expect
       .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.paused))
       .toBe(false);
