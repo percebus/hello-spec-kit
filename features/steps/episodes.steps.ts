@@ -3,6 +3,7 @@ import { createBdd } from "playwright-bdd";
 import { focusWithKeyboard } from "../../tests/helpers/keyboard";
 
 const { Given, When, Then } = createBdd();
+const externalRequests = new WeakMap<Page, string[]>();
 
 function getSelectedEpisode(page: Page) {
   return page
@@ -11,8 +12,27 @@ function getSelectedEpisode(page: Page) {
     .nth(1);
 }
 
-Given("a visitor opens the episodes page", async ({ page }) => {
+Given("a visitor opens the episodes page", async ({ page, baseURL }) => {
+  const siteOrigin = new URL(baseURL ?? "http://localhost").origin;
+  const requests: string[] = [];
+
+  externalRequests.set(page, requests);
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      url.protocol !== "blob:" &&
+      url.protocol !== "data:" &&
+      url.origin !== siteOrigin
+    ) {
+      requests.push(request.url());
+    }
+  });
+
   await page.goto("episodes/");
+});
+
+Then("no external content is requested", async ({ page }) => {
+  expect(externalRequests.get(page)).toEqual([]);
 });
 
 When("the episodes page loads", async ({ page }) => {
@@ -132,6 +152,22 @@ Then("the first episode is paused", async ({ page }) => {
     .toBe(true);
 });
 
+Then(
+  "the first episode is no longer identified as playing",
+  async ({ page }) => {
+    const first = page
+      .getByRole("list", { name: "All episodes", exact: true })
+      .getByRole("article")
+      .first();
+
+    await expect(first.locator(".episode-player-status")).toBeEmpty();
+    await expect(first.locator("audio")).toHaveAttribute(
+      "data-playing",
+      "false",
+    );
+  },
+);
+
 Then("only the newly selected episode is playing", async ({ page }) => {
   const players = page.locator("audio");
   await expect
@@ -168,14 +204,21 @@ Then(
     const cards = page
       .getByRole("list", { name: "All episodes", exact: true })
       .getByRole("article");
+    const artworkSources = new Set<string>();
 
     for (const card of await cards.all()) {
       await expect(card.getByRole("heading", { level: 2 })).toHaveText(/\S/);
 
       const artwork = card.locator("img");
+      const episodeId = await card.getAttribute("data-episode-id");
       await expect(artwork).toBeVisible();
       await expect(artwork).toHaveAttribute("alt", "");
       await expect(card.locator("img")).toHaveCount(1);
+      await expect(artwork).toHaveCSS("height", "300px");
+      expect(episodeId).toBeTruthy();
+      const artworkSource = await artwork.getAttribute("src");
+      expect(artworkSource).toContain(`/episodes/${episodeId}.svg`);
+      artworkSources.add(artworkSource!);
       await expect
         .poll(() =>
           artwork.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -193,6 +236,8 @@ Then(
       await expect(player).toBeVisible();
       await expect(player).toHaveAttribute("aria-label", /^Play .+/);
     }
+
+    expect(artworkSources.size).toBe(await cards.count());
   },
 );
 
