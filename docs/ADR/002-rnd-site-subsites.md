@@ -49,9 +49,10 @@ https://percebus.github.io/hello-spec-kit/
   run of characters outside `[a-z0-9]` becomes `-`. Names longer than 63
   characters keep 54 characters plus an 8-hex SHA-256 suffix of the original
   name. `main` is reserved, and collisions are rejected explicitly.
-- **Merge gate**: The `preview-verification` commit status is required on
-  `main`, alongside `Verify`. It passes when the subsite passes the
-  end-to-end tests. There is no override.
+- **Merge gate**: The `Verify` and `E2E result` checks are required on
+  `main`. `E2E result` passes when the subsite passes the end-to-end tests.
+  There is no override. The post-merge review cannot gate merges; its
+  `preview-verification` commit status on `main` is informational.
 
 ## Justification
 

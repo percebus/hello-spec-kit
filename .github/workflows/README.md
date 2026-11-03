@@ -34,7 +34,8 @@ main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E te
 | `VARIABLES`    | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs. No deployment environment is created for a branch.                                                                                                                                                                                                                                                                                                                  |
 | `verify`       | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. No GitHub deployment environment, no status, and nothing published.                                                                                                                                                                                                                                                                                                                      |
 | `deploy-pages` | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                           |
-| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included). For pull requests, sets `preview-verification` to `success` or `failure`, which is the merge gate.                                                                                                                                                                                                                                                                                                                 |
+| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included).                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `e2e-result`   | The merge gate (`E2E result` check). Fails when the branch slug is invalid, the subsite was not published, or any browser's end-to-end tests failed.                                                                                                                                                                                                                                                                                                                                       |
 | (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI succeeds on a push to `main`, so `main/` is published and has passed its end-to-end tests. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
 
 - CI concurrency is per ref (`group: ${{ github.ref }}-${{ github.workflow }}`,
@@ -100,14 +101,15 @@ needs the same rule.
 
 ### Merge gate
 
-Apply this ruleset once, **after** the feature is on `main` and a pull request
-has passed end to end. Before then, nothing can set `preview-verification` to
-`success`, and every pull request would be blocked.
+Pull requests are gated by the `Verify` and `E2E result` checks. The
+post-merge review (`preview-verify`) cannot gate a merge: merging is what starts
+it. It writes the `preview-verification` commit status on the `main` commit for
+information only.
 
 ```text
 gh api -X POST repos/percebus/hello-spec-kit/rulesets --input - <<'EOF'
 {
-  "name": "main: preview verification",
+  "name": "main: end-to-end tests",
   "target": "branch",
   "enforcement": "active",
   "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
@@ -122,7 +124,7 @@ gh api -X POST repos/percebus/hello-spec-kit/rulesets --input - <<'EOF'
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           { "context": "Verify" },
-          { "context": "preview-verification" } ] } }
+          { "context": "E2E result" } ] } }
   ]
 }
 EOF

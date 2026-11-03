@@ -118,16 +118,12 @@ all with the same body, using the format in
 
 ## Commit status lifecycle (`preview-verification`)
 
-Pre-merge, on the PR head SHA (the merge gate):
+Pre-merge, there is no commit status. The PR is gated by the `Verify` and
+`E2E result` checks:
 
 ```text
-(push to same-repo PR) ── verify (no status; failure ⇒ check stays "Expected")
-        ▼ deploy-pages
-  pending "Building subsite…" ▶ "Publishing subsite…" ──collision/size/build/deploy error──▶ error
-        ▼ e2e-tests
-  pending "Running end-to-end tests…" ──fail──▶ failure
-        │
-        └──pass──▶ success "Subsite passed end-to-end tests"
+(push to same-repo PR) ── Verify ▶ Deploy pages ▶ E2E tests ▶ E2E result
+  E2E result fails on: invalid slug/collision, subsite not published, any browser failing
 ```
 
 Post-merge, on the `main` commit (informational; effects go to the PR and
@@ -142,6 +138,6 @@ issues):
         └──complete──▶ success ─────────────────────────┘
 ```
 
-There is no override. Any pre-merge non-`success` state is resolved by pushing
-a fix or by re-running the CI workflow. The subsite is never deleted by a status; it is
+There is no override. A failing pre-merge check is resolved by pushing
+a fix or by re-running the CI workflow. The subsite is never deleted by a check or status; it is
 deleted only when the pull request closes.
