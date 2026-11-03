@@ -1,17 +1,17 @@
 # Workflows
 
-| Workflow                                                   | Trigger                                            | Purpose                                                                                                |
-| ---------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [always.yml](always.yml)                                   | Pull request, push to `main`                       | CI: build and test, publish the site (or a pull request subsite), and run end-to-end tests against it. |
-| [pull_request_closed.yml](pull_request_closed.yml)         | Pull request closed or merged                      | Deletes the pull request's subsite.                                                                    |
-| [preview-verify.md](preview-verify.md)                     | CI finishes on `main` and `Deploy pages` succeeded | Agentic: reviews `main/` against the merged stories; reopens linked issues that are not done.          |
-| [issue-closed.md](issue-closed.md)                         | Issue closed                                       | Agentic: audits closed issues and their sub-issues.                                                    |
-| [issue-requirement-verify.md](issue-requirement-verify.md) | Daily, manual                                      | Agentic: checks open `FR-`/`SC-` issues against the deployed site.                                     |
+| Workflow                                                   | Trigger                                            | Purpose                                                                                                                                |
+| ---------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [always.yml](always.yml)                                   | Pull request, push to `main`                       | CI: build and test, publish the site (or a pull request subsite), run headless Chromium E2E tests, and run a browser matrix on `main`. |
+| [pull_request_closed.yml](pull_request_closed.yml)         | Pull request closed or merged                      | Deletes the pull request's subsite.                                                                                                    |
+| [preview-verify.md](preview-verify.md)                     | CI finishes on `main` and `Deploy pages` succeeded | Agentic: reviews `main/` against the merged stories; reopens linked issues that are not done.                                          |
+| [issue-closed.md](issue-closed.md)                         | Issue closed                                       | Agentic: audits closed issues and their sub-issues.                                                                                    |
+| [issue-requirement-verify.md](issue-requirement-verify.md) | Daily, manual                                      | Agentic: checks open `FR-`/`SC-` issues against the deployed site.                                                                     |
 
 ```text
-pull request ──▶ CI (always.yml) ──▶ subsite /<branch-slug>/ ──▶ merge
-                                                                   │
-main ──▶ CI (always.yml) ──▶ /main/ ──▶ preview-verify (post-merge review)
+pull request ──▶ CI (always.yml) ──▶ subsite /<branch-slug>/ ──▶ headless Chromium E2E ──▶ merge
+main ──▶ CI (always.yml) ──▶ /main/ ──▶ headless + browser matrix ──▶ preview-verify
+                                                                         (post-merge review)
 ```
 
 - Site: https://percebus.github.io/hello-spec-kit/ (redirects to `main/`).

@@ -211,44 +211,74 @@ jobs:
           echo "::error::${{ needs.VARIABLES.outputs.site_url }}/ did not show ${{ needs.VARIABLES.outputs.sha }} within 5 minutes"
           exit 1
 
-  # The existing end-to-end tests, run against the deployed subsite (main included),
-  # once per browser on the OS that ships it.
-  # The merge gate requires selected matrix checks by name (e.g.
-  # "E2E tests @ chrome@ubuntu-latest"); renaming this job or a matrix entry
-  # requires updating the ruleset (see copilot-notes.md › Merge gate).
-  # SC-009: https://github.com/percebus/hello-spec-kit/issues/149
-  e2e-tests:
-    name: E2E tests @ ${{ matrix.browser }}@${{ matrix.os }}
+  e2e-tests-headless:
+    name: E2E tests (headless Chromium)
     needs:
       - VARIABLES
       - deploy-pages
     if: ${{ needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
+    env:
+      BASE_URL: ${{ needs.VARIABLES.outputs.base_url }}
+      NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
+      PLAYWRIGHT_WEB_SERVER: ""
+      PLAYWRIGHT_BROWSER: chromium
+
+    steps:
+      - uses: percebus/github-actions-common/.github/actions/checkout@main
+
+      - uses: percebus/github-actions-node/.github/actions/setup@main
+
+      - name: npm install
+        run: npm install
+
+      - name: playwright test
+        run: npm run test:e2e
+
+      - uses: percebus/github-actions-testing/.github/actions/junit@main
+        if: ${{ !cancelled() }}
+        with:
+          files_pattern: test-results/junit.xml
+          list-tests: all
+          publish-test-deltas: true
+
+  # The browser matrix runs only on main; headless Chromium runs on every
+  # eligible ref and is the E2E merge gate (see copilot-notes.md › Merge gate).
+  # SC-009: https://github.com/percebus/hello-spec-kit/issues/149
+  e2e-tests-browsers:
+    name: E2E tests @ ${{ matrix.browser }}@${{ matrix.os }}
+    needs:
+      - VARIABLES
+      - deploy-pages
+    if: ${{ github.ref_name == 'main' && needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
 
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        # Firefox runs on every branch. Edge and Safari are slow; run them only on main.
         include:
           - browser: chrome
             install: chrome
             os: ubuntu-latest
-            run: true
 
           - browser: firefox
             install: firefox
             os: ubuntu-latest
-            run: true
 
           - browser: edge
             install: msedge
             os: windows-latest
-            run: ${{ github.ref_name == 'main' }}
 
           - browser: safari
             install: webkit
             os: macos-latest
-            run: true # TEMP: verify Safari on this branch
 
     defaults:
       run:
@@ -274,39 +304,38 @@ jobs:
 
     steps:
       - uses: percebus/github-actions-common/.github/actions/checkout@main
-        if: ${{ matrix.run }}
 
       - uses: percebus/github-actions-node/.github/actions/setup@main
-        if: ${{ matrix.run }}
 
       # --ignore-scripts skips postinstall, which would install chromium.
       - name: npm install
-        if: ${{ matrix.run }}
         run: npm install --ignore-scripts
 
       - name: playwright install ${{ matrix.install }}
-        if: ${{ matrix.run }}
         run: npx playwright install --with-deps ${{ matrix.install }}
 
       - name: Start PulseAudio for Firefox
-        if: ${{ matrix.run && matrix.browser == 'firefox' }}
+        if: ${{ matrix.browser == 'firefox' }}
         run: |
           sudo apt-get install -y --no-install-recommends pulseaudio
           pulseaudio --start --exit-idle-time=-1
 
       # macOS runners have no audio output device, so WebKit never gets past readyState 1.
       - name: Install virtual audio device for Safari
-        if: ${{ matrix.run && matrix.browser == 'safari' }}
+        if: ${{ matrix.browser == 'safari' }}
         run: |
           brew install --cask blackhole-2ch
           sudo killall coreaudiod || true
 
+      - name: Enable Full Keyboard Access for Safari
+        if: ${{ matrix.browser == 'safari' }}
+        run: defaults write -g AppleKeyboardUIMode -int 3
+
       - name: playwright test
-        if: ${{ matrix.run }}
         run: npm run test:e2e
 
       - uses: percebus/github-actions-testing/.github/actions/junit@main
-        if: ${{ matrix.run && !cancelled() }}
+        if: ${{ !cancelled() }}
         with:
           files_pattern: test-results/junit.xml
           list-tests: all
