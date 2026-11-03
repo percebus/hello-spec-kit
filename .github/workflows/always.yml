@@ -257,7 +257,7 @@ jobs:
     needs:
       - VARIABLES
       - deploy-pages
-    if: ${{ (github.ref_name == 'main' || github.head_ref == 'claude/bugfix-safari-keyboard-tests') && needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
+    if: ${{ github.ref_name == 'main' && needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
 
     strategy:
       fail-fast: false
