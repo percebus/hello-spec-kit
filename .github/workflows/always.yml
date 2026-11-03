@@ -320,6 +320,13 @@ jobs:
           sudo apt-get install -y --no-install-recommends pulseaudio
           pulseaudio --start --exit-idle-time=-1
 
+      # macOS runners have no audio output device, so WebKit never gets past readyState 1.
+      - name: Install virtual audio device for Safari
+        if: ${{ matrix.browser == 'safari' }}
+        run: |
+          brew install --cask blackhole-2ch
+          sudo killall coreaudiod || true
+
       - name: Enable Full Keyboard Access for Safari
         if: ${{ matrix.browser == 'safari' }}
         run: defaults write -g AppleKeyboardUIMode -int 3

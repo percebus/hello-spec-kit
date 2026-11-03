@@ -20,14 +20,18 @@ export async function expectVisibleFocus(target: Locator) {
 }
 
 export async function focusWithKeyboard(page: Page, target: Locator) {
-  const direction = await target.evaluate((element) => {
+  const forward = await target.evaluate((element) => {
     const activeElement = document.activeElement;
-    return activeElement &&
+    return Boolean(
+      activeElement &&
       activeElement.compareDocumentPosition(element) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-      ? "Tab"
-      : "Shift+Tab";
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
+  // On macOS, WebKit's Tab skips links unless Option (Alt) is held.
+  const modifier =
+    page.context().browser()?.browserType().name() === "webkit" ? "Alt+" : "";
+  const direction = `${modifier}${forward ? "Tab" : "Shift+Tab"}`;
 
   for (let attempt = 0; attempt < 250; attempt += 1) {
     if (
