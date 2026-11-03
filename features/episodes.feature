@@ -18,6 +18,7 @@ Feature: Episodes page
     Then the first episode is paused
     And the first episode is no longer identified as playing
     And only the newly selected episode is playing
+    And the selected episode is clearly identified
 
   # SC-008: Every rendered episode card exposes complete details.
   # SRC: https://github.com/percebus/hello-spec-kit/issues/18
