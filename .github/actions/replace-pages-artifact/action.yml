@@ -76,13 +76,6 @@ runs:
       run: |
         set -euo pipefail
         TREE="$RUNNER_TEMP/rnd-site-tree"
-        set_status() {
-          [ "$OP/$KIND" = "publish/branch" ] && [ -n "$SHA" ] || return 0
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-            -f state="$1" -f context=preview-verification \
-            -f description="$(printf '%s' "$2" | cut -c1-140)" \
-            -f target_url="$RUN_URL" > /dev/null
-        }
         tree_hash() {
           (cd "$TREE" && find . -path ./.git -prune -o -type f -print0 | sort -z \
             | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
@@ -103,7 +96,6 @@ runs:
             ;;
         esac
         echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
-        set_status pending "Publishing subsite…"
 
         rm -rf "$TREE"
         mkdir -p "$TREE"
@@ -128,7 +120,6 @@ runs:
         if [ "$code" -ne 0 ]; then
           message="$(cat "$RUNNER_TEMP/tree-error.txt")"
           echo "::error::$message"
-          set_status error "$message"
           exit 1
         fi
 
@@ -188,7 +179,7 @@ runs:
         set -euo pipefail
         marker="<!-- rnd-subsite -->"
         if [ "$OP" = "publish" ]; then
-          message="$(printf '**R&D subsite**: %s/%s/\n\nBranch `%s` @ `%s` · [run](%s)\n\nEnd-to-end tests and verification follow; the verification report will be posted here.' \
+          message="$(printf '**R&D subsite**: %s/%s/\n\nBranch `%s` @ `%s` · [run](%s)\n\nEnd-to-end tests follow. After merge, the verification report will be posted here.' \
             "$SITE_URL" "$SLUG" "$BRANCH" "${SHA:0:7}" "$RUN_URL")"
         else
           message="$(printf '**R&D subsite**: `%s` was deleted because the pull request closed · [run](%s)' \

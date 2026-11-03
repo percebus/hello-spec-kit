@@ -66,7 +66,6 @@ jobs:
       sha: ${{ github.event.pull_request.head.sha || github.sha }}
       pr: ${{ github.event.pull_request.number }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      status_context: preview-verification
       slug: ${{ steps.variables.outputs.slug }}
       slug_error: ${{ steps.variables.outputs.slug_error }}
       base_url: ${{ steps.variables.outputs.base_url }}
@@ -147,13 +146,11 @@ jobs:
       pages: write
       id-token: write
       pull-requests: write
-      statuses: write
 
     outputs:
       slug: ${{ steps.subsite.outputs.slug }}
 
     env:
-      GH_TOKEN: ${{ github.token }}
       NEXT_PUBLIC_BASE_PATH: ${{ needs.VARIABLES.outputs.base_path }}
       NEXT_PUBLIC_PREVIEW_PR: ${{ needs.VARIABLES.outputs.kind == 'branch' && needs.VARIABLES.outputs.pr || '' }}
       NEXT_PUBLIC_PREVIEW_REF: ${{ needs.VARIABLES.outputs.kind == 'branch' && needs.VARIABLES.outputs.branch || '' }}
@@ -168,20 +165,9 @@ jobs:
         env:
           SLUG_ERROR: ${{ needs.VARIABLES.outputs.slug_error }}
         run: |
-          set_status() {
-            gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
-              -f state="$1" -f context="${{ needs.VARIABLES.outputs.status_context }}" \
-              -f description="$(printf '%s' "$2" | cut -c1-140)" \
-              -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
-          }
-
           if [ -n "$SLUG_ERROR" ]; then
-            echo "::warning::No subsite for this branch: $SLUG_ERROR"
-            set_status error "$SLUG_ERROR; rename the branch"
-            exit 0
-          fi
-          if [ "${{ needs.VARIABLES.outputs.kind }}" = "branch" ]; then
-            set_status pending "Building subsite…"
+            echo "::error::No subsite for this branch: $SLUG_ERROR; rename the branch"
+            exit 1
           fi
           echo "slug=${{ needs.VARIABLES.outputs.slug }}" >> "$GITHUB_OUTPUT"
 
@@ -211,28 +197,6 @@ jobs:
           source: ${{ github.workspace }}/out
           run-url: ${{ needs.VARIABLES.outputs.run_url }}
 
-      # Covers build and publish failures; keeps a clearer error already set
-      # (for example an address collision).
-      - name: preview-verification error
-        if: ${{ failure() && needs.VARIABLES.outputs.kind == 'branch' }}
-        run: |
-          current="$(gh api "repos/$GITHUB_REPOSITORY/commits/${{ needs.VARIABLES.outputs.sha }}/statuses" \
-            --jq '[.[] | select(.context == "${{ needs.VARIABLES.outputs.status_context }}")][0].state // empty')"
-          if [ "$current" != "error" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
-              -f state=error -f context="${{ needs.VARIABLES.outputs.status_context }}" \
-              -f description="Inconclusive: building or publishing the subsite failed" \
-              -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
-          fi
-
-      - name: preview-verification pending
-        if: ${{ needs.VARIABLES.outputs.kind == 'branch' }}
-        run: |
-          set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
-            -f state=pending -f context="${{ needs.VARIABLES.outputs.status_context }}" \
-            -f description="Running end-to-end tests…" -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
-
       - name: wait for subsite
         run: |
           set -euo pipefail
@@ -249,6 +213,9 @@ jobs:
 
   # The existing end-to-end tests, run against the deployed subsite (main included),
   # once per browser on the OS that ships it.
+  # The merge gate requires selected matrix checks by name (e.g.
+  # "E2E tests @ chrome@ubuntu-latest"); renaming this job or a matrix entry
+  # requires updating the ruleset (see copilot-notes.md › Merge gate).
   # SC-009: https://github.com/percebus/hello-spec-kit/issues/149
   e2e-tests:
     name: E2E tests @ ${{ matrix.browser }}@${{ matrix.os }}
@@ -337,32 +304,3 @@ jobs:
           files_pattern: test-results/junit.xml
           list-tests: all
           publish-test-deltas: ${{ runner.os == 'Linux' }}
-
-  # Pre-merge gate: a branch subsite that passes its end-to-end tests in every
-  # browser may merge.
-  e2e-result:
-    name: E2E result
-    needs:
-      - VARIABLES
-      - deploy-pages
-      - e2e-tests
-    if: ${{ !cancelled() && needs.VARIABLES.outputs.kind == 'branch' && needs.deploy-pages.result == 'success' && needs.deploy-pages.outputs.slug != '' }}
-    runs-on: ubuntu-latest
-
-    permissions:
-      statuses: write
-
-    steps:
-      - name: preview-verification result
-        env:
-          GH_TOKEN: ${{ github.token }}
-          OUTCOME: ${{ needs.e2e-tests.result }}
-        run: |
-          if [ "$OUTCOME" = "success" ]; then
-            state=success description="Subsite passed end-to-end tests"
-          else
-            state=failure description="End-to-end tests failed on the subsite"
-          fi
-          gh api "repos/$GITHUB_REPOSITORY/statuses/${{ needs.VARIABLES.outputs.sha }}" \
-            -f state="$state" -f context="${{ needs.VARIABLES.outputs.status_context }}" \
-            -f description="$description" -f target_url="${{ needs.VARIABLES.outputs.run_url }}" > /dev/null
