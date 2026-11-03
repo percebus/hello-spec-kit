@@ -55,8 +55,9 @@ The ruleset on `main` requires `Verify` and selected `E2E tests` matrix checks
 When `Deploy pages` fails or is skipped, the matrix checks never report and the
 pull request stays blocked.
 
-When this workflow succeeds on a push to `main`, `preview-verify` starts on
-`workflow_run`.
+When this workflow finishes on a push to `main`, whatever its conclusion,
+`preview-verify` starts on `workflow_run`. It proceeds only if `Deploy pages`
+succeeded in that run, so it also reviews `main/` when `E2E tests` fail.
 
 | Job              | Runs when                                                                                     | Does                                                                                                                                                                                                                                                                                         | Permissions                                                                     |
 | ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |

@@ -1,9 +1,10 @@
 ---
 name: Preview verify
 on:
-  # Runs after CI succeeds on a push to main: main/ is published and has passed
-  # its end-to-end tests. Must match always.yml's `name:`. Workflow names are
-  # filter patterns, so `[` and `]` must be escaped to match literally.
+  # Runs when CI finishes on a push to main, whatever its conclusion; `resolve`
+  # skips unless that run's `Deploy pages` job succeeded (main/ is published).
+  # Must match always.yml's `name:`. Workflow names are filter patterns, so `[`
+  # and `]` must be escaped to match literally.
   # Re-running main's CI re-runs this review.
   workflow_run:
     workflows:
@@ -12,7 +13,7 @@ on:
       - completed
     branches:
       - main
-if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+if: ${{ github.event.workflow_run.event == 'push' }}
 concurrency:
   group: preview-verify-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
@@ -60,6 +61,7 @@ jobs:
   resolve:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       issues: read
       pull-requests: read
@@ -73,9 +75,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
+          # Jobs of the CI run's latest attempt; must match always.yml's deploy-pages `name:`.
+          deploy="$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/jobs" \
+            --jq '.jobs[] | select(.name == "Deploy pages") | .conclusion')"
+          if [ "$deploy" != "success" ]; then
+            echo "Deploy pages did not succeed (${deploy:-not run}); main/ was not published for $SHA"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           pr="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" \
             --jq '[.[] | select(.merged_at != null and .base.ref == "main")][0].number // empty')"
           if [ -z "$pr" ]; then
