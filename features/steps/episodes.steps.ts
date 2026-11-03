@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { focusWithKeyboard } from "../../tests/helpers/keyboard";
+import { startPlaybackWithKeyboard } from "../../tests/helpers/keyboard";
 
 const { Given, When, Then } = createBdd();
 const externalRequests = new WeakMap<Page, string[]>();
@@ -74,8 +74,7 @@ Given("the visitor selects an episode's playback action", async ({ page }) => {
   await expect
     .poll(() => player.evaluate((audio: HTMLAudioElement) => audio.readyState))
     .toBeGreaterThanOrEqual(1);
-  await focusWithKeyboard(page, player);
-  await page.keyboard.press("Space");
+  await startPlaybackWithKeyboard(page, player);
 });
 
 When("playback starts", async ({ page }) => {

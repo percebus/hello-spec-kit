@@ -3,6 +3,7 @@ import { episodes } from "../../app/lib/episodes";
 import {
   focusWithKeyboard,
   operatePlayerWithKeyboard,
+  startPlaybackWithKeyboard,
 } from "../helpers/keyboard";
 
 const primaryPages = [
@@ -104,7 +105,14 @@ for (const width of [320, 1440]) {
       }
     });
 
-    test("native audio shortcuts seek and adjust volume", async ({ page }) => {
+    test("native audio shortcuts seek and adjust volume", async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(
+        browserName === "webkit",
+        "WebKit's native audio controls have no Home/End/Arrow shortcuts.",
+      );
       await page.goto("./");
       const player = page.locator("audio[controls]");
       await expect
@@ -203,13 +211,7 @@ for (const width of [320, 1440]) {
             .evaluate((audio: HTMLAudioElement) => audio.readyState),
         )
         .toBeGreaterThanOrEqual(1);
-      await focusWithKeyboard(page, players.nth(0));
-      await page.keyboard.press("Space");
-      await expect
-        .poll(() =>
-          players.nth(0).evaluate((audio: HTMLAudioElement) => audio.paused),
-        )
-        .toBe(false);
+      await startPlaybackWithKeyboard(page, players.nth(0));
       await expect
         .poll(() =>
           players
@@ -217,7 +219,6 @@ for (const width of [320, 1440]) {
             .evaluate((audio: HTMLAudioElement) => audio.readyState),
         )
         .toBeGreaterThanOrEqual(1);
-      await focusWithKeyboard(page, players.nth(1));
       const previousPausedWhenSelectedStarts = page.evaluate(
         () =>
           new Promise<boolean>((resolve) => {
@@ -229,12 +230,7 @@ for (const width of [320, 1440]) {
             );
           }),
       );
-      await page.keyboard.press("Space");
-      await expect
-        .poll(() =>
-          players.nth(1).evaluate((audio: HTMLAudioElement) => audio.paused),
-        )
-        .toBe(false);
+      await startPlaybackWithKeyboard(page, players.nth(1));
       expect(await previousPausedWhenSelectedStarts).toBe(true);
       await expect
         .poll(() =>
