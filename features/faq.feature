@@ -11,6 +11,7 @@ Feature: FAQ page
   # of at most 2 sentences and at most 30 words.
   #
   # SRC: https://github.com/percebus/hello-spec-kit/issues/10
+  # SRC: https://github.com/percebus/hello-spec-kit/issues/32
   Scenario Outline: A visitor finds a concise answer to a common question
     Given the FAQ page
     When the FAQ page loads

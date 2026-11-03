@@ -7,6 +7,7 @@ Feature: Landing page
   #  - distinctive visual presentation
   #  - and clear content hierarchy.
   #
+  # SC-001: Visitors identify the show topic and featured episode.
   # SRC: https://github.com/percebus/hello-spec-kit/issues/12
   Scenario Outline: A visitor recognizes the show and its featured episode
     Given the landing page
