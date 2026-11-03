@@ -248,7 +248,7 @@ jobs:
           - browser: safari
             install: webkit
             os: macos-latest
-            run: ${{ github.ref_name == 'main' }}
+            run: true # TEMP: verify Safari on this branch
 
     defaults:
       run:
@@ -293,10 +293,6 @@ jobs:
         run: |
           sudo apt-get install -y --no-install-recommends pulseaudio
           pulseaudio --start --exit-idle-time=-1
-
-      - name: Enable Full Keyboard Access for Safari
-        if: ${{ matrix.run && matrix.browser == 'safari' }}
-        run: defaults write -g AppleKeyboardUIMode -int 3
 
       - name: playwright test
         if: ${{ matrix.run }}
