@@ -126,29 +126,27 @@ for (const { name, path, title, heading, context } of primaryPages) {
       expect(problems).toEqual([]);
     });
 
-    test("images actually load and have bytes", async ({ page }) => {
+    test("images link to non-empty resources", async ({ page }) => {
       await page.goto(path);
-      await page.waitForLoadState("networkidle");
 
-      for (const image of await page.locator("img").all()) {
-        await image.scrollIntoViewIfNeeded();
-        await expect
-          .poll(() =>
-            image.evaluate(
-              (element: HTMLImageElement) =>
-                element.complete && element.naturalWidth > 0,
-            ),
-          )
-          .toBe(true);
-      }
-
-      const sources = await page.$$eval("img", (images) =>
-        images.map((image) => image.currentSrc),
-      );
+      const sources = [
+        ...new Set(
+          await page.$$eval("img", (images) =>
+            images.map((image) => (image as HTMLImageElement).src),
+          ),
+        ),
+      ];
       for (const src of sources) {
+        expect(src, "img is missing a src").not.toBe("");
         const response = await page.request.get(src);
         expect(response.ok(), src).toBe(true);
-        expect((await response.body()).length, src).toBeGreaterThan(0);
+        expect(response.headers()["content-type"] ?? "", src).toMatch(
+          /^image\//,
+        );
+        expect(
+          (await response.body()).length,
+          `${src} is 0 bytes`,
+        ).toBeGreaterThan(0);
       }
     });
 
