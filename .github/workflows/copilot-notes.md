@@ -28,17 +28,18 @@ branches that flatten to the same slug (for example `feat/a-b/c` and
 [always.yml](always.yml) runs:
 
 ```text
-pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (matrix; merge gate)
-main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (matrix) ──(CI finished, Deploy pages succeeded)──▶ preview-verify.md (post-merge review)
+pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (headless Chromium; merge gate)
+main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (headless Chromium + browser matrix) ──(CI finished, Deploy pages succeeded)──▶ preview-verify.md (post-merge review)
 ```
 
-| Job            | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VARIABLES`    | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `verify`       | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. Publishes nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `deploy-pages` | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                                                                                                                    |
-| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included), one matrix check per browser. The ruleset picks which of these checks gate the merge.                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI finishes on a push to `main`, whatever its conclusion, and proceeds only if that run's `Deploy pages` job succeeded, so `main/` is published even when its end-to-end tests failed. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
+| Job                  | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VARIABLES`          | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `verify`             | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. Publishes nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `deploy-pages`       | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                                                                                                                    |
+| `e2e-tests-headless` | Runs the existing tests against the deployed subsite in headless Chromium on every eligible ref; this is the E2E merge-gate check.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `e2e-tests-browsers` | Runs the existing tests once per browser on the OS that ships it, on `main` only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| (separate)           | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI finishes on a push to `main`, whatever its conclusion, and proceeds only if that run's `Deploy pages` job succeeded, so `main/` is published even when its end-to-end tests failed. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
 
 - CI concurrency is per ref (`group: ${{ github.ref }}-${{ github.workflow }}`,
   `cancel-in-progress: true`): a newer push cancels the older run, and
@@ -94,17 +95,14 @@ never matches, and `github-pages` needs the `refs/pull/*/merge` rule.
 
 ### Merge gate
 
-Pull requests are gated by `Verify` and the `E2E tests` matrix checks that
-run on every branch: `E2E tests @ chrome@ubuntu-latest` and
-`E2E tests @ firefox@ubuntu-latest`. Add or remove browsers by editing
-`required_status_checks` below; the context must match the check name exactly.
-Do not require Edge or Safari: they run only on `main`, so on a pull request
-their checks pass without testing anything.
+Pull requests are gated by `Verify` and `E2E tests (headless Chromium)`.
+The `e2e-tests-browsers` matrix runs only on `main` and is not a merge-gate
+check. The required check context must match the check name exactly.
 
 If the branch slug is invalid, `Deploy pages` fails with "rename the branch".
 When `Deploy pages` fails or is skipped (including fork pull requests), the
-`E2E tests` job is skipped and its matrix checks never report. The required
-checks then stay "Expected", so the pull request stays blocked.
+headless E2E job is skipped and its check never reports. The required checks
+then stay "Expected", so the pull request stays blocked.
 
 The post-merge review (`preview-verify`) cannot gate a merge: merging is what
 starts it. Its `preview-verification` commit status on the `main` commit is
@@ -139,8 +137,7 @@ gh api -X "$METHOD" "$ENDPOINT" --input - <<'EOF'
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           { "context": "Verify" },
-          { "context": "E2E tests @ chrome@ubuntu-latest" },
-          { "context": "E2E tests @ firefox@ubuntu-latest" } ] } }
+          { "context": "E2E tests (headless Chromium)" } ] } }
   ]
 }
 EOF
