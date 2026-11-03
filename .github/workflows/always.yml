@@ -261,7 +261,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        # Firefox runs on every branch. Edge runs only on main; Safari remains disabled.
+        # Firefox runs on every branch. Edge and Safari are slow; run them only on main.
         include:
           - browser: chrome
             install: chrome
@@ -278,10 +278,10 @@ jobs:
             os: windows-latest
             run: ${{ github.ref_name == 'main' }}
 
-          # - browser: safari
-          #   install: webkit
-          #   os: macos-latest
-          #   run: ${{ github.ref_name == 'main' }}
+          - browser: safari
+            install: webkit
+            os: macos-latest
+            run: ${{ github.ref_name == 'main' }}
 
     defaults:
       run:
