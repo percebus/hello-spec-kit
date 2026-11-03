@@ -28,26 +28,24 @@ branches that flatten to the same slug (for example `feat/a-b/c` and
 [always.yml](always.yml) runs:
 
 ```text
-pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ E2E result (merge gate)
-main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ E2E result ──(CI succeeded)──▶ preview-verify.md (post-merge review)
+pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (matrix; merge gate)
+main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests (matrix) ──(CI succeeded)──▶ preview-verify.md (post-merge review)
 ```
 
 | Job            | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `VARIABLES`    | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs. No deployment environment is created for a branch.                                                                                                                                                                                                                                                                                                                  |
-| `verify`       | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. No GitHub deployment environment, no status, and nothing published.                                                                                                                                                                                                                                                                                                                      |
+| `VARIABLES`    | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs.                                                                                                                                                                                                                                                                                                                                                                     |
+| `verify`       | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. Publishes nothing.                                                                                                                                                                                                                                                                                                                                                                       |
 | `deploy-pages` | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                           |
-| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included), one matrix check per browser.                                                                                                                                                                                                                                                                                                                                                                                      |
-| `e2e-result`   | The `E2E result` merge-gate check. Fails when verification, deployment, or end-to-end testing fails or is skipped.                                                                                                                                                                                                                                                                                                                                                                         |
+| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included), one matrix check per browser. The ruleset picks which of these checks gate the merge.                                                                                                                                                                                                                                                                                                                              |
 | (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI succeeds on a push to `main`, so `main/` is published and has passed its end-to-end tests. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
 
 - CI concurrency is per ref (`group: ${{ github.ref }}-${{ github.workflow }}`,
   `cancel-in-progress: true`): a newer push cancels the older run, and
   different branches run in parallel. Only `deploy-pages` is serialized,
   through the job-level group `pages` (`queue: max`).
-- `VARIABLES` resolves `kind` using
-  `${{ github.ref_name == 'main' && 'main' || 'branch' }}`. `branch` describes
-  a deployment kind, not a formal environment.
+- `VARIABLES` resolves `kind` (`main` or `branch`) using
+  `${{ github.ref_name == 'main' && 'main' || 'branch' }}`.
 - `VARIABLES` reads `.env.local` for local verification and `.env.main` for the
   deployed origin and main base path. For PRs, it replaces the final `main`
   path segment with the validated branch slug. Builds and deployed E2E tests
@@ -62,7 +60,7 @@ main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E te
   runs on `pull_request_target`, so it uses the default branch's workflow and
   never checks out PR code. It starts as soon as the pull request closes and
   waits only for an in-flight `deploy-pages`, through the shared job-level
-  group `pages`. It only takes effect once it is on `main`.
+  group `pages`.
 - Both workflows share the composite action [replace-pages-artifact](../actions/replace-pages-artifact/action.yml)
   for publish/delete, prune, deploy, and the PR comment.
 - A failing subsite stays available until the next push or until the PR
@@ -87,46 +85,38 @@ Create these under Settings → Environments:
 | -------------- | ------------------------------------------------------------------------------------ |
 | `github-pages` | Selected branches and tags: `main` **and** `refs/pull/*/merge` (or "No restriction") |
 
-The GitHub Actions `main` and `branch` environments from earlier versions are
-no longer used and can be deleted. The repository keeps `.env.main` for main
-settings; branch URLs are computed, without a branch environment file.
-
-**Bootstrap:** each deployment publishes the whole stored tree, and the root
-redirects to `main/`. Until the first push to `main` runs this workflow, `main/`
-does not exist and the root returns a 404, even though branch subsites work.
-Merging the pull request that introduces this workflow publishes `main/`.
+`.env.main` holds the main settings; branch URLs are computed, without a branch
+environment file.
 
 Environment rules match the run's `GITHUB_REF`. For `pull_request` runs that
 is `refs/pull/<n>/merge`, not the branch name. A rule like `feat/*` therefore
-never matches, and `github-pages` needs the `refs/pull/*/merge` rule. If the
-`branch` environment uses selected branches instead of "No restriction", it
-needs the same rule.
+never matches, and `github-pages` needs the `refs/pull/*/merge` rule.
 
 ### Merge gate
 
-Pull requests are gated by `Verify` and `E2E result`. The aggregation check
-fails when verification, deployment, or end-to-end testing fails or is skipped,
-so missing browser checks cannot leave the merge gate "Expected".
+Pull requests are gated by `Verify` and the `E2E tests` matrix checks that
+run on every branch: `E2E tests @ chrome@ubuntu-latest` and
+`E2E tests @ firefox@ubuntu-latest`. Add or remove browsers by editing
+`required_status_checks` below; the context must match the check name exactly.
+Do not require Edge or Safari: they run only on `main`, so on a pull request
+their checks pass without testing anything.
 
 If the branch slug is invalid, `Deploy pages` fails with "rename the branch".
 When `Deploy pages` fails or is skipped (including fork pull requests), the
-`E2E tests` job is skipped and `E2E result` fails.
+`E2E tests` job is skipped and its matrix checks never report. The required
+checks then stay "Expected", so the pull request stays blocked.
 
-The post-merge review (`preview-verify`) cannot gate a merge: merging is what starts
-it. It writes the `preview-verification` commit status on the `main` commit for
-information only.
+The post-merge review (`preview-verify`) cannot gate a merge: merging is what
+starts it. Its `preview-verification` commit status on the `main` commit is
+informational only.
 
-Update the existing ruleset in place. Creating a second ruleset is not enough:
-rules from every active ruleset apply together, so an old ruleset that still
-requires `preview-verification` would keep blocking every pull request. The
-script below updates the ruleset created as `main: preview verification` (or
-already renamed to `main: merge gate`) and creates one only if neither exists.
-If the ruleset has another name, list them with
-`gh api repos/percebus/hello-spec-kit/rulesets` and set `RULESET_ID` by hand.
+Rules from every active ruleset apply together, so keep a single ruleset for
+`main`. The script below updates `main: merge gate` if it exists and creates
+it otherwise.
 
 ```text
 RULESET_ID=$(gh api --paginate repos/percebus/hello-spec-kit/rulesets \
-  --jq '.[] | select(.name == "main: preview verification" or .name == "main: merge gate") | .id')
+  --jq '.[] | select(.name == "main: merge gate") | .id')
 if [ -n "$RULESET_ID" ]; then
   METHOD=PUT; ENDPOINT="repos/percebus/hello-spec-kit/rulesets/$RULESET_ID"
 else
@@ -149,7 +139,8 @@ gh api -X "$METHOD" "$ENDPOINT" --input - <<'EOF'
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           { "context": "Verify" },
-          { "context": "E2E result" } ] } }
+          { "context": "E2E tests @ chrome@ubuntu-latest" },
+          { "context": "E2E tests @ firefox@ubuntu-latest" } ] } }
   ]
 }
 EOF
