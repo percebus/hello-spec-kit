@@ -304,3 +304,25 @@ jobs:
           files_pattern: test-results/junit.xml
           list-tests: all
           publish-test-deltas: ${{ runner.os == 'Linux' }}
+
+  e2e-result:
+    name: E2E result
+    needs:
+      - VARIABLES
+      - verify
+      - deploy-pages
+      - e2e-tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployment and tests
+        env:
+          VARIABLES_RESULT: ${{ needs.VARIABLES.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          DEPLOY_RESULT: ${{ needs.deploy-pages.result }}
+          E2E_RESULT: ${{ needs.e2e-tests.result }}
+        run: |
+          if [[ "$VARIABLES_RESULT" != "success" || "$VERIFY_RESULT" != "success" || "$DEPLOY_RESULT" != "success" || "$E2E_RESULT" != "success" ]]; then
+            echo "::error::Deployment or testing did not succeed (VARIABLES=$VARIABLES_RESULT, verify=$VERIFY_RESULT, deploy-pages=$DEPLOY_RESULT, e2e-tests=$E2E_RESULT)"
+            exit 1
+          fi

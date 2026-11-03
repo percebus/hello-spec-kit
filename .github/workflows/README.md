@@ -25,8 +25,8 @@ branches that flatten to the same slug (for example `feat/a-b/c` and
 [always.yml](always.yml) runs:
 
 ```text
-pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests   (merge gate)
-main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests   ──(CI succeeded)──▶ preview-verify.md (post-merge review)
+pull request: VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ E2E result (merge gate)
+main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E tests ──▶ E2E result ──(CI succeeded)──▶ preview-verify.md (post-merge review)
 ```
 
 | Job            | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -34,7 +34,8 @@ main:         VARIABLES ──▶ Verify ──▶ Deploy pages ──▶ E2E te
 | `VARIABLES`    | Loads local and main settings, resolves the branch slug and deployed URL, and exposes job outputs for downstream jobs. No deployment environment is created for a branch.                                                                                                                                                                                                                                                                                                                  |
 | `verify`       | Isolated build and `test:all` against the local server, using the local outputs from `VARIABLES`. No GitHub deployment environment, no status, and nothing published.                                                                                                                                                                                                                                                                                                                      |
 | `deploy-pages` | Skips forks. Computes the slug, builds the subsite (or `main/`) with its base path, uploads artifact `site`, publishes it into the R&D site, and prunes subsites of PRs that are no longer open.                                                                                                                                                                                                                                                                                           |
-| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included), one matrix check per browser. The ruleset picks which of these checks gate the merge.                                                                                                                                                                                                                                                                                                                              |
+| `e2e-tests`    | Runs the existing tests against the deployed subsite (`main` included), one matrix check per browser.                                                                                                                                                                                                                                                                                                                                                                                      |
+| `e2e-result`   | The `E2E result` merge-gate check. Fails when verification, deployment, or end-to-end testing fails or is skipped.                                                                                                                                                                                                                                                                                                                                                                         |
 | (separate)     | [preview-verify.md](preview-verify.md) runs on `workflow_run` when CI succeeds on a push to `main`, so `main/` is published and has passed its end-to-end tests. It finds the merged pull request; then a deterministic Playwright scan (`tests/preview/`) and the Copilot agent check `main/` against the merged stories. The report is posted on the PR and on every issue it closes, and those issues are reopened when the stories are not done (blocking finding or intent mismatch). |
 
 - CI concurrency is per ref (`group: ${{ github.ref }}-${{ github.workflow }}`,
@@ -100,17 +101,13 @@ needs the same rule.
 
 ### Merge gate
 
-Pull requests are gated by `Verify` and the `E2E tests` matrix checks that
-run on every branch: `E2E tests @ chrome@ubuntu-latest` and
-`E2E tests @ firefox@ubuntu-latest`. Add or remove browsers by editing
-`required_status_checks` below; the context must match the check name exactly.
-Do not require Edge or Safari: they run only on `main`, so on a pull request
-their checks pass without testing anything.
+Pull requests are gated by `Verify` and `E2E result`. The aggregation check
+fails when verification, deployment, or end-to-end testing fails or is skipped,
+so missing browser checks cannot leave the merge gate "Expected".
 
 If the branch slug is invalid, `Deploy pages` fails with "rename the branch".
 When `Deploy pages` fails or is skipped (including fork pull requests), the
-`E2E tests` job is skipped and its matrix checks never report.
-The required checks then stay "Expected", so the pull request stays blocked.
+`E2E tests` job is skipped and `E2E result` fails.
 
 The post-merge review (`preview-verify`) cannot gate a merge: merging is what starts
 it. It writes the `preview-verification` commit status on the `main` commit for
@@ -149,8 +146,7 @@ gh api -X "$METHOD" "$ENDPOINT" --input - <<'EOF'
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           { "context": "Verify" },
-          { "context": "E2E tests @ chrome@ubuntu-latest" },
-          { "context": "E2E tests @ firefox@ubuntu-latest" } ] } }
+          { "context": "E2E result" } ] } }
   ]
 }
 EOF
