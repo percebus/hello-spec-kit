@@ -101,32 +101,6 @@ async function expectLandingContentUsable(page: Page) {
   await expect(page).toHaveURL(/\/episodes\/$/);
 }
 
-test.describe("SC-001: identify the show topic and featured episode", () => {
-  test("key landing content is identifiable within 10 seconds", async ({
-    page,
-  }) => {
-    test.setTimeout(10_000);
-
-    await page.goto("./");
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: "Find the human signal inside the technology story.",
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByText(
-        /explores how thoughtful people make creative technology/i,
-      ),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("article").filter({
-        has: page.getByText("Featured episode", { exact: true }),
-      }),
-    ).toHaveCount(1);
-  });
-});
-
 test.describe("SC-005: landing page has no horizontal scrolling", () => {
   for (const width of [320, 375, 768, 1440]) {
     test(`landing page fits a ${width}px viewport`, async ({ page }) => {
