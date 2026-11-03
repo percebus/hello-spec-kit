@@ -143,6 +143,6 @@ The environment profiles have distinct responsibilities:
 
 | Environment `github-pages`    | Selected branches and tags: `main` and `refs/pull/*/merge`, because `pull_request` runs deploy as `GITHUB_REF=refs/pull/<n>/merge`. "No restriction" also works. |
 | `gh-pages` branch             | Created by the first deployment. Exclude it from rules that block force-pushes.         |
-| Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/README.md`)                                            |
+| Secret `COPILOT_GITHUB_TOKEN` | Existing (see `.github/workflows/copilot-notes.md`)                                            |
 | Ruleset on `main`             | Require status checks `Verify`, `E2E tests @ chrome@ubuntu-latest`, and `E2E tests @ firefox@ubuntu-latest`; require a PR |
 | Follow-up                     | #100: move production to `hello-spec-kit-release`                                       |

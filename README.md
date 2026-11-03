@@ -2,7 +2,8 @@
 
 `github` `spec-kit` https://github.com/github/spec-kit
 
-See the [workflow documentation](.github/workflows/README.md) for closed issue
+See the [workflow documentation](.github/workflows/README.md) for an overview,
+and the [workflow notes](.github/workflows/copilot-notes.md) for closed issue
 auditor setup and usage.
 
 ## Pull request subsites
@@ -17,7 +18,7 @@ Every pull request into `main` is published as its own subsite, such as
 After the merge, `main/` is scanned at 320 px and 1440 px and reviewed by an
 agent. The report is posted on the pull request and on the issues it closes,
 and those issues are reopened if the stories are not done. See the
-[workflow documentation](.github/workflows/README.md#rd-site-and-pull-request-subsites).
+[workflow notes](.github/workflows/copilot-notes.md#rd-site-and-pull-request-subsites).
 
 ## Installing dependencies
 

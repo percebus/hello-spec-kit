@@ -19,7 +19,7 @@ no implementation code.
   - The `gh-pages` branch is excluded from force-push protection.
   - A ruleset on `main` requires `Verify`, `E2E tests @ chrome@ubuntu-latest`
     and `E2E tests @ firefox@ubuntu-latest`, applied last. Update the existing
-    ruleset rather than adding a second one; see `.github/workflows/README.md`.
+    ruleset rather than adding a second one; see `.github/workflows/copilot-notes.md`.
 
 ## 1. Local checks before pushing
 
